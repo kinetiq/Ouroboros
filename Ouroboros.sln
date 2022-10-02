@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32901.215
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ouroboros", "Ouroboros\Ouroboros.csproj", "{5AA663D9-7332-4A4D-B618-D07C87FF7A8B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ouroboros.Console", "Ouroboros.Console\Ouroboros.Console.csproj", "{D50A5B0C-3248-4BCD-A19C-2FF1DCFAD3E1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5AA663D9-7332-4A4D-B618-D07C87FF7A8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AA663D9-7332-4A4D-B618-D07C87FF7A8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AA663D9-7332-4A4D-B618-D07C87FF7A8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AA663D9-7332-4A4D-B618-D07C87FF7A8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D50A5B0C-3248-4BCD-A19C-2FF1DCFAD3E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D50A5B0C-3248-4BCD-A19C-2FF1DCFAD3E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D50A5B0C-3248-4BCD-A19C-2FF1DCFAD3E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D50A5B0C-3248-4BCD-A19C-2FF1DCFAD3E1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0833734D-B9BA-44B3-B078-71559B088F2F}
+	EndGlobalSection
+EndGlobal
