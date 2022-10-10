@@ -1,46 +1,52 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Ouroboros.Document.Elements;
 using Z.Core.Extensions;
 
 namespace Ouroboros.Document.Mutators;
 
-internal class ResolverDocumentMutator
+internal class ResolverMutator
 {
-    private readonly DocumentModel Source;
     private readonly ResolveElement Element;
+    private List<ElementBase> DocumentModel;
 
     /// <summary>
     /// To prepare a new DeepFragment based on a resolver, we need to take our existing
-    /// DocumentModel and change it. The Resolver element provides a prompt, and that
+    /// document model and change it. The Resolver element provides a prompt, and that
     /// has to replace the existing prompt tag. Also, the Resolve tag itself has to be
     /// removed, and any content it has must be added as text. 
     /// </summary>
-    public DocumentModel Mutate()
+    public List<ElementBase> Mutate()
     {
-        var newModel = Source.DeepClone();
-
         // Cut the elements list off right before Element. 
-        TrimElements(newModel);
+        TrimElements();
 
         // Swap out the prompt tag with the one provided in Element. 
-        SetupPrompt(newModel);
+        SetupPrompt();
 
         // Add text to the end.
-        AddTextElement(newModel);
+        AddTextElement();
 
-        return newModel;
+        return DocumentModel;
+    }
+
+    public DeepFragment MutateToNewFragment()
+    {
+        Mutate();
+
+        return new DeepFragment(DocumentModel);
     }
 
     #region Helpers
     /// <summary>
     /// Cut the elements list off right *before* this element. 
     /// </summary>
-    private void TrimElements(DocumentModel newModel)
+    private void TrimElements()
     {
-        var index = Source.Elements.IndexOf(Element);
+        var index = DocumentModel
+            .IndexOf(Element);
 
-        newModel.Elements = newModel
-            .Elements
+        DocumentModel = DocumentModel
             .Take(index)
             .ToList();
     }
@@ -48,10 +54,9 @@ internal class ResolverDocumentMutator
     /// <summary>
     /// Swap out the prompt content with the content provided in our resolve tag.
     /// </summary>
-    private void SetupPrompt(DocumentModel newModel)
+    private void SetupPrompt()
     {
-        var prompt = newModel
-            .Elements
+        var prompt = DocumentModel
             .First(x => x is PromptElement);
 
         prompt.Content = Element.Prompt;
@@ -60,7 +65,7 @@ internal class ResolverDocumentMutator
     /// <summary>
     /// If the resolve tag has content, add that to the end of the document.
     /// </summary>
-    private void AddTextElement(DocumentModel newModel)
+    private void AddTextElement()
     {
         var content = Element.Content;
 
@@ -72,13 +77,16 @@ internal class ResolverDocumentMutator
             Content = content
         };
 
-        newModel.Elements.Add(textElement);
+        DocumentModel.Add(textElement);
     } 
     #endregion
 
-    public ResolverDocumentMutator(DocumentModel source, ResolveElement element)
+    public ResolverMutator(DeepFragment source, ResolveElement element)
     {
-        Source = source;
+        DocumentModel = source
+            .DocElements
+            .DeepClone();
+
         Element = element;
     }
 }

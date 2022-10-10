@@ -1,21 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Ouroboros.Document.Elements
+namespace Ouroboros.Document.Elements;
+
+[Serializable]
+internal class ElementBase
 {
+    /// <summary>
+    /// You can optionally give any element a unique name. Ouroboros does not use this internally;
+    /// it's used by devs only.
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
 
-    [Serializable]
-    internal class ElementBase
+    /// <summary>
+    /// If a tag's content has been summarized, that is stored here.
+    /// </summary>
+    public string Summary { get; set; } = string.Empty;
+
+    public override string ToString()
     {
-        public string Content { get; set; } = string.Empty;
-
-        public override string ToString()
-        {
-            return Content;
-        }
+        return Content;
     }
 }

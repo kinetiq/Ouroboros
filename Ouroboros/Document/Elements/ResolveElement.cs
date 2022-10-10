@@ -1,42 +1,37 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Z.Core.Extensions;
 
-namespace Ouroboros.Document.Elements
+namespace Ouroboros.Document.Elements;
+
+[Serializable]
+[DebuggerDisplay("Resolve: { ToString }")]
+internal class ResolveElement : ElementBase
 {
-    [Serializable]
-    [DebuggerDisplay("Resolve: { ToString }")]
-    internal class ResolveElement : ElementBase
+    // Attributes set via document
+    public string Prompt { get; set; }
+
+    // Attributes set via resolver
+    public bool IsResolved { get; set; }
+    public string FullText { get; set; } 
+    public string Summary { get; set; } // Not implemented
+
+    public override string ToString()
     {
-        // Attributes set via document
-        public string Prompt { get; set; }
+        if (Content.IsNullOrWhiteSpace())
+            return Prompt;
 
-        // Attributes set via resolver
-        public bool IsResolved { get; set; }
-        public string FullText { get; set; } 
-        public string Summary { get; set; } // Not implemented
+        if (Summary.IsNotNullOrWhiteSpace())
+            return Summary;
 
-        public override string ToString()
-        {
-            if (Content.IsNullOrWhiteSpace())
-                return Prompt;
+        return FullText;
+    }
 
-            if (Summary.IsNotNullOrWhiteSpace())
-                return Summary;
-
-            return FullText;
-        }
-
-        public ResolveElement()
-        {
-            Prompt = string.Empty;
-            IsResolved = false;
-            FullText = string.Empty;
-            Summary = string.Empty;
-        }
+    public ResolveElement()
+    {
+        Prompt = string.Empty;
+        IsResolved = false;
+        FullText = string.Empty;
+        Summary = string.Empty;
     }
 }
