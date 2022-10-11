@@ -4,7 +4,6 @@
 AnsiConsole.Markup("Starting...");
 AnsiConsole.WriteLine();
 
-
 var client = new Ouroboros.Client();
 
 //var output = await client.Mine(@"D:\GPT\data.txt");

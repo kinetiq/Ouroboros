@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Ouroboros.Document;
 using Ouroboros.Document.Extensions;
 using Ouroboros.Scales;
 using Ouroboros.VulcanMiner;
+
+[assembly: InternalsVisibleToAttribute("Ouroboros.Test")]
 
 namespace Ouroboros;
 
