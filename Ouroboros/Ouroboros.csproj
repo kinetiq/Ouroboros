@@ -10,8 +10,4 @@
     <PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="MithrilMine\" />
-  </ItemGroup>
-
 </Project>

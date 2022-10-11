@@ -20,8 +20,7 @@ internal class DocElementsFactory
     private bool IsInTag = false;
     private int LastIndex = 0;
 
-    // TODO: This could be used to create a much more sophisticated DOM.
-    // Eech too tired right now.
+    // TODO: This doesn't nest elements. There's nothing stopping us from doing that though.
 
     public List<ElementBase> Create(string text)
     {
@@ -44,11 +43,21 @@ internal class DocElementsFactory
 
         // Now that we've checked all our matches, there could still be some text at the end of the document. 
         // That needs to go into the DOM as well.
-        CreateTextElementForTextAfterFinalTag(text);
-
+        CreateTextElementForTextAfterFinalTag();
+        FindPrompt();
         Validate();
 
         return DocElements;
+    }
+
+
+    /// <summary>
+    /// If we don't have an explicit Prompt tag, try to find one by interrogating DocElements. 
+    /// </summary>
+    public void FindPrompt()
+    {
+        var finder = new PromptFinder(DocElements);
+        finder.FindPrompt();
     }
 
     private void Validate()
@@ -123,14 +132,14 @@ internal class DocElementsFactory
         }
     }
 
-    private void CreateTextElementForTextAfterFinalTag(string text)
+    private void CreateTextElementForTextAfterFinalTag()
     {
         // If we are at the end of the document, just exit.
-        if (text.Length <= LastIndex) 
+        if (Text.Length <= LastIndex) 
             return;
 
         // Get the remaining text and delete any whitespace.
-        var subtext = text[LastIndex..]
+        var subtext = Text[LastIndex..]
             .Trim();
 
         // Create the element.
