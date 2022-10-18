@@ -15,7 +15,7 @@ internal class ElementBase
     /// <summary>
     /// If a tag's content has been summarized, that is stored here.
     /// </summary>
-    public string Summary { get; set; } = string.Empty;
+    public string ContentSummary { get; set; } = string.Empty;
 
     public override string ToString()
     {

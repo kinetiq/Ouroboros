@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Diagnostics;
 using Z.Core.Extensions;
 
@@ -9,29 +10,36 @@ namespace Ouroboros.Document.Elements;
 internal class ResolveElement : ElementBase
 {
     // Attributes set via document
-    public string Prompt { get; set; }
+    public string? Prompt { get; set; }
 
     // Attributes set via resolver
     public bool IsResolved { get; set; }
-    public string FullText { get; set; } 
-    public string Summary { get; set; } // Not implemented
+    public string? GeneratedOutput { get; set; } 
+
+    public string? GeneratedOutputSummary { get; set; } // Not implemented
 
     public override string ToString()
     {
-        if (Content.IsNullOrWhiteSpace())
-            return Prompt;
+        if (IsResolved)
+        {
+            if (GeneratedOutputSummary.IsNotNullOrWhiteSpace())
+                return Content + GeneratedOutputSummary!;
 
-        if (Summary.IsNotNullOrWhiteSpace())
-            return Summary;
+            return GeneratedOutput.IsNotNullOrWhiteSpace() ?
+                Content + GeneratedOutput! : 
+                Content;
+        }
 
-        return FullText;
+        return Content.IsNullOrWhiteSpace() ? 
+            Prompt ?? string.Empty : 
+            Content;
     }
 
     public ResolveElement()
     {
-        Prompt = string.Empty;
+        Prompt = null;
         IsResolved = false;
-        FullText = string.Empty;
-        Summary = string.Empty;
+        GeneratedOutput = string.Empty;
+        GeneratedOutputSummary = null;
     }
 }

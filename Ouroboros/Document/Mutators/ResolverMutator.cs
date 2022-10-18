@@ -56,6 +56,9 @@ internal class ResolverMutator
     /// </summary>
     private void SetupPrompt()
     {
+        if (Element.Prompt == null) // if this isn't specified, we stick with the original prompt.
+            return;
+
         var prompt = DocumentModel
             .First(x => x is PromptElement);
 
@@ -87,6 +90,12 @@ internal class ResolverMutator
             .DocElements
             .DeepClone();
 
-        Element = element;
+        // We just cloned the DocumentModel so that we can work on it without affecting the original.
+        // Now we need to grab the version of our resolver element that exists in the new model.
+        var sourceIndex = source
+            .DocElements
+            .IndexOf(element);
+
+        Element = (ResolveElement) DocumentModel[sourceIndex];
     }
 }

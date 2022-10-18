@@ -8,7 +8,7 @@ namespace Ouroboros.VulcanMiner;
 
 internal class Sifter
 {
-    public async Task<List<string>> Mine(string rawData)
+    public async Task<List<string>> Mine(string rawData, int insightGoal = 1, int maxAttempts = 10)
     {
         var results = new List<string>();
 
@@ -29,7 +29,13 @@ internal class Sifter
 
                 insights++;
             }
-        } while (insights < 3 && attempts < 10);
+        } while (insights < insightGoal && attempts < maxAttempts);
+
+        // TODO: return both the insight and the citations.
+        // TODO: go further - can we propose ways to research this? Sources to explore? 
+        // TODO: maybe we can say that after researching it against all human knowledge, I discovered... 
+
+        // TODO: maybe build a genius researcher. Maybe we could stage a debate between some of the best minds in history on the topic.
 
         return results;
     }
@@ -43,6 +49,10 @@ internal class Sifter
 
         fragment.AddText("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n");
         await fragment.ResolveAndSubmit(newElementName: "insight");
+
+        // TODO: it might be better to ask for multiple insights off the bat, and then:
+        // TODO: Split them into a list. 
+        // TODO: Re-run what follows for each. 
 
         // Citations
         fragment.AddText("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.");

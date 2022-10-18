@@ -26,10 +26,18 @@ public class Client
 
     public async Task<string> Summarize(string text, int maxSentences)
     {
-        var fragment = new DeepFragment("text");
-        await fragment.Resolve();
+        var fragment = new DeepFragment(
+            $"This is a Harvard business professor who summarizes the provided text into at most {maxSentences} sentences, " + 
+            $"solving any spelling and grammatical issues. She preserves the original author's intent and does not censor criticism or add any new meaning." +
+            $"If the text involves details that might be attributable to the author, the professor will remove those to protect the author." +
+            "The result is professional and succinct, and cannot be traced to the original author in any way.\n\n" + 
+            $"Text: {text}\n" +
+            $"Summary:");
 
-        return fragment.ToString();
+        await fragment.ResolveAndSubmit();
+        var response = fragment.GetLastAsText();
+
+        return response;
     }
 
     public async Task<List<string>> Mine(string path)
