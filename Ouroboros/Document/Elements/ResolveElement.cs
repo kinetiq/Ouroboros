@@ -9,7 +9,7 @@ namespace Ouroboros.Document.Elements;
 [DebuggerDisplay("Resolve: { ToString }")]
 internal class ResolveElement : ElementBase
 {
-    // Attributes set via document
+    // Attributes set via element
     public string? Prompt { get; set; }
 
     // Attributes set via resolver

@@ -18,15 +18,34 @@ public class Client
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
 
-        var fragment = new DeepFragment(text);
+        var fragment = new Document.Document(text);
         await fragment.Resolve();
 
         return fragment.ToString();
     }
 
+    /// <summary>
+    /// Resolves the next element, and then stops. 
+    /// </summary>
+    public async Task<IDocument> ResolveNext(string path)
+    {
+        var text = await System.IO.File.ReadAllTextAsync(path);
+
+        Document.Document fragment = new Document.Document(text);
+
+        await fragment.Resolve(new ResolveOptions()
+        {
+            HaltAfterFirstComplete = true
+        });
+
+        return (IDocument) fragment;
+    }
+
+
+
     public async Task<string> Summarize(string text, int maxSentences)
     {
-        var fragment = new DeepFragment(
+        var fragment = new Document.Document(
             $"This is a Harvard business professor who summarizes the provided text into at most {maxSentences} sentences, " + 
             $"solving any spelling and grammatical issues. She preserves the original author's intent and does not censor criticism or add any new meaning." +
             $"If the text involves details that might be attributable to the author, the professor will remove those to protect the author." +

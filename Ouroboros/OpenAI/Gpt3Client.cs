@@ -24,7 +24,7 @@ internal class Gpt3Client
             MaxTokens = 256
         };
 
-        var completionResult = await api.Completions.Create(request, Models.Model.TextDavinciV2);
+        var completionResult = await api.Completions.Create(request, Models.Model.TextDavinciV3);
 
         if (completionResult.Successful)
             return completionResult.Choices.First()

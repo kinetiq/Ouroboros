@@ -11,28 +11,43 @@ using Ouroboros.OpenAI;
 
 namespace Ouroboros.Document;
 
-internal class DeepFragment
+internal class Document : IDocument
 {
+    private ResolveOptions Options = new ResolveOptions();
+
+    /// <summary>
+    /// Used to show the user where the last completion was.
+    /// </summary>
+    public ElementBase? LastResolvedElement = null;
     public List<ElementBase> DocElements { get; set; }
+
+
 
     #region Public API
     public async Task Resolve(ResolveOptions? options = null)
     {
-        options ??= new ResolveOptions();
+        Options = options ?? new ResolveOptions();
 
         // TODO: Any element could contain a resolve element. Maybe we should call them all recursively. 
+        // TODO: For now, we only check resolve elements.
         var resolveElements = DocElements
             .OfType<ResolveElement>()
             .Where(x => !x.IsResolved)
             .ToList();
 
-        // Iterate through any resolve elements first. Resolve them by calling GPT. 
+        // Iterate through any Resolve elements first. Handle these by calling the API. 
         foreach (var element in resolveElements)
+        {
             await ResolveElement(element);
+            LastResolvedElement = element;
+
+            if (Options.HaltAfterFirstComplete)
+                return;
+        }
 
         // Submit to GPT if necessary.
-        if (options.SubmitResultForCompletion)
-            await SubmitAndAppend(options);
+        if (Options.SubmitResultForCompletion)
+            await SubmitAndAppend();
     }
 
     /// <summary>
@@ -42,7 +57,8 @@ internal class DeepFragment
     {
         await Resolve(new ResolveOptions()
         {
-            SubmitResultForCompletion = true,
+            SubmitResultForCompletion = true, 
+            HaltAfterFirstComplete = Options.HaltAfterFirstComplete,
             NewElementName = newElementName 
         });
 
@@ -68,7 +84,7 @@ internal class DeepFragment
     /// <summary>
     /// Submits the document to the LLM, and then appends the result onto the end.
     /// </summary>
-    private async Task SubmitAndAppend(ResolveOptions options)
+    private async Task SubmitAndAppend()
     {
         var documentText = this.ToString();
 
@@ -77,30 +93,47 @@ internal class DeepFragment
 
         var textElement = new TextElement()
         {
-            Id = options.NewElementName,
+            Id = Options.NewElementName,
             IsGenerated = true,
             Content = result
         };
 
         DocElements.Add(textElement);
+        LastResolvedElement = textElement;
     }
 
+    /// <summary>
+    /// Resolves a single element by (1) recursively resolving any Resolve tags it may have and then
+    /// (2) resolving the entire resulting text (which, again, is just one element).
+    ///
+    /// Although we are only resolving a single element, the process involves the entire document
+    /// leading up to and including it. It does get a bit involved.  
+    /// 
+    /// The text that comes out of that process becomes the GeneratedText of our element.
+    /// </summary>
     private async Task ResolveElement(ResolveElement element)
     {
-        // Create a new fragment to help us handle the resolve tag. We swap out the prompt and
-        // cut the document off just before the resolve tag.
+        // We can't perform the resolve directly on our element, because resolution involves
+        // operations like swapping out the prompt, removing everything after element,
+        // and so on. We don't want to permanently damage the original fragment.
+        //
+        // Instead, we create a new "workspace" fragment to help us handle this job. This is a
+        // deep copy of the entire document fragment. 
+        //
+        // We use that workspace, chop it up, submit it to the API, and 
+        // plug the result back into our original element. The workspace gets tossed.
 
         var mutator = new ResolverMutator(this, element);
-        var fragment = mutator.MutateToNewFragment();
+        var workspace = mutator.MutateToNewFragment();
 
         //     ███ ███ ███ █┼█ ███ ███ ███ ███ █┼┼█     // 
         //     █▄┼ █▄┼ █┼┼ █┼█ █▄┼ █▄▄ ┼█┼ █┼█ ██▄█     // 
         //     █┼█ █▄▄ ███ ███ █┼█ ▄▄█ ▄█▄ █▄█ █┼██     //
+        //            HERE THERE BE SERPENTS            //
 
-        // This call will resolve the fragment, and resolve tags inside the fragment, recursively.
-        // A new element is returned. Note that it belongs to the new fragment, which is just sort of a temporary workspace,
-        // 
-        var newElement = await fragment.ResolveAndSubmit();
+        // Recursively resolve the element, then submit it. What we get back is an element that belongs
+        // to the workspace fragment. That contains our results.  
+        var newElement = await workspace.ResolveAndSubmit();
 
         // Plug that content into our element, and mark it resolved.
         element.GeneratedOutput = newElement.Content;
@@ -109,12 +142,12 @@ internal class DeepFragment
     #endregion
 
 
-    internal DeepFragment(List<ElementBase> docElements)
+    internal Document(List<ElementBase> docElements)
     {
         DocElements = docElements;
     }
 
-    internal DeepFragment(string text) 
+    internal Document(string text) 
     {
         var factory = new DocElementsFactory();
         DocElements = factory.Create(text);

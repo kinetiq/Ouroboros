@@ -4,7 +4,7 @@ namespace Ouroboros.Document.Extensions;
 
 internal static class AddTextExtensions
 {
-    public static TextElement AddText(this DeepFragment @this, string text)
+    public static TextElement AddText(this Document @this, string text)
     {
         var element = new TextElement(text);
 

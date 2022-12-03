@@ -30,16 +30,16 @@ internal class ResolverMutator
         return DocumentModel;
     }
 
-    public DeepFragment MutateToNewFragment()
+    public Document MutateToNewFragment()
     {
         Mutate();
 
-        return new DeepFragment(DocumentModel);
+        return new Document(DocumentModel);
     }
 
     #region Helpers
     /// <summary>
-    /// Cut the elements list off right *before* this element. 
+    /// Cut the elements list off right *after* this element. 
     /// </summary>
     private void TrimElements()
     {
@@ -84,7 +84,7 @@ internal class ResolverMutator
     } 
     #endregion
 
-    public ResolverMutator(DeepFragment source, ResolveElement element)
+    public ResolverMutator(Document source, ResolveElement element)
     {
         DocumentModel = source
             .DocElements

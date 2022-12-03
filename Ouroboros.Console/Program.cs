@@ -6,9 +6,11 @@ AnsiConsole.WriteLine();
 
 var client = new Ouroboros.Client();
 
-var output = await client.Resolve(@"D:\GPT\kevin.txt");
+var document = await client.ResolveNext(@"D:\GPT\kevin.txt");
 
-AnsiConsole.WriteLine(output);
+AnsiConsole.WriteLine(document.ToString());
+
+
 
 //foreach (var item in output)
 //{

@@ -19,12 +19,12 @@ internal class Sifter
         {
             attempts++;
 
-            var fragment = await GenerateInsight(rawData);
-            var likert = fragment.GetLastAsLikert();
+            var doc = await GenerateInsight(rawData);
+            var likert = doc.GetLastAsLikert();
 
             if (likert >= LikertAgreement4.Agree)
             {
-                var insight = fragment.GetById("insight");
+                var insight = doc.GetById("insight");
                 results.Add(insight.ToString());
 
                 insights++;
@@ -43,9 +43,9 @@ internal class Sifter
     /// <summary>
     /// Run a series of requests to gather and validate research ideas.
     /// </summary>
-    private async Task<DeepFragment> GenerateInsight(string text)
+    private async Task<Document.Document> GenerateInsight(string text)
     {
-        var fragment = new DeepFragment(text);
+        var fragment = new Document.Document(text);
 
         fragment.AddText("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n");
         await fragment.ResolveAndSubmit(newElementName: "insight");
