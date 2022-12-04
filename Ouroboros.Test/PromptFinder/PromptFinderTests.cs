@@ -27,8 +27,8 @@ public class PromptFinderTests
 
         Assert.Equal(2, docElements.Count);
         Assert.IsType<PromptElement>(docElements[0]);
-        Assert.Equal("This line should become the prompt.", docElements[0].Content);
-        Assert.Equal("This line will remain in the text element.", docElements[1].Content);
+        Assert.Equal("This line should become the prompt.", docElements[0].Text);
+        Assert.Equal("This line will remain in the text element.", docElements[1].Text);
     }
 
     /// <summary>
@@ -56,8 +56,8 @@ public class PromptFinderTests
 
         Assert.Equal(2, docElements.Count);
         Assert.IsType<PromptElement>(docElements[0]);
-        Assert.Equal("This line should become the prompt.", docElements[0].Content);
-        Assert.Equal("  \nThis line will remain in the text element.", docElements[1].Content);
+        Assert.Equal("This line should become the prompt.", docElements[0].Text);
+        Assert.Equal("  \nThis line will remain in the text element.", docElements[1].Text);
     }
 
     /// <summary>
@@ -79,6 +79,6 @@ public class PromptFinderTests
 
         Assert.Single(docElements);
         Assert.IsType<PromptElement>(docElements[0]);
-        Assert.Equal("This line should become the prompt.", docElements[0].Content);
+        Assert.Equal("This line should become the prompt.", docElements[0].Text);
     }
 }

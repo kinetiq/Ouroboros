@@ -62,7 +62,7 @@ internal class ResolverMutator
         var prompt = DocumentModel
             .First(x => x is PromptElement);
 
-        prompt.Content = Element.Prompt;
+        prompt.Text = Element.Prompt;
     }
 
     /// <summary>
@@ -70,14 +70,14 @@ internal class ResolverMutator
     /// </summary>
     private void AddTextElement()
     {
-        var content = Element.Content;
+        var content = Element.Text;
 
         if (content.IsNullOrWhiteSpace())
             return;
 
         var textElement = new TextElement()
         {
-            Content = content
+            Text = content
         };
 
         DocumentModel.Add(textElement);

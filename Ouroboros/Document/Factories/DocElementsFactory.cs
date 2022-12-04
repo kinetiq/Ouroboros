@@ -128,7 +128,7 @@ internal class DocElementsFactory
 
         if (subtext.Length > 0)
         {
-            DocElements.Add(new TextElement() { Content = subtext });
+            DocElements.Add(new TextElement() { Text = subtext });
         }
     }
 
@@ -144,6 +144,6 @@ internal class DocElementsFactory
 
         // Create the element.
         if (subtext.Length > 0)
-            DocElements.Add(new TextElement() { Content = subtext });
+            DocElements.Add(new TextElement() { Text = subtext });
     }
 }

@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace Ouroboros.Document.Elements;
 
 [Serializable]
-[DebuggerDisplay("Prompt: { Content }")]
+[DebuggerDisplay("Prompt: { Text }")]
 internal class PromptElement : ElementBase
 {
 }

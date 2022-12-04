@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace Ouroboros.Document.Elements;
 
 [Serializable]
-[DebuggerDisplay("Text: { Content }")]
+[DebuggerDisplay("Text: { Text }")]
 internal class TextElement : ElementBase
 {
     /// <summary>
@@ -17,8 +17,8 @@ internal class TextElement : ElementBase
         IsGenerated = false;
     }
 
-    public TextElement(string content) : this()
+    public TextElement(string text) : this()
     {
-        Content = content;
+        Text = text;
     }
 }

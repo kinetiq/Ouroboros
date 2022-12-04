@@ -29,7 +29,7 @@ internal static class GetLastGeneratedExtensions
     {
         return @this
             .GetLastGeneratedAsElement()
-            .Content;
+            .Text;
     }
 
     public static LikertAgreement4 GetLastAsLikert(this Document @this)

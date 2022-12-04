@@ -14,32 +14,32 @@ internal class ResolveElement : ElementBase
 
     // Attributes set via resolver
     public bool IsResolved { get; set; }
-    public string? GeneratedOutput { get; set; } 
+    public string? GeneratedText { get; set; } 
 
-    public string? GeneratedOutputSummary { get; set; } // Not implemented
+    public string? GeneratedTextSummary { get; set; } // Not implemented
 
     public override string ToString()
     {
         if (IsResolved)
         {
-            if (GeneratedOutputSummary.IsNotNullOrWhiteSpace())
-                return Content + GeneratedOutputSummary!;
+            if (GeneratedTextSummary.IsNotNullOrWhiteSpace())
+                return Text + GeneratedTextSummary!;
 
-            return GeneratedOutput.IsNotNullOrWhiteSpace() ?
-                Content + GeneratedOutput! : 
-                Content;
+            return GeneratedText.IsNotNullOrWhiteSpace() ?
+                Text + GeneratedText! : 
+                Text;
         }
 
-        return Content.IsNullOrWhiteSpace() ? 
+        return Text.IsNullOrWhiteSpace() ? 
             Prompt ?? string.Empty : 
-            Content;
+            Text;
     }
 
     public ResolveElement()
     {
         Prompt = null;
         IsResolved = false;
-        GeneratedOutput = string.Empty;
-        GeneratedOutputSummary = null;
+        GeneratedText = string.Empty;
+        GeneratedTextSummary = null;
     }
 }

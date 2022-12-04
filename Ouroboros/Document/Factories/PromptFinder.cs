@@ -55,7 +55,7 @@ internal class PromptFinder
     private static string[] SplitIntoLines(TextElement textElement)
     {
         return textElement
-            .Content
+            .Text
             .Split(
                 new string[] { "\r\n", "\r", "\n" },  // flexible approach
                 StringSplitOptions.None);
@@ -68,7 +68,7 @@ internal class PromptFinder
     {
         var prompt = new PromptElement()
         {
-            Content = firstRealLine
+            Text = firstRealLine
         };
 
         DocElements.Insert(0, prompt);
@@ -83,12 +83,12 @@ internal class PromptFinder
     {
         var index = lines.IndexOf(firstRealLine);
 
-        textElement.Content = lines
+        textElement.Text = lines
             .Where(x => lines.IndexOf(x) > index)
             .ToList()
             .StringJoin("\n");
 
-        if (textElement.Content.IsNullOrWhiteSpace())
+        if (textElement.Text.IsNullOrWhiteSpace())
             DocElements.Remove(textElement);
     }
 

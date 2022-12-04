@@ -16,7 +16,7 @@ internal static class LikertAgreementExtensions
     /// </summary>
     public static LikertAgreement4 ToAgreementScale(this TextElement @this)
     {
-        var content = @this.Content
+        var content = @this.Text
             .Trim()
             .ToLower();
 

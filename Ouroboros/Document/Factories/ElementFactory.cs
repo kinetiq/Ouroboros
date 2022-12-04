@@ -32,7 +32,7 @@ internal class ElementFactory
         return new ResolveElement()
         {
             Prompt = promptAttr?.Value,
-            Content = PrepareContent(element)
+            Text = PrepareContent(element)
         };
     }
 
@@ -40,7 +40,7 @@ internal class ElementFactory
     {
         return new TextElement()
         {
-            Content = PrepareContent(element)
+            Text = PrepareContent(element)
         };
     }
 
@@ -48,7 +48,7 @@ internal class ElementFactory
     {
         return new PromptElement()
         {
-            Content = PrepareContent(element)
+            Text = PrepareContent(element)
         };
     }
 

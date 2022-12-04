@@ -21,8 +21,6 @@ internal class Document : IDocument
     public ElementBase? LastResolvedElement = null;
     public List<ElementBase> DocElements { get; set; }
 
-
-
     #region Public API
     public async Task Resolve(ResolveOptions? options = null)
     {
@@ -51,7 +49,7 @@ internal class Document : IDocument
     }
 
     /// <summary>
-    /// Override that always submits the document to GPT-3. This is not the default behavior.
+    /// Override that always submits the document to the LLM. This is not the default behavior.
     /// </summary>
     public async Task<TextElement> ResolveAndSubmit(string newElementName = "")
     {
@@ -95,7 +93,7 @@ internal class Document : IDocument
         {
             Id = Options.NewElementName,
             IsGenerated = true,
-            Content = result
+            Text = result
         };
 
         DocElements.Add(textElement);
@@ -136,11 +134,10 @@ internal class Document : IDocument
         var newElement = await workspace.ResolveAndSubmit();
 
         // Plug that content into our element, and mark it resolved.
-        element.GeneratedOutput = newElement.Content;
+        element.GeneratedText = newElement.Text;
         element.IsResolved = true;
     }
     #endregion
-
 
     internal Document(List<ElementBase> docElements)
     {

@@ -10,15 +10,19 @@ internal class ElementBase
     /// it's used by devs only.
     /// </summary>
     public string Id { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
 
     /// <summary>
-    /// If a tag's content has been summarized, that is stored here.
+    /// The text inside the element.
     /// </summary>
-    public string ContentSummary { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+
+    /// <summary>
+    /// If a tag's text contents has been summarized, that is stored here.
+    /// </summary>
+    public string TextSummary { get; set; } = string.Empty;
 
     public override string ToString()
     {
-        return Content;
+        return Text;
     }
 }
