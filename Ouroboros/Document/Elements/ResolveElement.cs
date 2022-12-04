@@ -35,6 +35,23 @@ internal class ResolveElement : ElementBase
             Text;
     }
 
+    internal override string ToModelInput()
+    {
+        if (IsResolved)
+        {
+            if (GeneratedTextSummary.IsNotNullOrWhiteSpace())
+                return Text + GeneratedTextSummary!;
+
+            return GeneratedText.IsNotNullOrWhiteSpace() ?
+                Text + GeneratedText! :
+                Text;
+        }
+
+        return Text.IsNullOrWhiteSpace() ?
+            Prompt ?? string.Empty :
+            Text;
+    }
+
     public ResolveElement()
     {
         Prompt = null;

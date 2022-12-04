@@ -63,6 +63,16 @@ internal class Document : IDocument
         return this.GetLastGeneratedAsElement();
     }
 
+    internal string ToModelInput()
+    {
+        var builder = new StringBuilder();
+
+        foreach (var element in DocElements)
+            builder.Append(element.ToModelInput());
+
+        return builder.ToString();
+    }
+
     /// <summary>
     /// Returns the text representation of the document model.
     /// </summary>
@@ -84,7 +94,7 @@ internal class Document : IDocument
     /// </summary>
     private async Task SubmitAndAppend()
     {
-        var documentText = this.ToString();
+        var documentText = this.ToModelInput();
 
         var client = new Gpt3Client();
         var result = await client.Complete(documentText);

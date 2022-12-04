@@ -21,7 +21,18 @@ internal class ElementBase
     /// </summary>
     public string TextSummary { get; set; } = string.Empty;
 
+    /// <summary>
+    /// For use when displaying an element to the user.
+    /// </summary>
     public override string ToString()
+    {
+        return Text;
+    }
+
+    /// <summary>
+    /// For use when rendering an element as input into an LLM API.
+    /// </summary>
+    internal virtual string ToModelInput()
     {
         return Text;
     }
