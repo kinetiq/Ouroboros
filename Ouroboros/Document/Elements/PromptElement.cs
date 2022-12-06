@@ -5,6 +5,10 @@ namespace Ouroboros.Document.Elements;
 
 [Serializable]
 [DebuggerDisplay("Prompt: { Text }")]
-internal class PromptElement : ElementBase
+public class PromptElement : ElementBase
 {
+    public override string Type()
+    {
+        return "Prompt";
+    }
 }

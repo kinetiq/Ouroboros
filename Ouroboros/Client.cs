@@ -31,14 +31,22 @@ public class Client
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
 
-        Document.Document fragment = new Document.Document(text);
+        var doc = new Document.Document(text);
 
-        await fragment.Resolve(new ResolveOptions()
+        await doc.Resolve(new ResolveOptions()
         {
             HaltAfterFirstComplete = true
         });
 
-        return (IDocument) fragment;
+        return (IDocument) doc;
+    }
+
+    /// <summary>
+    /// Resolves the next element, and then stops. 
+    /// </summary>
+    public async Task ResolveNext(IDocument document)
+    {
+        await document.ResolveNext();
     }
 
 

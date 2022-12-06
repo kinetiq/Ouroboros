@@ -3,7 +3,7 @@
 namespace Ouroboros.Document.Elements;
 
 [Serializable]
-internal class ElementBase
+public abstract class ElementBase
 {
     /// <summary>
     /// You can optionally give any element a unique name. Ouroboros does not use this internally;
@@ -15,6 +15,8 @@ internal class ElementBase
     /// The text inside the element.
     /// </summary>
     public string Text { get; set; } = string.Empty;
+
+    public abstract string Type();
 
     /// <summary>
     /// If a tag's text contents has been summarized, that is stored here.

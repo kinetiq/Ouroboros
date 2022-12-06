@@ -7,8 +7,13 @@ namespace Ouroboros.Document.Elements;
 
 [Serializable]
 [DebuggerDisplay("Resolve: { ToString }")]
-internal class ResolveElement : ElementBase
+public class ResolveElement : ElementBase
 {
+    public override string Type()
+    {
+        return "Resolve";
+    }
+
     // Attributes set via element
     public string? Prompt { get; set; }
 

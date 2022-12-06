@@ -52,7 +52,7 @@ internal class DocElementsFactory
 
 
     /// <summary>
-    /// If we don't have an explicit Prompt tag, try to find one by interrogating DocElements. 
+    /// If we don't have an explicit Prompt tag, try to find one by interrogating DocElements.
     /// </summary>
     public void FindPrompt()
     {

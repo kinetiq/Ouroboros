@@ -18,10 +18,15 @@ internal class Document : IDocument
     /// <summary>
     /// Used to show the user where the last completion was.
     /// </summary>
-    public ElementBase? LastResolvedElement = null;
+    public ElementBase? LastResolvedElement { get; set; } = null;
     public List<ElementBase> DocElements { get; set; }
 
     #region Public API
+
+
+    /// <summary>
+    /// Resolves this document.
+    /// </summary>
     public async Task Resolve(ResolveOptions? options = null)
     {
         Options = options ?? new ResolveOptions();
@@ -49,6 +54,18 @@ internal class Document : IDocument
     }
 
     /// <summary>
+    /// Resolves this document, but stop after the first completion.
+    /// </summary>
+    /// <returns></returns>
+    public async Task ResolveNext()
+    {
+        await Resolve(new ResolveOptions()
+        {
+            HaltAfterFirstComplete = true
+        });
+    }
+
+    /// <summary>
     /// Override that always submits the document to the LLM. This is not the default behavior.
     /// </summary>
     public async Task<TextElement> ResolveAndSubmit(string newElementName = "")
@@ -63,6 +80,9 @@ internal class Document : IDocument
         return this.GetLastGeneratedAsElement();
     }
 
+    /// <summary>
+    /// Renders the document to text for use as input into an LLM.
+    /// </summary>
     internal string ToModelInput()
     {
         var builder = new StringBuilder();
