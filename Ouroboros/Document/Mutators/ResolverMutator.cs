@@ -1,12 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Ouroboros.Document.Elements;
+using Ouroboros.OpenAI;
 using Z.Core.Extensions;
 
 namespace Ouroboros.Document.Mutators;
 
 internal class ResolverMutator
 {
+    private readonly OpenAiClient Client;
     private readonly ResolveElement Element;
     private List<ElementBase> DocumentModel;
 
@@ -34,7 +36,7 @@ internal class ResolverMutator
     {
         Mutate();
 
-        return new Document(DocumentModel);
+        return new Document(Client, DocumentModel);
     }
 
     #region Helpers
@@ -97,5 +99,7 @@ internal class ResolverMutator
             .IndexOf(element);
 
         Element = (ResolveElement) DocumentModel[sourceIndex];
+
+        Client = source.Client;
     }
 }

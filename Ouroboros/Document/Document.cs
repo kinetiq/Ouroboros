@@ -13,6 +13,7 @@ namespace Ouroboros.Document;
 
 internal class Document : IDocument
 {
+    internal OpenAiClient Client { get; }
     private ResolveOptions Options = new ResolveOptions();
 
     /// <summary>
@@ -115,9 +116,8 @@ internal class Document : IDocument
     private async Task SubmitAndAppend()
     {
         var documentText = this.ToModelInput();
-
-        var client = new Gpt3Client();
-        var result = await client.Complete(documentText);
+        
+        var result = await Client.Complete(documentText);
 
         var textElement = new TextElement()
         {
@@ -169,13 +169,15 @@ internal class Document : IDocument
     }
     #endregion
 
-    internal Document(List<ElementBase> docElements)
+    internal Document(OpenAiClient client, List<ElementBase> docElements)
     {
         DocElements = docElements;
+        Client = client;
     }
 
-    internal Document(string text) 
+    internal Document(OpenAiClient client, string text) 
     {
+        Client = client;
         var factory = new DocElementsFactory();
         DocElements = factory.Create(text);
     }

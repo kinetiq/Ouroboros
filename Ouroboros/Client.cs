@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Ouroboros.Document;
 using Ouroboros.Document.Extensions;
-using Ouroboros.Scales;
+using Ouroboros.OpenAI;
 using Ouroboros.VulcanMiner;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
@@ -12,13 +12,14 @@ namespace Ouroboros;
 
 public class Client
 {
-    //private string TemplateRoot { get; set; }
+    private string ApiKey;
 
     public async Task<string> Resolve(string path)
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
-
-        var fragment = new Document.Document(text);
+        var client = new OpenAiClient(ApiKey);
+        
+        var fragment = new Document.Document(client, text);
         await fragment.Resolve();
 
         return fragment.ToString();
@@ -30,8 +31,9 @@ public class Client
     public async Task<IDocument> ResolveNext(string path)
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
+        var client = new OpenAiClient(ApiKey);
 
-        var doc = new Document.Document(text);
+        var doc = new Document.Document(client, text);
 
         await doc.Resolve(new ResolveOptions()
         {
@@ -53,7 +55,9 @@ public class Client
 
     public async Task<string> Summarize(string text, int maxSentences)
     {
-        var fragment = new Document.Document(
+        var client = new OpenAiClient(ApiKey);
+
+        var fragment = new Document.Document(client, 
             $"This is a Harvard business professor who summarizes the provided text into at most {maxSentences} sentences, " + 
             $"solving any spelling and grammatical issues. She preserves the original author's intent and does not censor criticism or add any new meaning." +
             $"If the text involves details that might be attributable to the author, the professor will remove those to protect the author." +
@@ -70,8 +74,16 @@ public class Client
     public async Task<List<string>> Mine(string path)
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
-        var sifter = new Sifter();
+        var client = new OpenAiClient(ApiKey);
+
+        var sifter = new Sifter(client);
 
         return await sifter.Mine(text);
     }
+
+    public Client(string apiKey)
+    {
+        ApiKey = apiKey;
+    }
+
 }

@@ -1,10 +1,11 @@
-﻿using Ouroboros.Console.UI;
+﻿using Ouroboros;
+using Ouroboros.Console.UI;
 using Spectre.Console;
 
 // See https://aka.ms/new-console-template for more information
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new Ouroboros.Client();
+var client = new Client("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");
 
 var document = await client.ResolveNext(@"D:\GPT\kevin.txt");
 Renderer.Render(document);

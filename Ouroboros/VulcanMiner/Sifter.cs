@@ -3,11 +3,14 @@ using Ouroboros.Scales;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ouroboros.Document.Extensions;
+using Ouroboros.OpenAI;
 
 namespace Ouroboros.VulcanMiner;
 
 internal class Sifter
 {
+    private readonly OpenAiClient Client;
+
     public async Task<List<string>> Mine(string rawData, int insightGoal = 1, int maxAttempts = 10)
     {
         var results = new List<string>();
@@ -45,7 +48,7 @@ internal class Sifter
     /// </summary>
     private async Task<Document.Document> GenerateInsight(string text)
     {
-        var fragment = new Document.Document(text);
+        var fragment = new Document.Document(Client, text);
 
         fragment.AddText("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n");
         await fragment.ResolveAndSubmit(newElementName: "insight");
@@ -63,5 +66,10 @@ internal class Sifter
         await fragment.ResolveAndSubmit(newElementName: "validation");
 
         return fragment;
+    }
+
+    internal Sifter(OpenAiClient client)
+    {
+        Client = client;
     }
 }

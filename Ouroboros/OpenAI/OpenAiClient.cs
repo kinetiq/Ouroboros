@@ -8,8 +8,10 @@ using OpenAI.GPT3.ObjectModels.RequestModels;
 
 namespace Ouroboros.OpenAI;
 
-internal class Gpt3Client 
+internal class OpenAiClient 
 {
+    private readonly string ApiKey;
+
     public async Task<string> Complete(string text)
     {
         var api = GetClient();
@@ -39,7 +41,12 @@ internal class Gpt3Client
     {
         return new OpenAIService(new OpenAiOptions
         {
-            ApiKey = "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"
+            ApiKey = ApiKey
         });
+    }
+
+    internal OpenAiClient(string apiKey)
+    {
+        ApiKey = apiKey;
     }
 }
