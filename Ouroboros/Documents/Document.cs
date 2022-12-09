@@ -7,13 +7,12 @@ using Ouroboros.Documents.Elements;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.Documents.Factories;
 using Ouroboros.Documents.Mutators;
-using Ouroboros.OpenAI;
 
 namespace Ouroboros.Documents;
 
 public class Document
 {
-    internal OpenAiClient Client { get; }
+    internal Client Client { get; }
     private ResolveOptions Options = new();
 
     /// <summary>
@@ -168,13 +167,13 @@ public class Document
     }
     #endregion
 
-    internal Document(OpenAiClient client, List<ElementBase> docElements)
+    internal Document(Client client, List<ElementBase> docElements)
     {
         DocElements = docElements;
         Client = client;
     }
 
-    internal Document(OpenAiClient client, string text) 
+    internal Document(Client client, string text) 
     {
         Client = client;
         var factory = new DocElementsFactory();

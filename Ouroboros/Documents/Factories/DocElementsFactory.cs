@@ -10,11 +10,10 @@ namespace Ouroboros.Documents.Factories;
 internal class DocElementsFactory
 {
     public const string XmlTagPattern = "<[^>]+>";
-
-    private readonly ElementFactory ElementFactory = new ElementFactory();
-
-    private  List<ElementBase> DocElements = new List<ElementBase>();
-
+    
+    private readonly ElementFactory ElementFactory = new();
+    
+    private  List<ElementBase> DocElements = new();
     private string Text = "";
     private Match? LastMatch = null;
     private bool IsInTag = false;

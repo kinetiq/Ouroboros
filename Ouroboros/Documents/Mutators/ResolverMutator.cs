@@ -8,7 +8,7 @@ namespace Ouroboros.Documents.Mutators;
 
 internal class ResolverMutator
 {
-    private readonly OpenAiClient Client;
+    private readonly Client Client;
     private readonly ResolveElement Element;
     private List<ElementBase> DocumentModel;
 

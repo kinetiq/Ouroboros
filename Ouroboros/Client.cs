@@ -15,20 +15,23 @@ namespace Ouroboros;
 
 public class Client
 {
-    private readonly string ApiKey;
+    private readonly OpenAiClient CompletionClient;
+
+    public async Task<string> Complete(string text)
+    {
+        return await CompletionClient.Complete(text);
+    }
 
     public Document CreateDocument(string text)
     {
-        var client = new OpenAiClient(ApiKey);
-        return new Document(client, text); // TODO: return an IDocument builder interface
+        return new Document(this, text); // TODO: return an IDocument builder interface
     }
 
     public async Task<string> Resolve(string path)
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
-        var client = new OpenAiClient(ApiKey);
-        
-        var fragment = new Document(client, text);
+
+        var fragment = new Document(this, text);
         await fragment.Resolve();
 
         return fragment.ToString();
@@ -40,10 +43,9 @@ public class Client
     public async Task<Document> ResolveNext(string path)
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
-        var client = new OpenAiClient(ApiKey);
 
-        var doc = new Document(client, text);
-
+        var doc = new Document(this, text);
+        
         await doc.Resolve(new ResolveOptions()
         {
             HaltAfterFirstComplete = true
@@ -62,9 +64,7 @@ public class Client
 
     public async Task<string> Summarize(string text, int maxSentences)
     {
-        var client = new OpenAiClient(ApiKey);
-
-        var fragment = new Document(client, 
+        var fragment = new Document(this, 
             $"This is a Harvard business professor who summarizes the provided text into at most {maxSentences} sentences, " + 
             $"solving any spelling and grammatical issues. She preserves the original author's intent and does not censor criticism or add any new meaning." +
             $"If the text involves details that might be attributable to the author, the professor will remove those to protect the author." +
@@ -90,6 +90,6 @@ public class Client
 
     public Client(string apiKey)
     {
-        ApiKey = apiKey;
+        CompletionClient = new OpenAiClient(apiKey);
     }
 }

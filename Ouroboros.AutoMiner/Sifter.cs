@@ -7,7 +7,7 @@ namespace Ouroboros.AutoMiner;
 
 internal class Sifter
 {
-    private readonly OpenAiClient Client;
+    private readonly Client Client;
 
     public async Task<List<string>> Mine(string rawData, int insightGoal = 1, int maxAttempts = 10)
     {
@@ -46,8 +46,8 @@ internal class Sifter
     /// </summary>
     private async Task<Document> GenerateInsight(string text)
     {
-     
-        var doc = new Document(Client, text);
+
+        var doc = Client.CreateDocument(text);
 
         // doc.Ask("...");
         // var answer = doc.AsLikert("");
@@ -71,7 +71,7 @@ internal class Sifter
         return doc;
     }
 
-    internal Sifter(OpenAiClient client)
+    internal Sifter(Client client)
     {
         Client = client;
     }
