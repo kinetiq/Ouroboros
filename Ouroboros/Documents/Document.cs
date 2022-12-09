@@ -11,7 +11,7 @@ using Ouroboros.OpenAI;
 
 namespace Ouroboros.Documents;
 
-internal class Document : IDocument
+public class Document
 {
     internal OpenAiClient Client { get; }
     private ResolveOptions Options = new();
@@ -23,10 +23,9 @@ internal class Document : IDocument
     public List<ElementBase> DocElements { get; set; }
 
     #region Public API
-
-
     /// <summary>
-    /// Resolves this document.
+    /// Resolves this document. Note that this does not submit the result to the LLM for
+    /// completion, but you can use ResolveAndSubmit if you want to do both.
     /// </summary>
     public async Task Resolve(ResolveOptions? options = null)
     {
@@ -55,9 +54,8 @@ internal class Document : IDocument
     }
 
     /// <summary>
-    /// Resolves this document, but stop after the first completion.
+    /// Resolve this document, but stop after the first completion.
     /// </summary>
-    /// <returns></returns>
     public async Task ResolveNext()
     {
         await Resolve(new ResolveOptions()
@@ -68,6 +66,7 @@ internal class Document : IDocument
 
     /// <summary>
     /// Override that always submits the document to the LLM. This is not the default behavior.
+    /// Returns only the output. 
     /// </summary>
     public async Task<TextElement> ResolveAndSubmit(string newElementName = "")
     {

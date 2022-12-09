@@ -1,11 +1,9 @@
-﻿using Ouroboros.Scales;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Ouroboros.Documents;
+﻿using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.OpenAI;
+using Ouroboros.Scales;
 
-namespace Ouroboros.VulcanMiner;
+namespace Ouroboros.AutoMiner;
 
 internal class Sifter
 {
@@ -25,13 +23,13 @@ internal class Sifter
             var doc = await GenerateInsight(rawData);
             var likert = doc.GetLastAsLikert();
 
-            if (likert >= LikertAgreement4.Agree)
-            {
-                var insight = doc.GetById("insight");
-                results.Add(insight.ToString());
+            if (likert < LikertAgreement4.Agree) 
+                continue;
+            
+            var insight = doc.GetById("insight");
+            results.Add(insight.ToString());
 
-                insights++;
-            }
+            insights++;
         } while (insights < insightGoal && attempts < maxAttempts);
 
         // TODO: return both the insight and the citations.
@@ -48,24 +46,29 @@ internal class Sifter
     /// </summary>
     private async Task<Document> GenerateInsight(string text)
     {
-        var fragment = new Document(Client, text);
+     
+        var doc = new Document(Client, text);
 
-        fragment.AddText("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n");
-        await fragment.ResolveAndSubmit(newElementName: "insight");
+        // doc.Ask("...");
+        // var answer = doc.AsLikert("");
+        //
+        // 
+        doc.AddText("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n");
+        await doc.ResolveAndSubmit(newElementName: "insight");
 
         // TODO: it might be better to ask for multiple insights off the bat, and then:
         // TODO: Split them into a list. 
         // TODO: Re-run what follows for each. 
 
         // Citations
-        fragment.AddText("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.");
-        await fragment.ResolveAndSubmit(newElementName: "citations");
+        doc.AddText("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.");
+        await doc.ResolveAndSubmit(newElementName: "citations");
 
         // Validation
-        fragment.AddText("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.");
-        await fragment.ResolveAndSubmit(newElementName: "validation");
+        doc.AddText("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.");
+        await doc.ResolveAndSubmit(newElementName: "validation");
 
-        return fragment;
+        return doc;
     }
 
     internal Sifter(OpenAiClient client)

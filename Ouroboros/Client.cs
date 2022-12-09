@@ -4,15 +4,24 @@ using System.Threading.Tasks;
 using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.OpenAI;
-using Ouroboros.VulcanMiner;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
 namespace Ouroboros;
 
+// TODO: combine OpenAiClient and Client into a single class.
+// TODO: But also keep OpenAiClient abstracted out as a possible way to 
+// TODO: Add other LLMs.
+
 public class Client
 {
     private readonly string ApiKey;
+
+    public Document CreateDocument(string text)
+    {
+        var client = new OpenAiClient(ApiKey);
+        return new Document(client, text); // TODO: return an IDocument builder interface
+    }
 
     public async Task<string> Resolve(string path)
     {
@@ -28,7 +37,7 @@ public class Client
     /// <summary>
     /// Resolves the next element, and then stops. 
     /// </summary>
-    public async Task<IDocument> ResolveNext(string path)
+    public async Task<Document> ResolveNext(string path)
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
         var client = new OpenAiClient(ApiKey);
@@ -40,13 +49,13 @@ public class Client
             HaltAfterFirstComplete = true
         });
 
-        return (IDocument) doc;
+        return (Document) doc;
     }
 
     /// <summary>
     /// Resolves the next element, and then stops. 
     /// </summary>
-    public async Task ResolveNext(IDocument document)
+    public async Task ResolveNext(Document document)
     {
         await document.ResolveNext();
     }
@@ -69,15 +78,15 @@ public class Client
         return response;
     }
 
-    public async Task<List<string>> Mine(string path)
-    {
-        var text = await System.IO.File.ReadAllTextAsync(path);
-        var client = new OpenAiClient(ApiKey);
+    //public async Task<List<string>> Mine(string path)
+    //{
+    //    var text = await System.IO.File.ReadAllTextAsync(path);
+    //    var client = new OpenAiClient(ApiKey);
 
-        var sifter = new Sifter(client);
+    //    var sifter = new Sifter(client);
 
-        return await sifter.Mine(text);
-    }
+    //    return await sifter.Mine(text);
+    //}
 
     public Client(string apiKey)
     {

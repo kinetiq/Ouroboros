@@ -3,7 +3,7 @@ using Ouroboros.Scales;
 
 namespace Ouroboros.Documents.Extensions;
 
-internal static class LikertAgreementExtensions
+public static class LikertAgreementExtensions
 {
     /// <summary>
     /// Given a TextElement containing a likert response, this returns a likert enum.

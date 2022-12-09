@@ -8,7 +8,7 @@ using OpenAI.GPT3.ObjectModels.RequestModels;
 
 namespace Ouroboros.OpenAI;
 
-internal class OpenAiClient 
+public class OpenAiClient 
 {
     private readonly string ApiKey;
 

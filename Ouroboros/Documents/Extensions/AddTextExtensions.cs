@@ -2,7 +2,7 @@
 
 namespace Ouroboros.Documents.Extensions;
 
-internal static class AddTextExtensions
+public static class AddTextExtensions
 {
     public static TextElement AddText(this Document @this, string text)
     {

@@ -5,7 +5,7 @@ using Z.Core.Extensions;
 
 namespace Ouroboros.Documents.Extensions;
 
-internal static class GetLastGeneratedExtensions
+public static class GetLastGeneratedExtensions
 {
     public static ElementBase GetById(this Document @this, string id)
     {

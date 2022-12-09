@@ -10,7 +10,7 @@ namespace Ouroboros.Console.UI;
 
 internal static class Renderer
 {
-    internal static void Render(IDocument document)
+    internal static void Render(Document document)
     {
         foreach (var element in document.DocElements)
         {
