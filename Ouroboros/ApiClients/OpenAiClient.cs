@@ -1,14 +1,13 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using OpenAI.GPT3;
 using OpenAI.GPT3.Managers;
 using OpenAI.GPT3.ObjectModels;
 using OpenAI.GPT3.ObjectModels.RequestModels;
 
-namespace Ouroboros.OpenAI;
+namespace Ouroboros.ApiClients;
 
-internal class OpenAiClient 
+internal class OpenAiClient : IApiClient
 {
     private readonly string ApiKey;
 

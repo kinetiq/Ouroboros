@@ -1,9 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Ouroboros.ApiClients;
 using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
-using Ouroboros.OpenAI;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -15,11 +14,11 @@ namespace Ouroboros;
 
 public class Client
 {
-    private readonly OpenAiClient CompletionClient;
+    private readonly IApiClient ApiClient;
 
     public async Task<string> Complete(string text)
     {
-        return await CompletionClient.Complete(text);
+        return await ApiClient.Complete(text);
     }
 
     public Document CreateDocument(string text)
@@ -90,6 +89,6 @@ public class Client
 
     public Client(string apiKey)
     {
-        CompletionClient = new OpenAiClient(apiKey);
+        ApiClient = new OpenAiClient(apiKey);
     }
 }

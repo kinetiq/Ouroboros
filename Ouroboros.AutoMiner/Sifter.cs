@@ -1,6 +1,5 @@
 ﻿using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
-using Ouroboros.OpenAI;
 using Ouroboros.Scales;
 
 namespace Ouroboros.AutoMiner;

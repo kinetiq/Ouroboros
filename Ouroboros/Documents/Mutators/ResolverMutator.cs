@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Ouroboros.Documents.Elements;
-using Ouroboros.OpenAI;
 using Z.Core.Extensions;
 
 namespace Ouroboros.Documents.Mutators;
