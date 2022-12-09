@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Ouroboros.Document.Elements;
-using Ouroboros.Document.Extensions;
-using Ouroboros.Document.Factories;
-using Ouroboros.Document.Mutators;
+using Ouroboros.Documents.Elements;
+using Ouroboros.Documents.Extensions;
+using Ouroboros.Documents.Factories;
+using Ouroboros.Documents.Mutators;
 using Ouroboros.OpenAI;
 
-namespace Ouroboros.Document;
+namespace Ouroboros.Documents;
 
 internal class Document : IDocument
 {
     internal OpenAiClient Client { get; }
-    private ResolveOptions Options = new ResolveOptions();
+    private ResolveOptions Options = new();
 
     /// <summary>
     /// Used to show the user where the last completion was.

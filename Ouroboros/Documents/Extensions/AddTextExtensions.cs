@@ -1,6 +1,6 @@
-﻿using Ouroboros.Document.Elements;
+﻿using Ouroboros.Documents.Elements;
 
-namespace Ouroboros.Document.Extensions;
+namespace Ouroboros.Documents.Extensions;
 
 internal static class AddTextExtensions
 {

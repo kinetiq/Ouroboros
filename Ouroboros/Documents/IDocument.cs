@@ -1,8 +1,8 @@
-﻿using Ouroboros.Document.Elements;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Ouroboros.Documents.Elements;
 
-namespace Ouroboros.Document;
+namespace Ouroboros.Documents;
 
 /// <summary>
 /// A resolved or partially resolved document.

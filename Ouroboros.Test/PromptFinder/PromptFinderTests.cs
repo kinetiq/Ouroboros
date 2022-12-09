@@ -1,5 +1,5 @@
-using Ouroboros.Document.Elements;
-using Ouroboros.Document.Factories;
+using Ouroboros.Documents.Elements;
+using Ouroboros.Documents.Factories;
 
 namespace Ouroboros.Test.PromptFinder;
 
@@ -21,7 +21,7 @@ public class PromptFinderTests
                                   "</Text>")
         };
 
-        var promptFinder = new Document.Factories.PromptFinder(docElements);
+        var promptFinder = new Documents.Factories.PromptFinder(docElements);
 
         promptFinder.FindPrompt();
 
@@ -50,7 +50,7 @@ public class PromptFinderTests
                                   "</Text>")
         };
 
-        var promptFinder = new Document.Factories.PromptFinder(docElements);
+        var promptFinder = new Documents.Factories.PromptFinder(docElements);
 
         promptFinder.FindPrompt();
 
@@ -73,7 +73,7 @@ public class PromptFinderTests
             elementFactory.Create("<Text>This line should become the prompt.</Text>")
         };
 
-        var promptFinder = new Document.Factories.PromptFinder(docElements);
+        var promptFinder = new Documents.Factories.PromptFinder(docElements);
 
         promptFinder.FindPrompt();
 

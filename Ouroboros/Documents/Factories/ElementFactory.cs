@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Xml.Linq;
-using Ouroboros.Document.Elements;
+using Ouroboros.Documents.Elements;
 using Z.Core.Extensions;
 
-namespace Ouroboros.Document.Factories;
-
+namespace Ouroboros.Documents.Factories;
 
 /// <summary>
 /// Generates elements of various types from raw text.

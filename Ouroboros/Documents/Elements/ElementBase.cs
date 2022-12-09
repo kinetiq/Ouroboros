@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Ouroboros.Document.Elements;
+namespace Ouroboros.Documents.Elements;
 
 [Serializable]
 public abstract class ElementBase

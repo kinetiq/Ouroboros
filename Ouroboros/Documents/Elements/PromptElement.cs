@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace Ouroboros.Document.Elements;
+namespace Ouroboros.Documents.Elements;
 
 [Serializable]
 [DebuggerDisplay("Prompt: { Text }")]

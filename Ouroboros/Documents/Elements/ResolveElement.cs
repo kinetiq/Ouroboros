@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using Z.Core.Extensions;
 
-namespace Ouroboros.Document.Elements;
+namespace Ouroboros.Documents.Elements;
 
 [Serializable]
 [DebuggerDisplay("Resolve: { ToString }")]

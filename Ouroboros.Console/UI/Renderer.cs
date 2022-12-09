@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Ouroboros.Document;
+using Ouroboros.Documents;
 using Spectre.Console;
 
 namespace Ouroboros.Console.UI;

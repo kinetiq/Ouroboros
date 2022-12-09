@@ -1,5 +1,5 @@
 ﻿#nullable enable
-namespace Ouroboros.Document;
+namespace Ouroboros.Documents;
 
 internal class ResolveOptions
 {

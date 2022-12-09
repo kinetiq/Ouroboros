@@ -1,12 +1,12 @@
-﻿using Ouroboros.Document.Elements;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Ouroboros.Documents.Elements;
 using Z.Collections.Extensions;
 using Z.Core.Extensions;
 
-namespace Ouroboros.Document.Factories;
+namespace Ouroboros.Documents.Factories;
 
 internal class PromptFinder
 {

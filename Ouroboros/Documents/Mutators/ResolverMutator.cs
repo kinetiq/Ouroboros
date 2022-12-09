@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Ouroboros.Document.Elements;
+using Ouroboros.Documents.Elements;
 using Ouroboros.OpenAI;
 using Z.Core.Extensions;
 
-namespace Ouroboros.Document.Mutators;
+namespace Ouroboros.Documents.Mutators;
 
 internal class ResolverMutator
 {

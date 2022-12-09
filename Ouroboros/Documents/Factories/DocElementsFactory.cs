@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Ouroboros.Document.Elements;
+using Ouroboros.Documents.Elements;
 
-namespace Ouroboros.Document.Factories;
+namespace Ouroboros.Documents.Factories;
 
 internal class DocElementsFactory
 {

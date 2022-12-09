@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Ouroboros.Document;
-using Ouroboros.Document.Extensions;
+using Ouroboros.Documents;
+using Ouroboros.Documents.Extensions;
 using Ouroboros.OpenAI;
 using Ouroboros.VulcanMiner;
 
@@ -12,14 +12,14 @@ namespace Ouroboros;
 
 public class Client
 {
-    private string ApiKey;
+    private readonly string ApiKey;
 
     public async Task<string> Resolve(string path)
     {
         var text = await System.IO.File.ReadAllTextAsync(path);
         var client = new OpenAiClient(ApiKey);
         
-        var fragment = new Document.Document(client, text);
+        var fragment = new Document(client, text);
         await fragment.Resolve();
 
         return fragment.ToString();
@@ -33,7 +33,7 @@ public class Client
         var text = await System.IO.File.ReadAllTextAsync(path);
         var client = new OpenAiClient(ApiKey);
 
-        var doc = new Document.Document(client, text);
+        var doc = new Document(client, text);
 
         await doc.Resolve(new ResolveOptions()
         {
@@ -51,13 +51,11 @@ public class Client
         await document.ResolveNext();
     }
 
-
-
     public async Task<string> Summarize(string text, int maxSentences)
     {
         var client = new OpenAiClient(ApiKey);
 
-        var fragment = new Document.Document(client, 
+        var fragment = new Document(client, 
             $"This is a Harvard business professor who summarizes the provided text into at most {maxSentences} sentences, " + 
             $"solving any spelling and grammatical issues. She preserves the original author's intent and does not censor criticism or add any new meaning." +
             $"If the text involves details that might be attributable to the author, the professor will remove those to protect the author." +
@@ -85,5 +83,4 @@ public class Client
     {
         ApiKey = apiKey;
     }
-
 }

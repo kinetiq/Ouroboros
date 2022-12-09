@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Ouroboros.Document.Elements;
+﻿using Ouroboros.Documents.Elements;
 using Ouroboros.Scales;
-using Z.Core.Extensions;
 
-namespace Ouroboros.Document.Extensions;
+namespace Ouroboros.Documents.Extensions;
 
 internal static class LikertAgreementExtensions
 {
