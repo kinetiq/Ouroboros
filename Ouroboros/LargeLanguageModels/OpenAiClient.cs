@@ -5,7 +5,7 @@ using OpenAI.GPT3.Managers;
 using OpenAI.GPT3.ObjectModels;
 using OpenAI.GPT3.ObjectModels.RequestModels;
 
-namespace Ouroboros.ApiClients;
+namespace Ouroboros.LargeLanguageModels;
 
 internal class OpenAiClient : IApiClient
 {

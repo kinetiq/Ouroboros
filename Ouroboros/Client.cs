@@ -1,8 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Ouroboros.ApiClients;
 using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
+using Ouroboros.LargeLanguageModels;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 

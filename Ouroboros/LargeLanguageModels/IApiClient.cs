@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace Ouroboros.ApiClients;
+namespace Ouroboros.LargeLanguageModels;
 
 /// <summary>
 /// Abstracts APIs such as OpenAI so we can easily swap these out.
