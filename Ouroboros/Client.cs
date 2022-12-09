@@ -6,7 +6,7 @@ using Ouroboros.Document.Extensions;
 using Ouroboros.Scales;
 using Ouroboros.VulcanMiner;
 
-[assembly: InternalsVisibleToAttribute("Ouroboros.Test")]
+[assembly: InternalsVisibleTo("Ouroboros.Test")]
 
 namespace Ouroboros;
 
