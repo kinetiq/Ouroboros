@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ouroboros.Builder;
 using Ouroboros.Documents.Elements;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.Documents.Factories;
@@ -10,7 +11,7 @@ using Ouroboros.Documents.Mutators;
 
 namespace Ouroboros.Documents;
 
-public class Document
+public class Document : IAsker
 {
     internal Client Client { get; }
     private ResolveOptions Options = new();
@@ -104,6 +105,15 @@ public class Document
 
         return builder.ToString();
     }
+
+    public async Task<AskBuilder> Ask(string text, string newElementName = "")
+    {
+        this.AddText(text);
+        var element = await ResolveAndSubmit(newElementName);
+
+        return new AskBuilder(this, element.Text);
+    }
+
     #endregion
 
     #region Resolution
@@ -115,7 +125,7 @@ public class Document
     {
         var documentText = this.ToModelInput();
         
-        var result = await Client.Complete(documentText);
+        var result = await Client.SendForCompletion(documentText);
 
         var textElement = new TextElement()
         {

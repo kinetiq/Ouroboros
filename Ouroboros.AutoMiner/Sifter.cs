@@ -1,10 +1,11 @@
-﻿using Ouroboros.Documents;
+﻿using Ouroboros.Builder;
+using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.Scales;
 
 namespace Ouroboros.AutoMiner;
 
-internal class Sifter
+public class Sifter
 {
     private readonly Client Client;
 
@@ -45,32 +46,31 @@ internal class Sifter
     /// </summary>
     private async Task<Document> GenerateInsight(string text)
     {
+        var builder = await Client
+            .CreateDocument(text)
+            .Ask("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n", newElementName: "insight")
+            .Ask("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.", newElementName: "citations")
+            .Ask("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation");
 
-        var doc = Client.CreateDocument(text);
-
-        // doc.Ask("...");
-        // var answer = doc.AsLikert("");
-        //
-        // 
-        doc.AddText("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n");
-        await doc.ResolveAndSubmit(newElementName: "insight");
+        //doc.AddText("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n");
+        //await doc.ResolveAndSubmit(newElementName: "insight");
 
         // TODO: it might be better to ask for multiple insights off the bat, and then:
         // TODO: Split them into a list. 
         // TODO: Re-run what follows for each. 
 
         // Citations
-        doc.AddText("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.");
-        await doc.ResolveAndSubmit(newElementName: "citations");
+        //doc.AddText("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.");
+        //await doc.ResolveAndSubmit(newElementName: "citations");
 
         // Validation
-        doc.AddText("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.");
-        await doc.ResolveAndSubmit(newElementName: "validation");
+        //doc.AddText("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.");
+        //await doc.ResolveAndSubmit(newElementName: "validation");
 
-        return doc;
+        return builder.Document;
     }
 
-    internal Sifter(Client client)
+    public Sifter(Client client)
     {
         Client = client;
     }

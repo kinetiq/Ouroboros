@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Ouroboros.Builder;
 using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.LargeLanguageModels;
@@ -8,15 +9,24 @@ using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros;
 
-// TODO: combine OpenAiClient and Client into a single class.
-// TODO: But also keep OpenAiClient abstracted out as a possible way to 
-// TODO: Add other LLMs.
-
-public class Client
+public class Client : IAsker
 {
     private readonly IApiClient ApiClient;
 
-    public async Task<string> Complete(string text)
+    public async Task<AskBuilder> Ask(string text, string newElementName = "")
+    {
+        var doc = new Document(this, text);
+        var element = await doc.ResolveAndSubmit(newElementName);
+
+        return new AskBuilder(doc, element.Text);
+    }
+
+
+    /// <summary>
+    /// Sends the text string to the LLM for completion. This is the most direct route
+    /// to completion and is ultimately the only place where we actually call the LLM.
+    /// </summary>
+    public async Task<string> SendForCompletion(string text)
     {
         return await ApiClient.Complete(text);
     }

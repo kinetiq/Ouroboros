@@ -32,7 +32,7 @@ public static class GetLastGeneratedExtensions
     {
         return @this
             .GetLastGeneratedAsElement()
-            .ToAgreementScale();
+            .ToAgreement4();
     }
 
 }

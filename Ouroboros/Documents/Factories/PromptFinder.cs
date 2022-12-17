@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Ouroboros.Documents.Elements;
+using Ouroboros.Documents.Extensions;
 using Z.Collections.Extensions;
 using Z.Core.Extensions;
 
@@ -29,7 +30,7 @@ internal class PromptFinder
         var textElement = (TextElement) DocElements.First();
 
         // Split this on newlines. We end up with an array of lines.
-        var lines = SplitIntoLines(textElement);
+        var lines = textElement.SplitTextOnNewLines();
 
         // Our prompt is going to be the first line that has non-whitespace content.
         var firstRealLine = GetFirstNoneWhitespaceLine(lines);
@@ -43,24 +44,11 @@ internal class PromptFinder
     }
 
     #region Helpers
-    [return: MaybeNull]
-    private static string GetFirstNoneWhitespaceLine(string[] lines)
+    private static string? GetFirstNoneWhitespaceLine(string[] lines)
     {
         return lines.FirstOrDefault(x => x.IsNotNullOrWhiteSpace());
     }
-
-    /// <summary>
-    /// Uses a flexible approach that should work with various platforms.
-    /// </summary>
-    private static string[] SplitIntoLines(TextElement textElement)
-    {
-        return textElement
-            .Text
-            .Split(
-                new string[] { "\r\n", "\r", "\n" },  // flexible approach
-                StringSplitOptions.None);
-    }
-
+    
     /// <summary>
     /// Creates our prompt and adds it to the beginning of DocElements.
     /// </summary>

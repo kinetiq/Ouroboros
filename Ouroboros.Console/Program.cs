@@ -1,19 +1,34 @@
 ﻿using Ouroboros;
+using Ouroboros.AutoMiner;
 using Ouroboros.Console.UI;
 using Spectre.Console;
+using System.IO;
 
 // See https://aka.ms/new-console-template for more information
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
 var client = new Client("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");
+var miner = new Sifter(client);
 
-var document = await client.ResolveNext(@"D:\GPT\kevin.txt");
-Renderer.Render(document);
+var text = await File.ReadAllTextAsync(@"D:\GPT\data.txt");
+var results = await miner.Mine(text);
 
-await client.ResolveNext(document);
+foreach (var result in results)
+{
+    AnsiConsole.MarkupLine("insight");
+    AnsiConsole.MarkupLine(result);
+}
 
-AnsiConsole.MarkupLine("[red]Next...[/]");
-Renderer.Render(document);
+
+//var document = await client.ResolveNext(@"D:\GPT\kevin.txt");
+//Renderer.Render(document);
+
+//await client.ResolveNext(document);
+
+//AnsiConsole.MarkupLine("[red]Next...[/]");
+//Renderer.Render(document);
+
+
 
 
 //foreach (var element in document.DocElements)
