@@ -1,13 +1,11 @@
 ﻿using Ouroboros;
 using Ouroboros.AutoMiner;
-using Ouroboros.Console.UI;
 using Spectre.Console;
-using System.IO;
 
 // See https://aka.ms/new-console-template for more information
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new Client("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");
+var client = new Client("[SECRET]");
 var miner = new Sifter(client);
 
 var text = await File.ReadAllTextAsync(@"D:\GPT\data.txt");
@@ -55,7 +53,7 @@ foreach (var result in results)
 //var text = await client.Resolve("D:\\GPT\\characters.txt");
 
 //var text = await client.Summarize(
-//    "John is such a dick. Just last week, we went to lunch and " + 
+//    "John is such a jerk. Just last week, we went to lunch and " + 
 //    "he refused to pay, that wanker. That has happened so many times. But " +
 //    "professionally, he's just not a great communicator. I don't like working with him" +
 //    "but he does seem to get results. That's why Bob keeps him around.", 2);
