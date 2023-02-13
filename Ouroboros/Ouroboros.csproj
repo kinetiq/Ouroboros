@@ -1,13 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<Version>0.8.0</Version>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<!-- Identity -->
+		<PackageId>OuroborosAI.Core</PackageId>
+		<Authors>Brian MacKay</Authors>
 
-  <ItemGroup>
-    <PackageReference Include="Betalgo.OpenAI.GPT3" Version="6.6.7" />
-    <PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
-  </ItemGroup>
+		<!-- Legal -->
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Copyright>Brian MacKay 2022</Copyright> 
 
+		<!-- Location -->
+		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/kinetiq/Ouroboros</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		
+		<!-- Release -->
+		<PackageVersion>0.8.0</PackageVersion>
+		<Description>
+			Powerful layer on top of OpenAI supporting chaining and recursion scenarios.
+			Includes fluent SDK for chaining and text processing. Still very early an .NET 6 only; 
+			Docs and broader support to follow.
+		</Description>
+		<ReleaseNotes>Initial early release version.</ReleaseNotes>
+		<Tags>gpt3 llm openai chatgpt c#</Tags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Betalgo.OpenAI.GPT3" Version="6.6.7" />
+		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
+	</ItemGroup>
 </Project>
