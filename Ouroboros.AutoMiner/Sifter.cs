@@ -7,7 +7,7 @@ namespace Ouroboros.AutoMiner;
 
 public class Sifter
 {
-    private readonly Client Client;
+    private readonly OuroClient OuroClient;
 
     public async Task<List<string>> Mine(string rawData, int insightGoal = 1, int maxAttempts = 10)
     {
@@ -46,7 +46,7 @@ public class Sifter
     /// </summary>
     private async Task<Document> GenerateInsight(string text)
     {
-        var builder = await Client
+        var builder = await OuroClient
             .CreateDocument(text)
             .Ask("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n", newElementName: "insight")
             .Ask("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.", newElementName: "citations")
@@ -70,8 +70,8 @@ public class Sifter
         return builder.Document;
     }
 
-    public Sifter(Client client)
+    public Sifter(OuroClient ouroClient)
     {
-        Client = client;
+        OuroClient = ouroClient;
     }
 }

@@ -17,6 +17,7 @@
 		<!-- Location -->
 		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/kinetiq/Ouroboros</RepositoryUrl>
+		<!--<PackageReadmeFile>..\README.md</PackageReadmeFile>-->
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
@@ -26,12 +27,13 @@
 			Includes fluent SDK for chaining and text processing. Still very early an .NET 6 only; 
 			Docs and broader support to follow.
 		</Description>
-		<ReleaseNotes>Initial early release version.</ReleaseNotes>
-		<Tags>gpt3 llm openai chatgpt c#</Tags>
+		<PackageReleaseNotes>Initial early release version.</PackageReleaseNotes>
+		<PackageTags>gpt3 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Betalgo.OpenAI.GPT3" Version="6.6.7" />
+		<PackageReference Include="Polly" Version="7.2.3" />
 		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
 	</ItemGroup>
 </Project>

@@ -7,7 +7,7 @@ namespace Ouroboros.Documents.Mutators;
 
 internal class ResolverMutator
 {
-    private readonly Client Client;
+    private readonly OuroClient OuroClient;
     private readonly ResolveElement Element;
     private List<ElementBase> DocumentModel;
 
@@ -35,7 +35,7 @@ internal class ResolverMutator
     {
         Mutate();
 
-        return new Document(Client, DocumentModel);
+        return new Document(OuroClient, DocumentModel);
     }
 
     #region Helpers
@@ -99,6 +99,6 @@ internal class ResolverMutator
 
         Element = (ResolveElement) DocumentModel[sourceIndex];
 
-        Client = source.Client;
+        OuroClient = source.OuroClient;
     }
 }

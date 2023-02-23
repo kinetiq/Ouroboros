@@ -5,7 +5,7 @@ using Spectre.Console;
 // See https://aka.ms/new-console-template for more information
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new Client("[SECRET]");
+var client = new OuroClient("[SECRET]");
 var miner = new Sifter(client);
 
 var text = await File.ReadAllTextAsync(@"D:\GPT\data.txt");

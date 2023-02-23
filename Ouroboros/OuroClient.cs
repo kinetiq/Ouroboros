@@ -9,7 +9,7 @@ using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros;
 
-public class Client : IAsker
+public class OuroClient : IAsker
 {
     private readonly IApiClient ApiClient;
 
@@ -46,37 +46,37 @@ public class Client : IAsker
         return fragment.ToString();
     }
 
-    /// <summary>
-    /// Resolves the next element, and then stops. 
-    /// </summary>
-    public async Task<Document> ResolveNext(string path)
-    {
-        var text = await System.IO.File.ReadAllTextAsync(path);
+    ///// <summary>
+    ///// Resolves the next element, and then stops. 
+    ///// </summary>
+    //public async Task<Document> ResolveNext(string path)
+    //{
+    //    var text = await System.IO.File.ReadAllTextAsync(path);
 
-        var doc = new Document(this, text);
+    //    var doc = new Document(this, text);
         
-        await doc.Resolve(new ResolveOptions()
-        {
-            HaltAfterFirstComplete = true
-        });
+    //    await doc.Resolve(new ResolveOptions()
+    //    {
+    //        HaltAfterFirstComplete = true
+    //    });
 
-        return (Document) doc;
-    }
+    //    return (Document) doc;
+    //}
 
-    /// <summary>
-    /// Resolves the next element, and then stops. 
-    /// </summary>
-    public async Task ResolveNext(Document document)
-    {
-        await document.ResolveNext();
-    }
+    ///// <summary>
+    ///// Resolves the next element, and then stops. 
+    ///// </summary>
+    //public async Task ResolveNext(Document document)
+    //{
+    //    await document.ResolveNext();
+    //}
 
     public async Task<string> Summarize(string text, int maxSentences)
     {
         var fragment = new Document(this, 
-            $"This is a Harvard business professor who summarizes the provided text into at most {maxSentences} sentences, " + 
+            $"This is a brilliant Harvard business professor who summarizes the provided text into at most {maxSentences} sentences, " + 
             $"solving any spelling and grammatical issues. She preserves the original author's intent and does not censor criticism or add any new meaning." +
-            $"If the text involves details that might be attributable to the author, the professor will remove those to protect the author." +
+            $"If the text involves details that might be attributable to the author, she will remove those to protect the author." +
             "The result is professional and succinct, and cannot be traced to the original author in any way.\n\n" + 
             $"Text: {text}\n" +
             $"Summary:");
@@ -97,7 +97,7 @@ public class Client : IAsker
     //    return await sifter.Mine(text);
     //}
 
-    public Client(string apiKey)
+    public OuroClient(string apiKey)
     {
         ApiClient = new OpenAiClient(apiKey);
     }

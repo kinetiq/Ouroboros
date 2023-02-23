@@ -13,7 +13,7 @@ namespace Ouroboros.Documents;
 
 public class Document : IAsker
 {
-    internal Client Client { get; }
+    internal OuroClient OuroClient { get; }
     private ResolveOptions Options = new();
 
     /// <summary>
@@ -125,7 +125,7 @@ public class Document : IAsker
     {
         var documentText = this.ToModelInput();
         
-        var result = await Client.SendForCompletion(documentText);
+        var result = await OuroClient.SendForCompletion(documentText);
 
         var textElement = new TextElement()
         {
@@ -177,15 +177,15 @@ public class Document : IAsker
     }
     #endregion
 
-    internal Document(Client client, List<ElementBase> docElements)
+    internal Document(OuroClient ouroClient, List<ElementBase> docElements)
     {
         DocElements = docElements;
-        Client = client;
+        OuroClient = ouroClient;
     }
 
-    internal Document(Client client, string text) 
+    internal Document(OuroClient ouroClient, string text) 
     {
-        Client = client;
+        OuroClient = ouroClient;
         var factory = new DocElementsFactory();
         DocElements = factory.Create(text);
     }
