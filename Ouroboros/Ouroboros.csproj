@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>0.8.0</Version>
+		<Version>0.8.1</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -12,7 +12,7 @@
 
 		<!-- Legal -->
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Copyright>Brian MacKay 2022</Copyright> 
+		<Copyright>Brian MacKay 2022-2023</Copyright> 
 
 		<!-- Location -->
 		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
@@ -21,13 +21,13 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>0.8.0</PackageVersion>
+		<PackageVersion>0.8.1</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios.
 			Includes fluent SDK for chaining and text processing. Still very early an .NET 6 only; 
 			Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Initial early release version.</PackageReleaseNotes>
+		<PackageReleaseNotes>Iterating towards v1. Exposed OpenAI options. DI.</PackageReleaseNotes>
 		<PackageTags>gpt3 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
