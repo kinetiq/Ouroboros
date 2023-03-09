@@ -7,5 +7,5 @@ namespace Ouroboros.LargeLanguageModels;
 /// </summary>
 internal interface IApiClient
 {
-    Task<string> Complete(string text);
+    Task<OuroResponseBase> Complete(string prompt, CompleteOptions? options);
 }

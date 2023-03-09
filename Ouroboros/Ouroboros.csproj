@@ -32,7 +32,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Betalgo.OpenAI.GPT3" Version="6.6.7" />
+		<PackageReference Include="AI.Dev.OpenAI.GPT" Version="1.0.2" />
+		<PackageReference Include="Betalgo.OpenAI.GPT3" Version="6.7.2" />
 		<PackageReference Include="Polly" Version="7.2.3" />
 		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
 	</ItemGroup>

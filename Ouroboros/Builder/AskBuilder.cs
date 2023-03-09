@@ -21,23 +21,23 @@ public class AskBuilder : IAsker
         return new AskBuilder(Document, element.Text);
     }
 
-    public AskBuilder RemoveLast()
-    {
-        var element = Document.GetLastGeneratedAsElement();
+    //public AskBuilder RemoveLast()
+    //{
+    //    var element = Document.GetLastGeneratedAsElement();
 
-        if (Document.LastResolvedElement == element)
-            Document.LastResolvedElement = null;
+    //    if (Document.LastResolvedElement == element)
+    //        Document.LastResolvedElement = null;
 
-        Document.DocElements.Remove(element);
+    //    Document.DocElements.Remove(element);
 
-        return this;
-    }
+    //    return this;
+    //}
 
-    public async Task<AskBuilder> RemoveLastAndAsk(string text, string newElementName = "")
-    {
-        RemoveLast();
-        return await Ask(text, newElementName);
-    } 
+    //public async Task<AskBuilder> RemoveLastAndAsk(string text, string newElementName = "")
+    //{
+    //    RemoveLast();
+    //    return await Ask(text, newElementName);
+    //} 
     
     /// <summary>
     /// Assumes the last prompt returned was a text-based list of some kind, with items separated by newlines.

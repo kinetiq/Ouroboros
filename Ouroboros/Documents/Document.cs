@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 using Ouroboros.Builder;
 using Ouroboros.Documents.Elements;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.Documents.Factories;
 using Ouroboros.Documents.Mutators;
+using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros.Documents;
 
@@ -121,21 +123,27 @@ public class Document : IAsker
     /// <summary>
     /// Submits the document to the LLM, and then appends the result onto the end.
     /// </summary>
-    private async Task SubmitAndAppend()
+    private async Task<OuroResponseBase> SubmitAndAppend()
     {
         var documentText = this.ToModelInput();
         
-        var result = await OuroClient.SendForCompletion(documentText);
+        var response = await OuroClient.SendForCompletion(documentText);
 
+        if (!response.Success)
+            return response;
+
+        // Append the result to the document.
         var textElement = new TextElement()
         {
             Id = Options.NewElementName,
             IsGenerated = true,
-            Text = result
+            Text = response.ResponseText
         };
 
         DocElements.Add(textElement);
         LastResolvedElement = textElement;
+
+        return response;
     }
 
     /// <summary>
