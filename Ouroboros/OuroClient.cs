@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using AI.Dev.OpenAI.GPT;
+﻿using AI.Dev.OpenAI.GPT;
 using Ouroboros.Builder;
 using Ouroboros.Documents;
+using Ouroboros.Events;
 using Ouroboros.LargeLanguageModels;
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -13,9 +15,13 @@ namespace Ouroboros;
 public class OuroClient 
 {
     private readonly IApiClient ApiClient;
+    public event EventHandler<OnRequestCompletedArgs>? OnRequestCompleted;
 
-
-
+    /// <summary>
+    /// Start here if you want to chain several prompts together with multiple .Chain calls.
+    /// These are not executed until you call one of the async methods, such as .AsDocumentAsync
+    /// or .AsListAsync
+    /// </summary>
     public ChainBuilder StartChain(string text, CompleteOptions? options = null)
     {
         var doc = new Document(this, text);
@@ -47,29 +53,29 @@ public class OuroClient
     /// </summary>
     public async Task<OuroResponseBase> SendForCompletion(string prompt, CompleteOptions? options = null)
     {
-        return await ApiClient.Complete(prompt, options);
+        var response = await ApiClient.Complete(prompt, options);
+
+        // Fire the OnRequestCompleted, which allows the user to tie directly into the pipeline of requests
+        // and easily log them even in chaining scenarios.
+        var promptTokens = TokenCount(prompt);
+        var responseTokens = response is OuroResponseSuccess ? TokenCount(response.ResponseText) : 0;
+
+        var args = new OnRequestCompletedArgs()
+        {
+            Prompt = prompt,
+            Response = response,
+            Tokens = promptTokens + responseTokens
+        };
+
+        OnRequestCompleted?.Invoke(this, args);
+
+        return response;
     }
 
     public Document CreateDocument(string text)
     {
         return new Document(this, text); 
     }
-
-    //public async Task<string> Summarize(string text, int maxSentences)
-    //{
-    //    var fragment = new Document(this, 
-    //        $"This is a brilliant Harvard business professor who summarizes the provided text into at most {maxSentences} sentences, " + 
-    //        $"solving any spelling and grammatical issues. She preserves the original author's intent and does not censor criticism or add any new meaning." +
-    //        $"If the text involves details that might be attributable to the author, she will remove those to protect the author." +
-    //        "The result is professional and succinct, and cannot be traced to the original author in any way.\n\n" + 
-    //        $"Text: {text}\n" +
-    //        $"Summary:");
-
-    //    await fragment.ResolveAndSubmit();
-    //    var response = fragment.GetLastAsText();
-
-    //    return response;
-    //}
 
     public OuroClient(string apiKey)
     {

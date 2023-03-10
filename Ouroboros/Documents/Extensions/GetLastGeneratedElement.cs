@@ -7,7 +7,7 @@ namespace Ouroboros.Documents.Extensions;
 
 public static class GetLastGeneratedExtensions
 {
-    public static ElementBase GetById(this Document @this, string id)
+    public static ElementBase GetByName(this Document @this, string id)
     {
         return (TextElement)@this
             .DocElements

@@ -11,7 +11,7 @@ public class CompleteOptions
     /// <summary>
     ///     The maximum number of <a href="https://beta.openai.com/tokenizer">tokens</a> to generate in the completion.
     ///     The token count of your prompt plus max_tokens cannot exceed the model's context length. Most models have a context
-    ///     length of 2048 tokens (except davinci-codex, which supports 4096).
+    ///     length of 2048 tokens (except davinci-codex and davinci-003, which support 4096).
     /// </summary>
     /// <see cref="!:https://beta.openai.com/docs/api-reference/completions/create#completions/create-max_tokens" />
     public int? MaxTokens { get; set; }
@@ -89,4 +89,13 @@ public class CompleteOptions
     ///     A unique identifier representing your end-user, which will help OpenAI to monitor and detect abuse.
     /// </summary>
     public string? User { get; set; }
+
+    public CompleteOptions()
+    {
+        // Defaults
+        MaxTokens = 256;
+        Temperature = 0.7f;
+        TopP = 1;
+        BestOf = 1;
+    }
 }

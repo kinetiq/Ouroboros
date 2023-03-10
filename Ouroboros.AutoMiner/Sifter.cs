@@ -26,8 +26,12 @@ public class Sifter
             if (likert < LikertAgreement4.Agree) 
                 continue;
             
-            var insight = doc.GetById("insight");
+            var insight = doc.GetByName("insight");
             results.Add(insight.ToString());
+
+            var citation = doc.GetByName("citations");
+            results.Add("citations:");
+            results.Add(citation.ToString());
 
             insights++;
         } while (insights < insightGoal && attempts < maxAttempts);
@@ -48,9 +52,9 @@ public class Sifter
     {
         return await OuroClient
             .StartChain(text)
-            .Chain("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n",  newElementName: "insight")
-            .Chain("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.", newElementName: "citations")
-            .Chain("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation")
+            .Chain("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\r\n",  newElementName: "insight")
+            .Chain("\n\n[CITATIONS] Using the data above, provide a few quotes that best support or prove the insight. \r\n1.", newElementName: "citations")
+            .Chain("\n\n[VALIDATION] Do you agree that these quotes exist in the data and sufficiently justify this insight? To qualify, the quotes must clearly exist in the data above. Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation")
             .AsDocumentAsync();
     }
 
