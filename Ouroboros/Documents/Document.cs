@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
 using Ouroboros.Builder;
 using Ouroboros.Documents.Elements;
 using Ouroboros.Documents.Extensions;
@@ -13,7 +12,7 @@ using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros.Documents;
 
-public class Document : IAsker
+public class Document : IChain
 {
     internal OuroClient OuroClient { get; }
     private ResolveOptions Options = new();
@@ -29,7 +28,7 @@ public class Document : IAsker
     /// Resolves this document. Note that this does not submit the result to the LLM for
     /// completion, but you can use ResolveAndSubmit if you want to do both.
     /// </summary>
-    public async Task Resolve(ResolveOptions? options = null)
+    public async Task<OuroResponseBase> Resolve(ResolveOptions? options = null)
     {
         Options = options ?? new ResolveOptions();
 
@@ -39,28 +38,38 @@ public class Document : IAsker
             .OfType<ResolveElement>()
             .Where(x => !x.IsResolved)
             .ToList();
+        
+        OuroResponseBase lastResponse = new OuroResponseNoOp(); // NoOp because nothing has happened yet.
 
         // Iterate through any Resolve elements first. Handle these by calling the API. 
         foreach (var element in resolveElements)
         {
-            await ResolveElement(element);
+            var response = await ResolveElement(element);
+            lastResponse = response;
+            
+            if (!response.Success)
+                return response;
+            
             LastResolvedElement = element;
 
             if (Options.HaltAfterFirstComplete)
-                return;
+                return response;
         }
 
         // Submit to GPT if necessary.
         if (Options.SubmitResultForCompletion)
-            await SubmitAndAppend();
+            return await SubmitAndAppend();
+
+        // If we get to this point, return whatever the last response was. It could be a NoOp if there was nothing to resolve.
+        return lastResponse;
     }
 
     /// <summary>
     /// Resolve this document, but stop after the first completion.
     /// </summary>
-    public async Task ResolveNext()
+    public async Task<OuroResponseBase> ResolveNext()
     {
-        await Resolve(new ResolveOptions()
+        return await Resolve(new ResolveOptions()
         {
             HaltAfterFirstComplete = true
         });
@@ -70,16 +79,16 @@ public class Document : IAsker
     /// Override that always submits the document to the LLM. This is not the default behavior.
     /// Returns only the output. 
     /// </summary>
-    public async Task<TextElement> ResolveAndSubmit(string newElementName = "")
+    public async Task<OuroResponseBase> ResolveAndSubmit(string? newElementName = null)
     {
-        await Resolve(new ResolveOptions()
+        return await Resolve(new ResolveOptions()
         {
             SubmitResultForCompletion = true, 
             HaltAfterFirstComplete = Options.HaltAfterFirstComplete,
             NewElementName = newElementName 
         });
 
-        return this.GetLastGeneratedAsElement();
+        // return this.GetLastGeneratedAsElement();
     }
 
     /// <summary>
@@ -103,17 +112,27 @@ public class Document : IAsker
         var builder = new StringBuilder();
 
         foreach (var element in DocElements)
-            builder.Append(element.ToString());
+            builder.Append(element);
 
         return builder.ToString();
     }
 
-    public async Task<AskBuilder> Ask(string text, string newElementName = "")
+    /// <inheritdoc />
+    public ChainBuilder Chain(string text, string? newElementName, CompleteOptions? options)
     {
-        this.AddText(text);
-        var element = await ResolveAndSubmit(newElementName);
+        return new ChainBuilder(this, text, newElementName, options);
+    }
 
-        return new AskBuilder(this, element.Text);
+    /// <inheritdoc />
+    public ChainBuilder Chain(string text, string? newElementName = null)
+    {
+        return Chain(text, newElementName, null);
+    }
+
+    /// <inheritdoc />
+    public ChainBuilder Chain(string text, CompleteOptions options)
+    {
+        return Chain(text, string.Empty, options);
     }
 
     #endregion
@@ -135,7 +154,7 @@ public class Document : IAsker
         // Append the result to the document.
         var textElement = new TextElement()
         {
-            Id = Options.NewElementName,
+            Id = Options.NewElementName ?? string.Empty,
             IsGenerated = true,
             Text = response.ResponseText
         };
@@ -155,7 +174,7 @@ public class Document : IAsker
     /// 
     /// The text that comes out of that process becomes the GeneratedText of our element.
     /// </summary>
-    private async Task ResolveElement(ResolveElement element)
+    private async Task<OuroResponseBase> ResolveElement(ResolveElement element)
     {
         // We can't perform the resolve directly on our element, because resolution involves
         // operations like swapping out the prompt, removing everything after element,
@@ -177,11 +196,16 @@ public class Document : IAsker
 
         // Recursively resolve the element, then submit it. What we get back is an element that belongs
         // to the workspace fragment. That contains our results.  
-        var newElement = await workspace.ResolveAndSubmit();
+        var response = await workspace.ResolveAndSubmit();
+
+        if (!response.Success)
+            return response;
 
         // Plug that content into our element, and mark it resolved.
-        element.GeneratedText = newElement.Text;
+        element.GeneratedText = response.ResponseText;
         element.IsResolved = true;
+
+        return response;
     }
     #endregion
 

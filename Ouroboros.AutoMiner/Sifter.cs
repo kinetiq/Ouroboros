@@ -35,7 +35,7 @@ public class Sifter
         // TODO: return both the insight and the citations.
         // TODO: go further - can we propose ways to research this? Sources to explore? 
         // TODO: maybe we can say that after researching it against all human knowledge, I discovered... 
-
+        
         // TODO: maybe build a genius researcher. Maybe we could stage a debate between some of the best minds in history on the topic.
 
         return results;
@@ -46,28 +46,12 @@ public class Sifter
     /// </summary>
     private async Task<Document> GenerateInsight(string text)
     {
-        var builder = await OuroClient
-            .CreateDocument(text)
-            .Ask("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n", newElementName: "insight")
-            .Ask("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.", newElementName: "citations")
-            .Ask("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation");
-
-        //doc.AddText("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n");
-        //await doc.ResolveAndSubmit(newElementName: "insight");
-
-        // TODO: it might be better to ask for multiple insights off the bat, and then:
-        // TODO: Split them into a list. 
-        // TODO: Re-run what follows for each. 
-
-        // Citations
-        //doc.AddText("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.");
-        //await doc.ResolveAndSubmit(newElementName: "citations");
-
-        // Validation
-        //doc.AddText("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.");
-        //await doc.ResolveAndSubmit(newElementName: "validation");
-
-        return builder.Document;
+        return await OuroClient
+            .StartChain(text)
+            .Chain("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\n",  newElementName: "insight")
+            .Chain("\n\n[CITATIONS] From the data above, provide citations that best support or prove the insight.\n1.", newElementName: "citations")
+            .Chain("\n\n[VALIDATION] Do you agree that these citations exist in the data and sufficiently justify this insight? Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation")
+            .AsDocumentAsync();
     }
 
     public Sifter(OuroClient ouroClient)

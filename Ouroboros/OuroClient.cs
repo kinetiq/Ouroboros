@@ -4,23 +4,23 @@ using System.Threading.Tasks;
 using AI.Dev.OpenAI.GPT;
 using Ouroboros.Builder;
 using Ouroboros.Documents;
-using Ouroboros.Documents.Extensions;
 using Ouroboros.LargeLanguageModels;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
 namespace Ouroboros;
 
-public class OuroClient : IAsker
+public class OuroClient 
 {
     private readonly IApiClient ApiClient;
 
-    public async Task<AskBuilder> Ask(string text, string newElementName = "")
+
+
+    public ChainBuilder StartChain(string text, CompleteOptions? options = null)
     {
         var doc = new Document(this, text);
-        var element = await doc.ResolveAndSubmit(newElementName);
 
-        return new AskBuilder(doc, element.Text);
+        return new ChainBuilder(doc, options);
     }
 
     /// <summary>

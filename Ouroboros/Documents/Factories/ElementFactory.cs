@@ -53,7 +53,7 @@ internal class ElementFactory
 
     /// <summary>
     /// Because of the structure of xml tags, there can be an extra newline that should not
-    /// be included. If that doesn't make sense, here's an example:
+    /// be included. 
     /// </summary>
     private string PrepareContent(XElement element)
     {
