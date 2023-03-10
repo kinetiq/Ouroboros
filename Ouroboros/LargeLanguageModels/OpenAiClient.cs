@@ -28,7 +28,8 @@ internal class OpenAiClient : IApiClient
             var responseText = completionResult
                 .Choices
                 .First()
-                .Text;
+                .Text
+                .Trim();
             
             return new OuroResponseSuccess(responseText);
         }

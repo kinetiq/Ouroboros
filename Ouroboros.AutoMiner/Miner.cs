@@ -5,11 +5,11 @@ using Ouroboros.Scales;
 
 namespace Ouroboros.AutoMiner;
 
-public class Sifter
+public class Miner
 {
     private readonly OuroClient OuroClient;
 
-    public async Task<List<string>> Mine(string rawData, int insightGoal = 1, int maxAttempts = 10)
+    public async Task<List<string>> MineAsync(string rawData, int insightGoal = 1, int maxAttempts = 10)
     {
         var results = new List<string>();
 
@@ -20,7 +20,8 @@ public class Sifter
         {
             attempts++;
 
-            var doc = await GenerateInsight(rawData);
+            var doc = await GenerateInsightAsync(rawData);
+            
             var likert = doc.GetLastAsLikert();
 
             if (likert < LikertAgreement4.Agree) 
@@ -36,7 +37,6 @@ public class Sifter
             insights++;
         } while (insights < insightGoal && attempts < maxAttempts);
 
-        // TODO: return both the insight and the citations.
         // TODO: go further - can we propose ways to research this? Sources to explore? 
         // TODO: maybe we can say that after researching it against all human knowledge, I discovered... 
         
@@ -48,17 +48,22 @@ public class Sifter
     /// <summary>
     /// Run a series of requests to gather and validate research ideas.
     /// </summary>
-    private async Task<Document> GenerateInsight(string text)
+    private async Task<Document> GenerateInsightAsync(string text)
     {
-        return await OuroClient
-            .StartChain(text)
+        var response = await OuroClient
+            .Prompt(text)
             .Chain("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\r\n",  newElementName: "insight")
             .Chain("\n\n[CITATIONS] Using the data above, provide a few quotes that best support or prove the insight. \r\n1.", newElementName: "citations")
             .Chain("\n\n[VALIDATION] Do you agree that these quotes exist in the data and sufficiently justify this insight? To qualify, the quotes must clearly exist in the data above. Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation")
-            .AsDocumentAsync();
+            .CompleteToDocumentAsync();
+
+        if (!response.Success)
+            throw new InvalidOperationException("Failed: " + response.OuroResponse.ResponseText);
+
+        return response.Value!;
     }
 
-    public Sifter(OuroClient ouroClient)
+    public Miner(OuroClient ouroClient)
     {
         OuroClient = ouroClient;
     }

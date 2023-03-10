@@ -28,7 +28,7 @@ public class Document : IChain
     /// Resolves this document. Note that this does not submit the result to the LLM for
     /// completion, but you can use ResolveAndSubmit if you want to do both.
     /// </summary>
-    public async Task<OuroResponseBase> Resolve(ResolveOptions? options = null)
+    public async Task<OuroResponseBase> ResolveAsync(ResolveOptions? options = null)
     {
         Options = options ?? new ResolveOptions();
 
@@ -44,7 +44,7 @@ public class Document : IChain
         // Iterate through any Resolve elements first. Handle these by calling the API. 
         foreach (var element in resolveElements)
         {
-            var response = await ResolveElement(element);
+            var response = await ResolveElementAsync(element);
             lastResponse = response;
             
             if (!response.Success)
@@ -58,7 +58,7 @@ public class Document : IChain
 
         // Submit to GPT if necessary.
         if (Options.SubmitResultForCompletion)
-            return await SubmitAndAppend();
+            return await CompleteAndAppendAsync();
 
         // If we get to this point, return whatever the last response was. It could be a NoOp if there was nothing to resolve.
         return lastResponse;
@@ -67,9 +67,9 @@ public class Document : IChain
     /// <summary>
     /// Resolve this document, but stop after the first completion.
     /// </summary>
-    public async Task<OuroResponseBase> ResolveNext()
+    public async Task<OuroResponseBase> ResolveNextAsync()
     {
-        return await Resolve(new ResolveOptions()
+        return await ResolveAsync(new ResolveOptions()
         {
             HaltAfterFirstComplete = true
         });
@@ -79,9 +79,9 @@ public class Document : IChain
     /// Override that always submits the document to the LLM. This is not the default behavior.
     /// Returns only the output. 
     /// </summary>
-    public async Task<OuroResponseBase> ResolveAndSubmit(string? newElementName = null)
+    public async Task<OuroResponseBase> ResolveAndSubmitAsync(string? newElementName = null)
     {
-        return await Resolve(new ResolveOptions()
+        return await ResolveAsync(new ResolveOptions()
         {
             SubmitResultForCompletion = true, 
             HaltAfterFirstComplete = Options.HaltAfterFirstComplete,
@@ -142,11 +142,11 @@ public class Document : IChain
     /// <summary>
     /// Submits the document to the LLM, and then appends the result onto the end.
     /// </summary>
-    private async Task<OuroResponseBase> SubmitAndAppend()
+    private async Task<OuroResponseBase> CompleteAndAppendAsync()
     {
         var documentText = this.ToModelInput();
         
-        var response = await OuroClient.SendForCompletion(documentText);
+        var response = await OuroClient.SendForCompletionAsync(documentText);
 
         if (!response.Success)
             return response;
@@ -174,7 +174,7 @@ public class Document : IChain
     /// 
     /// The text that comes out of that process becomes the GeneratedText of our element.
     /// </summary>
-    private async Task<OuroResponseBase> ResolveElement(ResolveElement element)
+    private async Task<OuroResponseBase> ResolveElementAsync(ResolveElement element)
     {
         // We can't perform the resolve directly on our element, because resolution involves
         // operations like swapping out the prompt, removing everything after element,
@@ -196,7 +196,7 @@ public class Document : IChain
 
         // Recursively resolve the element, then submit it. What we get back is an element that belongs
         // to the workspace fragment. That contains our results.  
-        var response = await workspace.ResolveAndSubmit();
+        var response = await workspace.ResolveAndSubmitAsync();
 
         if (!response.Success)
             return response;

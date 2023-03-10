@@ -9,7 +9,7 @@ var client = new OuroClient("[SECRET]");
 var miner = new Sifter(client);
 
 var text = await File.ReadAllTextAsync(@"D:\GPT\data.txt");
-var results = await miner.Mine(text, 1);
+var results = await miner.MineAsync(text, 1);
 
 foreach (var result in results)
 {

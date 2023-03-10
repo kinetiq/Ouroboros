@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.Threading;
+
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -15,18 +17,28 @@ namespace Ouroboros;
 public class OuroClient 
 {
     private readonly IApiClient ApiClient;
-    public event EventHandler<OnRequestCompletedArgs>? OnRequestCompleted;
+
+    public event AsyncEventHandler<OnRequestCompletedArgs>? OnRequestCompleted;
 
     /// <summary>
     /// Start here if you want to chain several prompts together with multiple .Chain calls.
     /// These are not executed until you call one of the async methods, such as .AsDocumentAsync
     /// or .AsListAsync
     /// </summary>
-    public ChainBuilder StartChain(string text, CompleteOptions? options = null)
+    public ChainBuilder Prompt(string prompt, CompleteOptions? options = null)
     {
-        var doc = new Document(this, text);
+        var doc = new Document(this, prompt);
 
         return new ChainBuilder(doc, options);
+    }
+
+    /// <summary>
+    /// Syntactic sugar for cases where you want to quickly complete a prompt and get back the results. 
+    /// </summary>
+    public async Task<PromptResponse<string>> PromptToStringAsync(string prompt, CompleteOptions? options = null)
+    {
+        return await Prompt(prompt, options)
+            .CompleteToStringAsync();
     }
 
     /// <summary>
@@ -51,7 +63,7 @@ public class OuroClient
     /// Sends the text string to the LLM for completion. This is the most direct route
     /// to completion and is ultimately the only place where we actually call the LLM.
     /// </summary>
-    public async Task<OuroResponseBase> SendForCompletion(string prompt, CompleteOptions? options = null)
+    internal async Task<OuroResponseBase> SendForCompletionAsync(string prompt, CompleteOptions? options = null)
     {
         var response = await ApiClient.Complete(prompt, options);
 
@@ -67,14 +79,21 @@ public class OuroClient
             Tokens = promptTokens + responseTokens
         };
 
-        OnRequestCompleted?.Invoke(this, args);
+        // Deliberately call this in a way that is not "fire and forget" because we want to run EF
+        // code to save all our requests, and it might be best to avoid race conditions.
+        if (OnRequestCompleted is not null) await OnRequestCompleted.InvokeAsync(this, args);
 
         return response;
     }
 
-    public Document CreateDocument(string text)
+    /// <summary>
+    /// **In almost all cases, you should start with Prompt, not this.** This creates a new Document from the prompt.
+    /// It offers the most control, but is also the most verbose. Only necessary when you want to create a prompt and
+    /// then manipulate the DOM before sending it to the LLM for completion.
+    /// </summary>
+    public Document CreateDocument(string prompt)
     {
-        return new Document(this, text); 
+        return new Document(this, prompt); 
     }
 
     public OuroClient(string apiKey)

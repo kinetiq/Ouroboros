@@ -1,20 +1,21 @@
 ﻿using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.LargeLanguageModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Ouroboros.TextProcessing;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Ouroboros.Builder;
 
+/// <summary>
+/// Enables chaining multiple prompts together. If you have no idea what this is and just want to
+/// complete a basic prompt, try calling .CompleteToString()
+/// </summary>
 public class ChainBuilder : IChain
 {
     internal Document Document { get; set; }
     private List<ChainedCommand> Commands { get; set; }
     private CompleteOptions? DefaultOptions = null;
-
 
     #region Public API
   
@@ -52,51 +53,52 @@ public class ChainBuilder : IChain
     } 
 
     /// <summary>
-    /// Assumes the last prompt returned was a text-based list of some kind, with items separated by newlines.
-    /// Cleans up any extra whitespace and returns list().
+    /// Assumes the last completion returned was a list, with items separated by newlines or numbers.
+    /// Cleans up any extra whitespace and returns a list.
     /// </summary>
-    public async Task<List<string>> AsListAsync()
+    public async Task<PromptResponse<List<string>>> CompleteToListAsync()
     {
-        var response = await ResolveAsync();
+        var response = await ExecuteCommandsAsync();
 
-        // TODO: better response handling
-        if (response is OuroResponseFailure)
-            throw new InvalidOperationException($"Error calling LLM: {response}");
+        if (!response.Success)
+            return new PromptResponse<List<string>>(response);
 
-        var last = Document.GetLastGeneratedAsElement();
-        var text = last.Text;
+        var value = ListExtractor.Extract(response.ResponseText);
 
-        return ListExtractor.ExtractList(text);
+        return new PromptResponse<List<string>>(response, value);
     }
 
-    public async Task<Document> AsDocumentAsync()
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
+    public async Task<PromptResponse<Document>> CompleteToDocumentAsync()
     {
-        var response = await ResolveAsync();
+        var response = await ExecuteCommandsAsync();
 
-        // TODO: better response handling
-        if (response is OuroResponseFailure)
-            throw new InvalidOperationException($"Error calling LLM: {response}");
+        if (!response.Success)
+            return new PromptResponse<Document>(response);
 
-        return Document;
+        return new PromptResponse<Document>(response, Document);
     }
-
-    public async Task<string> AsString()
+    
+    public async Task<PromptResponse<string>> CompleteToStringAsync()
     {
-        var response = await ResolveAsync();
-        
-        // TODO: better response handling
-        if (response is OuroResponseFailure)
-            throw new InvalidOperationException($"Error calling LLM: {response}");
+        var response = await ExecuteCommandsAsync();
 
-        return response.ResponseText;
+        if (!response.Success)
+            return new PromptResponse<string>(response);
+
+        return new PromptResponse<string>(response, response.ResponseText);
     }
     #endregion
 
 
     /// <summary>
-    /// Resolves all queued commands.
+    /// Executes all queued commands, which means actually sending requests to the LLM. You don't usually call this
+    /// manually. Instead, call one of the CompleteTo methods.
     /// </summary>
-    public async Task<OuroResponseBase> ResolveAsync()
+    internal async Task<OuroResponseBase> ExecuteCommandsAsync()
     {
         OuroResponseBase lastResponse = new OuroResponseNoOp();
         
@@ -105,7 +107,7 @@ public class ChainBuilder : IChain
             if (command.Text is { Length: > 0 })
                 Document.AddText(command.Text);
 
-            lastResponse = await Document.ResolveAndSubmit(command.NewElementName);
+            lastResponse = await Document.ResolveAndSubmitAsync(command.NewElementName);
 
             if (lastResponse is OuroResponseFailure)
                 return lastResponse;
@@ -119,10 +121,10 @@ public class ChainBuilder : IChain
     /// <summary>
     /// Adds a command to the queue, to be executed when one of the async calls occurs.
     /// </summary>
-    /// <param name="text"></param>
-    /// <param name="newElementName"></param>
-    /// <param name="options"></param>
-    public void AddCommand(string? text, string? newElementName = null, CompleteOptions? options = null)
+    /// <param name="text">The text to be added to the existing document. If this is null, the document will be completed without adding anything.</param>
+    /// <param name="newElementName">The name for the new element. Will be ignored if text is null.</param>
+    /// <param name="options">Optional options that impact this completion only. If it's null, the defaults for this ChainBuilder will be used, if they exist.</param>
+    internal void AddCommand(string? text, string? newElementName = null, CompleteOptions? options = null)
     {
         var command = new ChainedCommand()
         {

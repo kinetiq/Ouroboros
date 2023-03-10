@@ -9,19 +9,19 @@ public class ListExtractorTests
     {
         var text = "1. This is the basic case\r\n\r\n2. It just works.\r\n";
 
-        var list = ListExtractor.ExtractList(text);
+        var list = ListExtractor.Extract(text);
 
         Assert.Equal(2, list.Count);
         Assert.Equal("This is the basic case", list[0]);
         Assert.Equal("It just works.", list[1]);
     }
-    
+
     [Fact]
     public void Numbered_List_Extraction_Works1()
     {
         var text = "1.       This is the basic case\n2. It just works.";
 
-        var list = ListExtractor.ExtractList(text);
+        var list = ListExtractor.Extract(text);
 
         Assert.Equal(2, list.Count);
         Assert.Equal("This is the basic case", list[0]);
@@ -34,7 +34,7 @@ public class ListExtractorTests
     {
         var text = "1       This is the basic case\n2 It just works.";
         
-        var list = ListExtractor.ExtractList(text);
+        var list = ListExtractor.Extract(text);
 
         Assert.Equal(2, list.Count);
         Assert.Equal("This is the basic case", list[0]);
@@ -46,7 +46,7 @@ public class ListExtractorTests
     {
         var text = "1. This is the basic case";
         
-        var list = ListExtractor.ExtractList(text);
+        var list = ListExtractor.Extract(text);
         
         Assert.Single(list);
         Assert.Equal("This is the basic case", list[0]);
@@ -57,7 +57,7 @@ public class ListExtractorTests
     {
         var text = "This is the basic case\r\n\r\nIt just works.";
 
-        var list = ListExtractor.ExtractList(text);
+        var list = ListExtractor.Extract(text);
 
         Assert.Equal(2, list.Count);
         Assert.Equal("This is the basic case", list[0]);
@@ -66,11 +66,11 @@ public class ListExtractorTests
 
 
     [Fact]
-    public void Single_Lne_Works()
+    public void Single_Line_Works()
     {
         var text = "This is the basic case";
 
-        var list = ListExtractor.ExtractList(text);
+        var list = ListExtractor.Extract(text);
         
         Assert.Single(list);
         Assert.Equal("This is the basic case", list[0]);
@@ -79,7 +79,7 @@ public class ListExtractorTests
     [Fact]
     public void Empty_List_Extraction_Works()
     {
-        var list = ListExtractor.ExtractList("");
+        var list = ListExtractor.Extract("");
 
         Assert.Empty(list);
     }
@@ -87,7 +87,7 @@ public class ListExtractorTests
     [Fact]
     public void WhiteSpace_List_Extraction_Works()
     {
-        var list = ListExtractor.ExtractList(" \n \r\n  ");
+        var list = ListExtractor.Extract(" \n \r\n  ");
 
         Assert.Empty(list);
     }
