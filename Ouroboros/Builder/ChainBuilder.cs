@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ouroboros.TextProcessing;
 
 namespace Ouroboros.Builder;
 
@@ -63,15 +64,9 @@ public class ChainBuilder : IChain
             throw new InvalidOperationException($"Error calling LLM: {response}");
 
         var last = Document.GetLastGeneratedAsElement();
+        var text = last.Text;
 
-        var options = StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries;
-
-        // turn the text from the last element into a list by splitting on newlines
-        var lineList = last
-            .SplitTextOnNewLines(options)
-            .ToList();
-
-        return lineList.ToList();
+        return ListExtractor.ExtractList(text);
     }
 
     public async Task<Document> AsDocumentAsync()
