@@ -25,7 +25,7 @@
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining and text processing. Still very early an .NET 6 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Removed AysncHandler for now.</PackageReleaseNotes>
+		<PackageReleaseNotes>Added AsyncHandlers back in.</PackageReleaseNotes>
 		<PackageTags>gpt3 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
