@@ -1,4 +1,5 @@
 ﻿using AI.Dev.OpenAI.GPT;
+using Microsoft.VisualStudio.Threading;
 using Ouroboros.Builder;
 using Ouroboros.Documents;
 using Ouroboros.Events;
@@ -16,11 +17,8 @@ namespace Ouroboros;
 public class OuroClient 
 {
     private readonly IApiClient ApiClient;
-
-    // wanted to do AsyncEnventer Handler via Microsoft.VisualStudio.Threading, but it brought a lot of dependencies including annoying analyzers. 
-    // Tabling for the moment
-    // using Microsoft.VisualStudio.Threading;
-    //public event AsyncEventHandler<OnRequestCompletedArgs>? OnRequestCompleted;
+        
+    public event AsyncEventHandler<OnRequestCompletedArgs>? OnRequestCompleted;
 
     /// <summary>
     /// Start here if you want to chain several prompts together with multiple .Chain calls.
@@ -83,7 +81,7 @@ public class OuroClient
 
         // Deliberately call this in a way that is not "fire and forget" because we want to run EF
         // code to save all our requests, and it might be best to avoid race conditions.
-        //if (OnRequestCompleted is not null) await OnRequestCompleted.InvokeAsync(this, args);
+        if (OnRequestCompleted is not null) await OnRequestCompleted.InvokeAsync(this, args);
 
         return response;
     }
