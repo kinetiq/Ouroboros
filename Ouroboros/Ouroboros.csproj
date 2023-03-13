@@ -32,6 +32,17 @@
 	<ItemGroup>
 		<PackageReference Include="AI.Dev.OpenAI.GPT" Version="1.0.2" />
 		<PackageReference Include="Betalgo.OpenAI.GPT3" Version="6.7.3" />
+		<PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.5.22" />
+
+		<!-- This is used by Microsoft.VisualStudio.Threading... By referencing it directly,
+		we can mark it with PrivateAssets, which prevents the analyzers from this package from
+		infecting projects that consume Ouro. -->
+		<PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.5.22">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+
+
 		<PackageReference Include="Polly" Version="7.2.3" />
 		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
 	</ItemGroup>
