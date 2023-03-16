@@ -1,10 +1,8 @@
 ﻿using AI.Dev.OpenAI.GPT;
-using Microsoft.VisualStudio.Threading;
 using Ouroboros.Builder;
 using Ouroboros.Documents;
 using Ouroboros.Events;
 using Ouroboros.LargeLanguageModels;
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -17,9 +15,7 @@ namespace Ouroboros;
 public class OuroClient 
 {
     private readonly IApiClient ApiClient;
-        
-    public event AsyncEventHandler<OnRequestCompletedArgs>? OnRequestCompleted;
-
+    
     /// <summary>
     /// Start here if you want to chain several prompts together with multiple .Chain calls.
     /// These are not executed until you call one of the async methods, such as .AsDocumentAsync
@@ -78,10 +74,6 @@ public class OuroClient
             Response = response,
             Tokens = promptTokens + responseTokens
         };
-
-        // Deliberately call this in a way that is not "fire and forget" because we want to run EF
-        // code to save all our requests, and it might be best to avoid race conditions.
-        if (OnRequestCompleted is not null) await OnRequestCompleted.InvokeAsync(this, args);
 
         return response;
     }
