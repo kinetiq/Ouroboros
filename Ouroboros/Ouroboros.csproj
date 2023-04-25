@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>1.0.1</Version>
+		<Version>1.0.2</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,11 +21,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>1.0.1</PackageVersion>
+		<PackageVersion>1.0.2</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining and text processing. Still very early an .NET 6 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Added AsyncHandlers back in.</PackageReleaseNotes>
+		<PackageReleaseNotes>Built out models a bit better. Now you can set a default model, models have an attribute for their max tokens, and opened up ListExtractor, which is useful.</PackageReleaseNotes>
 		<PackageTags>gpt3 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
