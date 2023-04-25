@@ -1,4 +1,5 @@
 ﻿using AI.Dev.OpenAI.GPT;
+using OpenAI.GPT3.ObjectModels;
 using Ouroboros.Builder;
 using Ouroboros.Documents;
 using Ouroboros.Events;
@@ -15,6 +16,7 @@ namespace Ouroboros;
 public class OuroClient 
 {
     private readonly IApiClient ApiClient;
+    private OuroModels? DefaultModel;
     
     /// <summary>
     /// Start here if you want to chain several prompts together with multiple .Chain calls.
@@ -23,6 +25,8 @@ public class OuroClient
     /// </summary>
     public ChainBuilder Prompt(string prompt, CompleteOptions? options = null)
     {
+        options = ConfigureOptions(options);
+
         var doc = new Document(this, prompt);
 
         return new ChainBuilder(doc, options);
@@ -61,21 +65,28 @@ public class OuroClient
     /// </summary>
     internal async Task<OuroResponseBase> SendForCompletionAsync(string prompt, CompleteOptions? options = null)
     {
+        options = ConfigureOptions(options);
+
         var response = await ApiClient.Complete(prompt, options);
 
-        // Fire the OnRequestCompleted, which allows the user to tie directly into the pipeline of requests
-        // and easily log them even in chaining scenarios.
-        var promptTokens = TokenCount(prompt);
-        var responseTokens = response is OuroResponseSuccess ? TokenCount(response.ResponseText) : 0;
-
-        var args = new OnRequestCompletedArgs()
-        {
-            Prompt = prompt,
-            Response = response,
-            Tokens = promptTokens + responseTokens
-        };
-
         return response;
+    }
+
+    /// <summary>
+    /// Configures a default model that will be used for all completions initiated from this client,
+    /// unless overriden by passing in a model via CompleteOptions.
+    /// </summary>
+    public void SetDefaultModel(OuroModels model)
+    {
+        DefaultModel = model;
+    }
+
+    private CompleteOptions ConfigureOptions(CompleteOptions? options)
+    {
+        options ??= new CompleteOptions();
+        options.Model ??= DefaultModel;
+
+        return options;
     }
 
     /// <summary>
@@ -91,5 +102,6 @@ public class OuroClient
     public OuroClient(string apiKey)
     {
         ApiClient = new OpenAiClient(apiKey);
+        DefaultModel = null;
     }
 }

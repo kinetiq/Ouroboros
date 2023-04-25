@@ -6,6 +6,8 @@ namespace Ouroboros.LargeLanguageModels.OpenAI;
 
 internal class Mappings
 {
+    private const Models.Model DefaultModel = Models.Model.TextDavinciV3;
+
     /// <summary>
     /// Maps our generic options to OpenAI options.
     /// </summary>
@@ -34,10 +36,11 @@ internal class Mappings
     /// <summary>
     /// Convert our generic model list into one suitable for this library.
     /// </summary>
-    internal static Models.Model MapModel(OuroModels ouroModel)
+    internal static Models.Model MapModel(OuroModels? ouroModel)
     {
         return ouroModel switch
         {
+            null => DefaultModel,
             OuroModels.Ada => Models.Model.Ada,
             OuroModels.Babbage => Models.Model.Babbage,
             OuroModels.Curie => Models.Model.Curie,

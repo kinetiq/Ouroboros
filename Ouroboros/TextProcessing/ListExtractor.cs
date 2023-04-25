@@ -7,13 +7,13 @@ using Z.Core.Extensions;
 
 namespace Ouroboros.TextProcessing;
 
-internal static class ListExtractor
+public static class ListExtractor
 {
     /// <summary>
     /// Given a block of text, senses the format, and splits it into a list of strings. Works with numbered lists (top priority) followed by lists separated
     /// by any type of newline. If it's a numbered list, it removes the numbers.
     /// </summary>
-    internal static List<string> Extract(string rawText)
+    public static List<string> Extract(string rawText)
     {
         if(rawText.IsNullOrWhiteSpace())
             return new List<string>();
