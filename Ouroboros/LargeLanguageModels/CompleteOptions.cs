@@ -73,7 +73,7 @@ public class CompleteOptions
     /// <seealso cref="!:https://beta.openai.com/tokenizer?view=bpe" />
     public object? LogitBias { get; set; }
 
-    public string? Model { get; set; } 
+    public OuroModels Model { get; set; } 
 
     /// <summary>
     ///     What
@@ -97,5 +97,6 @@ public class CompleteOptions
         Temperature = 0.7f;
         TopP = 1;
         BestOf = 1;
+        Model = OuroModels.TextDavinciV3;
     }
 }
