@@ -1,21 +1,22 @@
 ﻿using Ouroboros;
 using Ouroboros.AutoMiner;
+using Ouroboros.LargeLanguageModels;
 using Spectre.Console;
 
 // See https://aka.ms/new-console-template for more information
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new OuroClient("[SECRET]");
-var miner = new Miner(client);
+//var client = new OuroClient("[SECRET]");
+//var miner = new Miner(client);
 
-var text = await File.ReadAllTextAsync(@"D:\GPT\data.txt");
-var results = await miner.MineAsync(text, 1);
+//var text = await File.ReadAllTextAsync(@"D:\GPT\data.txt");
+//var results = await miner.MineAsync(text, 1);
 
-foreach (var result in results)
-{
-    AnsiConsole.MarkupLine("insight:");
-    AnsiConsole.MarkupLine(result);
-}
+//foreach (var result in results)
+//{
+//    AnsiConsole.MarkupLine("insight:");
+//    AnsiConsole.MarkupLine(result);
+//}
 
 
 //var document = await client.ResolveNext(@"D:\GPT\kevin.txt");
@@ -50,12 +51,18 @@ foreach (var result in results)
 //}
 
 
-//var text = await client.Resolve("D:\\GPT\\characters.txt");
+var client = new OuroClient("[VALUE]");
 
-//var text = await client.Summarize(
-//    "John is such a jerk. Just last week, we went to lunch and " + 
-//    "he refused to pay, that wanker. That has happened so many times. But " +
-//    "professionally, he's just not a great communicator. I don't like working with him" +
-//    "but he does seem to get results. That's why Bob keeps him around.", 2);
+var options = new CompleteOptions()
+{
+    Model = OuroModels.Gpt_4
+};
 
-//AnsiConsole.Markup(text);
+var response = await client.PromptToStringAsync(
+    "John is such a jerk. Just last week, we went to lunch and " +
+    "he refused to pay, that wanker. That has happened so many times. But " +
+    "professionally, he's just not a great communicator. I don't like working with him" +
+    "but he does seem to get results. That's why Bob keeps him around.", options);
+
+
+AnsiConsole.Markup(response.ResponseText);
