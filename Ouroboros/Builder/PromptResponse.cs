@@ -1,28 +1,28 @@
-﻿using Ouroboros.LargeLanguageModels;
+﻿using Ouroboros.LargeLanguageModels.Completions;
 
 namespace Ouroboros.Builder;
 
 public class PromptResponse<T>
 {
-    public OuroResponseBase OuroResponse { get; set; }
+    public CompleteResponseBase CompleteResponse { get; set; }
     public string ResponseText { get; set; }
     public bool Success { get; set; }
     public T? Value { get; set; }
 
 
-    public PromptResponse(OuroResponseBase ouroResponse)
+    public PromptResponse(CompleteResponseBase completeResponse)
     {
-        OuroResponse = ouroResponse;
-        ResponseText = OuroResponse.ResponseText;
-        Success = ouroResponse.Success;
+        CompleteResponse = completeResponse;
+        ResponseText = CompleteResponse.ResponseText;
+        Success = completeResponse.Success;
         Value = default;
     }
 
-    public PromptResponse(OuroResponseBase ouroResponse, T value)
+    public PromptResponse(CompleteResponseBase completeResponse, T value)
     {
-        OuroResponse = ouroResponse;
-        ResponseText = OuroResponse.ResponseText;
-        Success = ouroResponse.Success;
+        CompleteResponse = completeResponse;
+        ResponseText = CompleteResponse.ResponseText;
+        Success = completeResponse.Success;
         Value = value;
     }
 }

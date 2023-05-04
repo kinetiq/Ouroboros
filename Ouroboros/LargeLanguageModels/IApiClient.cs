@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Ouroboros.LargeLanguageModels.Completions;
 
 namespace Ouroboros.LargeLanguageModels;
 
@@ -7,5 +8,5 @@ namespace Ouroboros.LargeLanguageModels;
 /// </summary>
 internal interface IApiClient
 {
-    Task<OuroResponseBase> Complete(string prompt, CompleteOptions? options);
+    Task<CompleteResponseBase> Complete(string prompt, CompleteOptions? options);
 }

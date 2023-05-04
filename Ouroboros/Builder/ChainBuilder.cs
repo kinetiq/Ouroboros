@@ -1,6 +1,6 @@
 ﻿using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
-using Ouroboros.LargeLanguageModels;
+using Ouroboros.LargeLanguageModels.Completions;
 using Ouroboros.TextProcessing;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -98,9 +98,9 @@ public class ChainBuilder : IChain
     /// Executes all queued commands, which means actually sending requests to the LLM. You don't usually call this
     /// manually. Instead, call one of the CompleteTo methods.
     /// </summary>
-    internal async Task<OuroResponseBase> ExecuteCommandsAsync()
+    internal async Task<CompleteResponseBase> ExecuteCommandsAsync()
     {
-        OuroResponseBase lastResponse = new OuroResponseNoOp();
+        CompleteResponseBase lastResponse = new CompleteResponseNoOp();
         
         foreach (var command in Commands)
         {
@@ -109,7 +109,7 @@ public class ChainBuilder : IChain
 
             lastResponse = await Document.ResolveAndSubmitAsync(command.NewElementName);
 
-            if (lastResponse is OuroResponseFailure)
+            if (lastResponse is CompleteResponseFailure)
                 return lastResponse;
         }
 

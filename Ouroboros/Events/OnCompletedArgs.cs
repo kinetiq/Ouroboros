@@ -1,4 +1,4 @@
-﻿using Ouroboros.LargeLanguageModels;
+﻿using Ouroboros.LargeLanguageModels.Completions;
 
 namespace Ouroboros.Events;
 
@@ -8,13 +8,13 @@ namespace Ouroboros.Events;
 public class OnRequestCompletedArgs
 {
     public string Prompt { get; set; } 
-    public OuroResponseBase Response { get; set; } 
+    public CompleteResponseBase Response { get; set; } 
     public int Tokens { get; set; }
 
     public OnRequestCompletedArgs()
     {
         Prompt = "";
-        Response = new OuroResponseNoOp();
+        Response = new CompleteResponseNoOp();
         Tokens = 0;
     }
 }

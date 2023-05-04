@@ -1,4 +1,4 @@
-﻿using Ouroboros.LargeLanguageModels;
+﻿using Ouroboros.LargeLanguageModels.Completions;
 
 namespace Ouroboros.Builder;
 

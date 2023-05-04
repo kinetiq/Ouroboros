@@ -58,7 +58,7 @@ public class Miner
             .CompleteToDocumentAsync();
 
         if (!response.Success)
-            throw new InvalidOperationException("Failed: " + response.OuroResponse.ResponseText);
+            throw new InvalidOperationException("Failed: " + response.CompleteResponse.ResponseText);
 
         return response.Value!;
     }

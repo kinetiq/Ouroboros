@@ -1,6 +1,6 @@
 ﻿using Ouroboros;
-using Ouroboros.AutoMiner;
 using Ouroboros.LargeLanguageModels;
+using Ouroboros.LargeLanguageModels.Completions;
 using Spectre.Console;
 
 // See https://aka.ms/new-console-template for more information

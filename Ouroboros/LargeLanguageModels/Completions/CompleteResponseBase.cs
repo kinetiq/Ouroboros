@@ -1,6 +1,6 @@
-﻿namespace Ouroboros.LargeLanguageModels;
+﻿namespace Ouroboros.LargeLanguageModels.Completions;
 
-public abstract class OuroResponseBase
+public abstract class CompleteResponseBase
 {
     public bool Success { get; set; }
     public string ResponseText { get; set; } = "";
@@ -11,9 +11,9 @@ public abstract class OuroResponseBase
     }
 }
 
-public class OuroResponseSuccess : OuroResponseBase
+public class CompleteResponseSuccess : CompleteResponseBase
 {
-    public OuroResponseSuccess(string responseText)
+    public CompleteResponseSuccess(string responseText)
     {
         Success = true;
         ResponseText = responseText;
@@ -24,9 +24,9 @@ public class OuroResponseSuccess : OuroResponseBase
 /// <summary>
 /// Indicates that the API call was cancelled because there was nothing to do.
 /// </summary>
-public class OuroResponseNoOp : OuroResponseBase
+public class CompleteResponseNoOp : CompleteResponseBase
 {
-    public OuroResponseNoOp()
+    public CompleteResponseNoOp()
     {
         Success = true;
         ResponseText = string.Empty;
@@ -34,9 +34,9 @@ public class OuroResponseNoOp : OuroResponseBase
 }
 
 
-public class OuroResponseFailure : OuroResponseBase
+public class CompleteResponseFailure : CompleteResponseBase
 {
-    public OuroResponseFailure(string error)
+    public CompleteResponseFailure(string error)
     {
         Success = false;
         ResponseText = error;

@@ -1,6 +1,7 @@
 ﻿using System;
 using OpenAI.GPT3.ObjectModels;
 using OpenAI.GPT3.ObjectModels.RequestModels;
+using Ouroboros.LargeLanguageModels.Completions;
 
 namespace Ouroboros.LargeLanguageModels.OpenAI;
 

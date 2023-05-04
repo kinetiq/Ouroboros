@@ -8,7 +8,7 @@ using Ouroboros.Documents.Elements;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.Documents.Factories;
 using Ouroboros.Documents.Mutators;
-using Ouroboros.LargeLanguageModels;
+using Ouroboros.LargeLanguageModels.Completions;
 
 namespace Ouroboros.Documents;
 
@@ -28,7 +28,7 @@ public class Document : IChain
     /// Resolves this document. Note that this does not submit the result to the LLM for
     /// completion, but you can use ResolveAndSubmit if you want to do both.
     /// </summary>
-    public async Task<OuroResponseBase> ResolveAsync(ResolveOptions? options = null)
+    public async Task<CompleteResponseBase> ResolveAsync(ResolveOptions? options = null)
     {
         Options = options ?? new ResolveOptions();
 
@@ -39,7 +39,7 @@ public class Document : IChain
             .Where(x => !x.IsResolved)
             .ToList();
         
-        OuroResponseBase lastResponse = new OuroResponseNoOp(); // NoOp because nothing has happened yet.
+        CompleteResponseBase lastResponse = new CompleteResponseNoOp(); // NoOp because nothing has happened yet.
 
         // Iterate through any Resolve elements first. Handle these by calling the API. 
         foreach (var element in resolveElements)
@@ -67,7 +67,7 @@ public class Document : IChain
     /// <summary>
     /// Resolve this document, but stop after the first completion.
     /// </summary>
-    public async Task<OuroResponseBase> ResolveNextAsync()
+    public async Task<CompleteResponseBase> ResolveNextAsync()
     {
         return await ResolveAsync(new ResolveOptions()
         {
@@ -79,7 +79,7 @@ public class Document : IChain
     /// Override that always submits the document to the LLM. This is not the default behavior.
     /// Returns only the output. 
     /// </summary>
-    public async Task<OuroResponseBase> ResolveAndSubmitAsync(string? newElementName = null)
+    public async Task<CompleteResponseBase> ResolveAndSubmitAsync(string? newElementName = null)
     {
         return await ResolveAsync(new ResolveOptions()
         {
@@ -142,7 +142,7 @@ public class Document : IChain
     /// <summary>
     /// Submits the document to the LLM, and then appends the result onto the end.
     /// </summary>
-    private async Task<OuroResponseBase> CompleteAndAppendAsync()
+    private async Task<CompleteResponseBase> CompleteAndAppendAsync()
     {
         var documentText = this.ToModelInput();
         
@@ -174,7 +174,7 @@ public class Document : IChain
     /// 
     /// The text that comes out of that process becomes the GeneratedText of our element.
     /// </summary>
-    private async Task<OuroResponseBase> ResolveElementAsync(ResolveElement element)
+    private async Task<CompleteResponseBase> ResolveElementAsync(ResolveElement element)
     {
         // We can't perform the resolve directly on our element, because resolution involves
         // operations like swapping out the prompt, removing everything after element,

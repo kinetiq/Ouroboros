@@ -4,6 +4,7 @@ using Ouroboros.Builder;
 using Ouroboros.Documents;
 using Ouroboros.Events;
 using Ouroboros.LargeLanguageModels;
+using Ouroboros.LargeLanguageModels.Completions;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -63,7 +64,7 @@ public class OuroClient
     /// Sends the text string to the LLM for completion. This is the most direct route
     /// to completion and is ultimately the only place where we actually call the LLM.
     /// </summary>
-    internal async Task<OuroResponseBase> SendForCompletionAsync(string prompt, CompleteOptions? options = null)
+    internal async Task<CompleteResponseBase> SendForCompletionAsync(string prompt, CompleteOptions? options = null)
     {
         options = ConfigureOptions(options);
 

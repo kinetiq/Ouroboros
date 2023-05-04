@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Ouroboros.LargeLanguageModels;
+namespace Ouroboros.LargeLanguageModels.Completions;
 public class CompleteOptions
 {
     /// <summary>
@@ -35,7 +35,7 @@ public class CompleteOptions
     ///     sequence.
     /// </summary>
     public IList<string>? StopAsList { get; set; }
-        
+
     /// <summary>
     ///     Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far,
     ///     increasing the model's likelihood to talk about new topics.
@@ -73,7 +73,7 @@ public class CompleteOptions
     /// <seealso cref="!:https://beta.openai.com/tokenizer?view=bpe" />
     public object? LogitBias { get; set; }
 
-    public OuroModels? Model { get; set; } 
+    public OuroModels? Model { get; set; }
 
     /// <summary>
     ///     What
