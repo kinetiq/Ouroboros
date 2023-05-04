@@ -68,9 +68,12 @@ internal class OpenAiClient : IApiClient
     }
 
     #region Embeddings
-    public async Task<EmbeddingResponseBase> RequestEmbeddings(List<string> inputs, OuroModels model)
+    public async Task<EmbeddingResponseBase> RequestEmbeddings(List<string> inputs, OuroModels? model)
     {
-        var openAiModel = Mappings.MapModel(model);
+        model ??= OuroModels.TextEmbeddingAdaV2;
+        inputs = PrepareInputs(inputs);
+
+        var openAiModel = Mappings.MapModel(model); // Maybe refactor this to better handle the embedding versus completion scenario
         var modelName = openAiModel.EnumToString();
 
         var api = GetClient();
@@ -90,6 +93,28 @@ internal class OpenAiClient : IApiClient
     }
 
     /// <summary>
+    /// OpenAI recommends replacing \n with a space: 
+    /// </summary>
+    private List<string> PrepareInputs(List<string> inputs)
+    {
+        var result = new List<string>();
+
+        foreach (var input in inputs)
+        {
+            result.Add(input.Replace("\n", " "));
+        }
+
+        return result;
+    }
+
+    public async Task<EmbeddingResponseBase> RequestEmbeddings(string input, OuroModels? model)
+    {
+        var inputs = new List<string>() { input };
+
+        return await RequestEmbeddings(inputs, model);
+    }
+
+    /// <summary>
     /// Extracts the ResponseText from from a completion response we already know to be
     /// successful.
     /// </summary>
@@ -102,7 +127,7 @@ internal class OpenAiClient : IApiClient
             .Data
             .Select(x => new OuroEmbedding()
             {
-                Embedding = x.Embedding,
+                Embedding = x.Embedding.ToArray(),
                 Index = x.Index,
                 Original = inputs[x.Index ?? 0] // if index is null, I assume that means there was only one input?   
             })

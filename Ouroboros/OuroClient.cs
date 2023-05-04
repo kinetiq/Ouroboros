@@ -1,14 +1,12 @@
 ﻿using AI.Dev.OpenAI.GPT;
-using OpenAI.GPT3.ObjectModels;
 using Ouroboros.Builder;
 using Ouroboros.Documents;
-using Ouroboros.Events;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.Completions;
+using Ouroboros.LargeLanguageModels.Embeddings;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -98,6 +96,18 @@ public class OuroClient
     public Document CreateDocument(string prompt)
     {
         return new Document(this, prompt); 
+    }
+
+    public async Task<EmbeddingResponseBase> RequestEmbeddings(List<string> inputs, OuroModels? model = null)
+    {
+        model ??= DefaultModel;
+
+        return await ApiClient.RequestEmbeddings(inputs, model);
+    }
+
+    public async Task<EmbeddingResponseBase> RequestEmbeddings(string input, OuroModels? model = null)
+    {
+        return await RequestEmbeddings(new List<string> { input }, model);
     }
 
     public OuroClient(string apiKey)

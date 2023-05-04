@@ -14,6 +14,7 @@ public enum OuroModels
     [MaxTokens(2048)] TextDavinciV1,
     [MaxTokens(2048)] TextDavinciV2,
     [MaxTokens(4096)] TextDavinciV3,
+    [MaxTokens(8191)] TextEmbeddingAdaV2,
     [MaxTokens(4096)] ChatGpt3_5Turbo,
     [MaxTokens(8192)] Gpt_4
 }

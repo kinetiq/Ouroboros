@@ -7,7 +7,7 @@ namespace Ouroboros.LargeLanguageModels.OpenAI;
 
 internal class Mappings
 {
-    private const Models.Model DefaultModel = Models.Model.TextDavinciV3;
+    public const Models.Model DefaultModel = Models.Model.TextDavinciV3;
 
     /// <summary>
     /// Maps our generic options to OpenAI options.
@@ -52,6 +52,7 @@ internal class Mappings
             OuroModels.TextDavinciV1 => Models.Model.TextDavinciV1,
             OuroModels.TextDavinciV2 => Models.Model.TextDavinciV2,
             OuroModels.TextDavinciV3 => Models.Model.TextDavinciV3,
+            OuroModels.TextEmbeddingAdaV2 => Models.Model.TextEmbeddingAdaV2,
             OuroModels.ChatGpt3_5Turbo => Models.Model.ChatGpt3_5Turbo,
             OuroModels.Gpt_4 => Models.Model.Gpt_4,
             _ => throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null)
