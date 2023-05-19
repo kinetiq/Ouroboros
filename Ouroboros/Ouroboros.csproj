@@ -30,7 +30,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Accord.Math" Version="3.8.0" />
 		<PackageReference Include="AI.Dev.OpenAI.GPT" Version="1.0.2" />
 		<PackageReference Include="Betalgo.OpenAI" Version="6.8.5" />
 		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />

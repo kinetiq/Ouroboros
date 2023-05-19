@@ -1,6 +1,7 @@
 ﻿using Ouroboros;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.Completions;
+using Ouroboros.LargeLanguageModels.Embeddings;
 using Spectre.Console;
 
 // See https://aka.ms/new-console-template for more information
@@ -51,18 +52,47 @@ AnsiConsole.MarkupLine("[red]Starting...[/]");
 //}
 
 
-var client = new OuroClient("[VALUE]");
+var client = new OuroClient("[SECRET]");
 
-var options = new CompleteOptions()
+var xx = new List<string>()
 {
-    Model = OuroModels.Gpt_4
+    "Positive, improve delegation",
+    "Negative, improve communication"
 };
 
-var response = await client.PromptToStringAsync(
-    "John is such a jerk. Just last week, we went to lunch and " +
-    "he refused to pay, that wanker. That has happened so many times. But " +
-    "professionally, he's just not a great communicator. I don't like working with him" +
-    "but he does seem to get results. That's why Bob keeps him around.", options);
+var test = await client.RequestEmbeddings(xx);
 
 
-AnsiConsole.Markup(response.ResponseText);
+AnsiConsole.Markup(test.ResponseText);
+
+if (test is EmbeddingResponseSuccess success)
+{
+    foreach (var item in success.Embeddings)
+    {
+        AnsiConsole.MarkupLine(item.ToString());
+    }
+}
+
+var v1 = test.Embeddings[0].Embedding;
+var v2 = test.Embeddings[1].Embedding;
+
+var distance = Ouroboros.Vectors.Calculate.EuclideanDistance(v1, v2);
+var dotProductResult = Ouroboros.Vectors.Calculate.DotProduct(v1, v2);
+
+AnsiConsole.MarkupLine("Distance: " + distance);
+AnsiConsole.MarkupLine("Dot Product: " + dotProductResult);
+
+//var options = new CompleteOptions()
+//{
+//    Model = OuroModels.Gpt_4
+//};
+
+//var response = await client.PromptToStringAsync(
+//    "John is such a jerk. Just last week, we went to lunch and " +
+//    "he refused to pay, that wanker. That has happened so many times. But " +
+//    "professionally, he's just not a great communicator. I don't like working with him" +
+//    "but he does seem to get results. That's why Bob keeps him around.", options);
+
+
+//AnsiConsole.Markup(response.ResponseText);
+
