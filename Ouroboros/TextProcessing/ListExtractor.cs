@@ -2,7 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Text.RegularExpressions;
+using Z.Collections.Extensions;
 using Z.Core.Extensions;
 
 namespace Ouroboros.TextProcessing;
@@ -10,32 +12,49 @@ namespace Ouroboros.TextProcessing;
 public static class ListExtractor
 {
     /// <summary>
-    /// Given a block of text, senses the format, and splits it into a list of strings. Works with numbered lists (top priority) followed by lists separated
-    /// by any type of newline. If it's a numbered list, it removes the numbers.
+    /// Given a block of text, senses the format, and splits the block into a list. Works with numbered lists (top priority)
+    /// followed by lists separated by any type of newline. 
     /// </summary>
-    public static List<string> Extract(string rawText)
+    public static List<ListItem> Extract(string rawText)
     {
-        if(rawText.IsNullOrWhiteSpace())
-            return new List<string>();
+        if (rawText.IsNullOrWhiteSpace())
+            return new List<ListItem>();
 
         rawText = rawText.Trim();
 
         return IsNumberedList(rawText) ? 
-            ExtractNumberedList(rawText) : 
+            ExtractNumberedList(rawText).ToList<ListItem>() : 
             ExtractNewLineList(rawText);
     }
 
-    private static List<string> ExtractNewLineList(string rawText)
+    /// <summary>
+    /// Like Extract, except this discards any item that doesn't start with a number.
+    /// This allows us to directly return NumberedListItem.
+    /// </summary>
+    public static List<NumberedListItem> ExtractNumbered(string rawText)
+    {
+        var items = Extract(rawText);
+
+        items.RemoveWhere(x => x is not NumberedListItem);
+
+        return items
+            .Cast<NumberedListItem>()
+            .ToList();
+    }
+
+    private static List<ListItem> ExtractNewLineList(string rawText)
     {
         var lines = rawText
-            .SplitTextOnNewLines(StringSplitOptions.RemoveEmptyEntries | 
+            .SplitTextOnNewLines(StringSplitOptions.RemoveEmptyEntries |
                                  StringSplitOptions.TrimEntries)
             .ToList();
 
         if (IsStealthNumbered(lines))
-            lines = RemoveStealthNumbering(lines);
+            return HandleStealthNumbering(lines);
 
-        return lines;
+        return lines
+            .Select(x => new ListItem(x))
+            .ToList();
     }
 
     /// <summary>
@@ -44,8 +63,8 @@ public static class ListExtractor
     /// </summary>
     private static bool IsNumberedList(string rawText)
     {
-        return (rawText.Length >= 2 && 
-                rawText[0].IsNumber() && 
+        return (rawText.Length >= 2 &&
+                rawText[0].IsNumber() &&
                 rawText[1] == '.');
     }
 
@@ -69,7 +88,7 @@ public static class ListExtractor
         foreach (var line in lines)
         {
             var expected = index.ToString() + ' ';
-            
+
             if (!line.StartsWith(expected))
                 return false;
 
@@ -79,10 +98,12 @@ public static class ListExtractor
         return true;
     }
 
-    private static List<string> RemoveStealthNumbering(List<string> lines)
+    private static List<ListItem> HandleStealthNumbering(List<string> lines)
     {
-        var result = new List<string>();
+        var result = new List<ListItem>();
         var index = 1;
+
+        // TODO: this only works if the numbering is sequential from 1 to n.
 
         foreach (var line in lines)
         {
@@ -93,30 +114,48 @@ public static class ListExtractor
                 currentLine = currentLine[expected.Length..].Trim();
 
             if (currentLine.Length > 0)
-                result.Add(currentLine);
+                result.Add(new NumberedListItem(index, currentLine));
 
             index++;
         }
-        
+
         return result;
     }
 
     /// <summary>
     /// Extract the numbered list using a regex.
     /// </summary>
-    private static List<string> ExtractNumberedList(string rawText)
+    private static List<NumberedListItem> ExtractNumberedList(string rawText)
     {
-        var pattern = @"([\d]+\. )(.*?)(?=([\d]+\.)|($))";
+        const string pattern = @"([\d]+\. )(.*?)(?=([\d]+\.)|($))";
         var matches = Regex.Matches(rawText, pattern, RegexOptions.Singleline);
 
         if (matches.Count == 0)
-            return new List<string>();
+            return new List<NumberedListItem>();
 
         // Get the text part of the list. Toss the number.
         return matches
-            .Select(x => x.Groups[2]
-                .Value
-                .Trim())
+            .Select(x => 
+                new NumberedListItem(index: ExtractInt(x.Groups[1].Value), 
+                                     text: x.Groups[2].Value.Trim()))
             .ToList();
+    }
+
+    /// <summary>
+    /// Value should be an integer followed by a dot, although we will also allow
+    /// a space. If it's an integer, convert it and return. Otherwise, return null.
+    /// </summary>
+    private static int ExtractInt(string value)
+    {
+        // Get everything up to the first dot or space.
+        var dotIndex = value.IndexOfAny(new char[] { '.', ' ' });
+
+        var number = value[..dotIndex];
+
+        if (number == null)
+            throw new InvalidOperationException("Called ExtractInt, but was unable to find the number: " + value);
+
+        // Parse it to an int, if we can.
+        return int.Parse(number);
     }
 }

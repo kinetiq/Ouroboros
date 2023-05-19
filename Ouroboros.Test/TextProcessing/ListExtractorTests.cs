@@ -9,11 +9,15 @@ public class ListExtractorTests
     {
         var text = "1. This is the basic case\r\n\r\n2. It just works.\r\n";
 
-        var list = ListExtractor.Extract(text);
+        var items = ListExtractor.ExtractNumbered(text);
 
-        Assert.Equal(2, list.Count);
-        Assert.Equal("This is the basic case", list[0]);
-        Assert.Equal("It just works.", list[1]);
+        Assert.Equal(2, items.Count);
+        
+        Assert.Equal("This is the basic case", items[0].Text);
+        Assert.Equal(1, items[0].Index);
+
+        Assert.Equal("It just works.", items[1].Text);
+        Assert.Equal(2, items[1].Index);
     }
 
     [Fact]
@@ -21,11 +25,13 @@ public class ListExtractorTests
     {
         var text = "1.       This is the basic case\n2. It just works.";
 
-        var list = ListExtractor.Extract(text);
+        var items = ListExtractor.ExtractNumbered(text);
 
-        Assert.Equal(2, list.Count);
-        Assert.Equal("This is the basic case", list[0]);
-        Assert.Equal("It just works.", list[1]);
+        Assert.Equal(2, items.Count);
+        Assert.Equal("This is the basic case", items[0].Text);
+        Assert.Equal(1, items[0].Index);
+        Assert.Equal("It just works.", items[1].Text);
+        Assert.Equal(2, items[1].Index);
     }
 
 
@@ -34,11 +40,13 @@ public class ListExtractorTests
     {
         var text = "1       This is the basic case\n2 It just works.";
         
-        var list = ListExtractor.Extract(text);
+        var items = ListExtractor.ExtractNumbered(text);
 
-        Assert.Equal(2, list.Count);
-        Assert.Equal("This is the basic case", list[0]);
-        Assert.Equal("It just works.", list[1]);
+        Assert.Equal(2, items.Count);
+        Assert.Equal("This is the basic case", items[0].Text);
+        Assert.Equal(1, items[0].Index);
+        Assert.Equal("It just works.", items[1].Text);
+        Assert.Equal(2, items[1].Index);
     }
 
     [Fact]
@@ -46,10 +54,10 @@ public class ListExtractorTests
     {
         var text = "1. This is the basic case";
         
-        var list = ListExtractor.Extract(text);
+        var items = ListExtractor.ExtractNumbered(text);
         
-        Assert.Single(list);
-        Assert.Equal("This is the basic case", list[0]);
+        Assert.Single(items);
+        Assert.Equal("This is the basic case", items[0].Text);
     }
 
     [Fact]
@@ -57,11 +65,31 @@ public class ListExtractorTests
     {
         var text = "This is the basic case\r\n\r\nIt just works.";
 
-        var list = ListExtractor.Extract(text);
+        var items = ListExtractor.Extract(text);
 
-        Assert.Equal(2, list.Count);
-        Assert.Equal("This is the basic case", list[0]);
-        Assert.Equal("It just works.", list[1]);
+        Assert.Equal(2, items.Count);
+        Assert.Equal("This is the basic case", items[0].Text);
+        Assert.Equal("It just works.", items[1].Text);
+    }
+
+    [Fact]
+    public void Unnumbered_Items_Are_Discard_By_ExtractNumbered()
+    {
+        var text = "This is the basic case\r\n\r\nIt just works.";
+
+        var items = ListExtractor.ExtractNumbered(text);
+
+        Assert.Empty(items);
+    }
+
+    [Fact]
+    public void Unnumbered_Items_Are_Discard_By_ExtractNumbered_2()
+    {
+        var text = "This is the basic case\r\n\r\nIt just works.\r\n1. Test";
+
+        var items = ListExtractor.ExtractNumbered(text);
+
+        Assert.Empty(items);
     }
 
 
@@ -70,25 +98,25 @@ public class ListExtractorTests
     {
         var text = "This is the basic case";
 
-        var list = ListExtractor.Extract(text);
+        var items = ListExtractor.Extract(text);
         
-        Assert.Single(list);
-        Assert.Equal("This is the basic case", list[0]);
+        Assert.Single(items);
+        Assert.Equal("This is the basic case", items[0].Text);
     }
 
     [Fact]
     public void Empty_List_Extraction_Works()
     {
-        var list = ListExtractor.Extract("");
+        var items = ListExtractor.Extract("");
 
-        Assert.Empty(list);
+        Assert.Empty(items);
     }
 
     [Fact]
     public void WhiteSpace_List_Extraction_Works()
     {
-        var list = ListExtractor.Extract(" \n \r\n  ");
+        var items = ListExtractor.Extract(" \n \r\n  ");
 
-        Assert.Empty(list);
+        Assert.Empty(items);
     }
 }

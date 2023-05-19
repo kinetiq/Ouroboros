@@ -56,16 +56,16 @@ public class ChainBuilder : IChain
     /// Assumes the last completion returned was a list, with items separated by newlines or numbers.
     /// Cleans up any extra whitespace and returns a list.
     /// </summary>
-    public async Task<PromptResponse<List<string>>> CompleteToListAsync()
+    public async Task<PromptResponse<List<ListItem>>> CompleteToListAsync()
     {
         var response = await ExecuteCommandsAsync();
 
         if (!response.Success)
-            return new PromptResponse<List<string>>(response);
+            return new PromptResponse<List<ListItem>>(response);
 
         var value = ListExtractor.Extract(response.ResponseText);
 
-        return new PromptResponse<List<string>>(response, value);
+        return new PromptResponse<List<ListItem>>(response, value);
     }
 
     /// <summary>
