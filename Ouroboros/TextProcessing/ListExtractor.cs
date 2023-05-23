@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Mime;
 using System.Text.RegularExpressions;
 using Z.Collections.Extensions;
 using Z.Core.Extensions;
@@ -58,14 +57,14 @@ public static class ListExtractor
     }
 
     /// <summary>
-    /// The main style of numbered list we're after is in the format of 1. [text]
+    /// The main style of numbered lists we're after is in the format of 1. [text]
     /// However, there's some other code in ExtractNewLineList that will try to catch situations where the dot is missing.
     /// </summary>
     private static bool IsNumberedList(string rawText)
     {
-        return (rawText.Length >= 2 &&
-                rawText[0].IsNumber() &&
-                rawText[1] == '.');
+        const string pattern = @"^\d+(\.| |$)";
+
+        return Regex.IsMatch(rawText, pattern);
     }
 
     /// <summary>
@@ -127,7 +126,7 @@ public static class ListExtractor
     /// </summary>
     private static List<NumberedListItem> ExtractNumberedList(string rawText)
     {
-        const string pattern = @"([\d]+\. )(.*?)(?=([\d]+\.)|($))";
+        const string pattern = @"([\d]+(\.\s|\s|\.?\s?$))([^\r|\n]*)(?=(\r|\n[\d]+(\.\s|\s|$))|($))";
         var matches = Regex.Matches(rawText, pattern, RegexOptions.Singleline);
 
         if (matches.Count == 0)
@@ -137,7 +136,7 @@ public static class ListExtractor
         return matches
             .Select(x => 
                 new NumberedListItem(index: ExtractInt(x.Groups[1].Value), 
-                                     text: x.Groups[2].Value.Trim()))
+                                     text: x.Groups[3].Value.Trim()))
             .ToList();
     }
 
@@ -149,6 +148,10 @@ public static class ListExtractor
     {
         // Get everything up to the first dot or space.
         var dotIndex = value.IndexOfAny(new char[] { '.', ' ' });
+
+        // This could only happen if we've got a number with no text at all.
+        if (dotIndex == -1)
+            return int.Parse(value);
 
         var number = value[..dotIndex];
 

@@ -1,4 +1,5 @@
 ﻿using Ouroboros.TextProcessing;
+using Xunit.Abstractions;
 
 namespace Ouroboros.Test.TextProcessing;
 
@@ -38,12 +39,12 @@ public class ListExtractorTests
     [Fact]
     public void Numbered_List_Extraction_Works_Without_Periods()
     {
-        var text = "1       This is the basic case\n2 It just works.";
+        var text = "1       Numbers in the string 1234 2. are allowed\n2 It just works.";
         
         var items = ListExtractor.ExtractNumbered(text);
 
         Assert.Equal(2, items.Count);
-        Assert.Equal("This is the basic case", items[0].Text);
+        Assert.Equal("Numbers in the string 1234 2. are allowed", items[0].Text);
         Assert.Equal(1, items[0].Index);
         Assert.Equal("It just works.", items[1].Text);
         Assert.Equal(2, items[1].Index);
@@ -118,5 +119,25 @@ public class ListExtractorTests
         var items = ListExtractor.Extract(" \n \r\n  ");
 
         Assert.Empty(items);
+    }
+
+    [Fact]
+    public void Leading_WhiteSpace_No_Dot_No_Text()
+    {
+        var items = ListExtractor.ExtractNumbered(" 1252532  ");
+
+        Assert.Single(items);
+        Assert.Equal("", items[0].Text);
+        Assert.Equal(1252532, items[0].Index);
+    }
+
+    [Fact]
+    public void Leading_WhiteSpace_Dot_No_Text()
+    {
+        var items = ListExtractor.ExtractNumbered(" 1252532.  ");
+
+        Assert.Single(items);
+        Assert.Equal("", items[0].Text);
+        Assert.Equal(1252532, items[0].Index);
     }
 }
