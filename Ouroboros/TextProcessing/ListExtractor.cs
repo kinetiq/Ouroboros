@@ -41,15 +41,16 @@ public static class ListExtractor
             .ToList();
     }
 
+    /// <summary>
+    /// If we don't have a numbered list, we look for newlines and try splitting on those.
+    /// Empty lines are discarded. 
+    /// </summary>
     private static List<ListItem> ExtractNewLineList(string rawText)
     {
         var lines = rawText
             .SplitTextOnNewLines(StringSplitOptions.RemoveEmptyEntries |
                                  StringSplitOptions.TrimEntries)
             .ToList();
-
-        if (IsStealthNumbered(lines))
-            return HandleStealthNumbering(lines);
 
         return lines
             .Select(x => new ListItem(x))
@@ -68,65 +69,11 @@ public static class ListExtractor
     }
 
     /// <summary>
-    /// Could happen if the list items are numbered, but don't have a dot.
-    /// </summary>
-    private static bool IsStealthNumbered(List<string> lines)
-    {
-        // Ensure we have some lines.
-        if (!lines.Any())
-            return false;
-
-        // Ensure all lines start with a number,
-        if (!lines.All(x => x[0].IsNumber()))
-            return false;
-
-        var index = 1;
-
-        // Iterate the list, confirming we have numbers and they aren't random,
-        // but follow a linear sequence starting with 1.
-        foreach (var line in lines)
-        {
-            var expected = index.ToString() + ' ';
-
-            if (!line.StartsWith(expected))
-                return false;
-
-            index++;
-        }
-
-        return true;
-    }
-
-    private static List<ListItem> HandleStealthNumbering(List<string> lines)
-    {
-        var result = new List<ListItem>();
-        var index = 1;
-
-        // TODO: this only works if the numbering is sequential from 1 to n.
-
-        foreach (var line in lines)
-        {
-            var currentLine = line;
-            var expected = index.ToString() + ' ';
-
-            if (line.StartsWith(expected))
-                currentLine = currentLine[expected.Length..].Trim();
-
-            if (currentLine.Length > 0)
-                result.Add(new NumberedListItem(index, currentLine));
-
-            index++;
-        }
-
-        return result;
-    }
-
-    /// <summary>
     /// Extract the numbered list using a regex.
     /// </summary>
     private static List<NumberedListItem> ExtractNumberedList(string rawText)
     {
-        const string pattern = @"([\d]+(\.\s|\s|\.?\s?$))([^\r|\n]*)(?=(\r|\n[\d]+(\.\s|\s|$))|($))";
+        const string pattern = @"([\d]+(\. | |\.? ?$))(.*?)(?=((\r|\n)[\d]+(\. | |$))|($))";
         var matches = Regex.Matches(rawText, pattern, RegexOptions.Singleline);
 
         if (matches.Count == 0)
@@ -141,8 +88,8 @@ public static class ListExtractor
     }
 
     /// <summary>
-    /// Value should be an integer followed by a dot, although we will also allow
-    /// a space. If it's an integer, convert it and return. Otherwise, return null.
+    /// Value should be an integer followed by a dot or space. If this runs, the integer
+    /// should always be present.
     /// </summary>
     private static int ExtractInt(string value)
     {

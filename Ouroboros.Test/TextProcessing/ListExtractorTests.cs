@@ -62,6 +62,20 @@ public class ListExtractorTests
     }
 
     [Fact]
+    public void Numbered_List_Extraction_With_Extra_NewLines()
+    {
+        var text = "9. This is the basic\n \n\rcase\n\r12. This is an actual new line.";
+
+        var items = ListExtractor.ExtractNumbered(text);
+
+        Assert.Equal(2, items.Count);
+        Assert.Equal("This is the basic\n \n\rcase", items[0].Text);
+        Assert.Equal(9, items[0].Index);
+        Assert.Equal("This is an actual new line.", items[1].Text);
+        Assert.Equal(12, items[1].Index);
+    }
+
+    [Fact]
     public void NewLine_List_Extraction_Works()
     {
         var text = "This is the basic case\r\n\r\nIt just works.";
