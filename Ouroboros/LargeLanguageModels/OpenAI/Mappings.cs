@@ -1,20 +1,21 @@
 ﻿using System;
-using OpenAI.GPT3.ObjectModels;
-using OpenAI.GPT3.ObjectModels.RequestModels;
+using OpenAI.ObjectModels;
+using OpenAI.ObjectModels.RequestModels;
 using Ouroboros.LargeLanguageModels.Completions;
 
 namespace Ouroboros.LargeLanguageModels.OpenAI;
 
 internal class Mappings
 {
-    public const Models.Model DefaultModel = Models.Model.TextDavinciV3;
+    public const OuroModels DefaultModel = OuroModels.Gpt_4;
+    private const Models.Model DefaultBetalgoModel = Models.Model.Gpt_4;
 
     /// <summary>
     /// Maps our generic options to OpenAI options.
     /// </summary>
     internal static CompletionCreateRequest MapOptions(string prompt, CompleteOptions options)
     {
-        var request = new CompletionCreateRequest
+        return new CompletionCreateRequest
         {
             Prompt = prompt,
             BestOf = options.BestOf,
@@ -29,19 +30,20 @@ internal class Mappings
             StopAsList = options.StopAsList,
             User = options.User,
             Echo = false,
-            Suffix = options.Suffix
+            Suffix = options.Suffix,
+            Model = GetModelNameAsString(options.Model)
         };
-        return request;
     }
 
     /// <summary>
-    /// Convert our generic model list into one suitable for this library.
+    /// We need to convert our generic model to a string. Turn it into a Betalgo model and use that library's
+    /// capability.
     /// </summary>
-    internal static Models.Model MapModel(OuroModels? ouroModel)
+    internal static string GetModelNameAsString(OuroModels? ouroModel)
     {
-        return ouroModel switch
+        var betalgoModel = ouroModel switch
         {
-            null => DefaultModel,
+            null => DefaultBetalgoModel,
             OuroModels.Ada => Models.Model.Ada,
             OuroModels.Babbage => Models.Model.Babbage,
             OuroModels.Curie => Models.Model.Curie,
@@ -57,5 +59,7 @@ internal class Mappings
             OuroModels.Gpt_4 => Models.Model.Gpt_4,
             _ => throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null)
         };
+
+        return betalgoModel.EnumToString();
     }
 }

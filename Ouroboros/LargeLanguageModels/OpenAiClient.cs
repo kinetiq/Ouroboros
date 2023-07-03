@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using OpenAI.GPT3;
-using OpenAI.GPT3.Interfaces;
-using OpenAI.GPT3.Managers;
-using OpenAI.GPT3.ObjectModels.RequestModels;
-using OpenAI.GPT3.ObjectModels;
-using OpenAI.GPT3.ObjectModels.ResponseModels;
+using OpenAI;
+using OpenAI.Managers;
+using OpenAI.ObjectModels.RequestModels;
+using OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.LargeLanguageModels.OpenAI;
 using Ouroboros.LargeLanguageModels.Embeddings;
 using Ouroboros.LargeLanguageModels.Completions;
@@ -26,9 +24,8 @@ internal class OpenAiClient : IApiClient
         var api = GetClient();
 
         var request = Mappings.MapOptions(prompt, options);
-        var model = Mappings.MapModel(options.Model);
 
-        var completionResult = await api.Completions.Create(request, model);
+        var completionResult = await api.Completions.CreateCompletion(request);
 
         if (completionResult.Successful)
             return GetResponseText(completionResult);
@@ -73,8 +70,7 @@ internal class OpenAiClient : IApiClient
         model ??= OuroModels.TextEmbeddingAdaV2;
         inputs = PrepareInputs(inputs);
 
-        var openAiModel = Mappings.MapModel(model); // Maybe refactor this to better handle the embedding versus completion scenario
-        var modelName = openAiModel.EnumToString();
+        var modelName = Mappings.GetModelNameAsString(model);
 
         var api = GetClient();
 
@@ -148,8 +144,6 @@ internal class OpenAiClient : IApiClient
         return new EmbeddingResponseFailure(error);
     } 
     #endregion
-
-
 
     private OpenAIService GetClient()
     {
