@@ -106,7 +106,7 @@ public class ChainBuilder : IChain
         {
             if (command.Text is { Length: > 0 })
                 Document.AddText(command.Text);
-
+            
             lastResponse = await Document.ResolveAndSubmitAsync(command.NewElementName);
 
             if (lastResponse is CompleteResponseFailure)
