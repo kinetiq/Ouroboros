@@ -29,7 +29,7 @@ public static class OuroModelsExtensions
             OuroModels.TextDavinciV1 => Models.Model.TextDavinciV1,
             OuroModels.TextDavinciV2 => Models.Model.TextDavinciV2,
             OuroModels.TextDavinciV3 => Models.Model.TextDavinciV3,
-            OuroModels.TextEmbeddingAdaV2 => Models.Model.TextEmbeddingAdaV2,
+//          OuroModels.TextEmbeddingAdaV2 => Models.Model.TextEmbeddingAdaV2,
             OuroModels.ChatGpt3_5Turbo => Models.Model.ChatGpt3_5Turbo,
             OuroModels.Gpt_4 => Models.Model.Gpt_4,
             _ => throw new ArgumentOutOfRangeException(nameof(@this), @this, null)

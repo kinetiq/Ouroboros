@@ -4,19 +4,18 @@ namespace Ouroboros.LargeLanguageModels;
 
 public enum OuroModels
 {
-    [MaxTokens(2048)] Ada,
-    [MaxTokens(2048)] Babbage,
-    [MaxTokens(2048)] Curie,
-    [MaxTokens(2048)] Davinci,
-    [MaxTokens(2048)] TextAdaV1,
-    [MaxTokens(2048)] TextBabbageV1,
-    [MaxTokens(2048)] TextCurieV1,
-    [MaxTokens(2048)] TextDavinciV1,
-    [MaxTokens(2048)] TextDavinciV2,
-    [MaxTokens(4096)] TextDavinciV3,
-    [MaxTokens(8191)] TextEmbeddingAdaV2,
-    [MaxTokens(4096)] ChatGpt3_5Turbo,
-    [MaxTokens(8192)] Gpt_4
+    [MaxTokens(2048)] [Complete] Ada,
+    [MaxTokens(2048)] [Complete] Babbage,
+    [MaxTokens(2048)] [Complete] Curie,
+    [MaxTokens(2048)] [Complete] Davinci,
+    [MaxTokens(2048)] [Complete] TextAdaV1,
+    [MaxTokens(2048)] [Complete] TextBabbageV1,
+    [MaxTokens(2048)] [Complete] TextCurieV1,
+    [MaxTokens(2048)] [Complete] TextDavinciV1,
+    [MaxTokens(2048)] [Complete] TextDavinciV2,
+    [MaxTokens(4096)] [Complete] TextDavinciV3,
+    [MaxTokens(4096)] [Chat]     ChatGpt3_5Turbo,
+    [MaxTokens(8192)] [Chat]     Gpt_4
 }
 
 class MaxTokensAttribute : Attribute
@@ -27,4 +26,14 @@ class MaxTokensAttribute : Attribute
     {
         this.Tokens = tokens;
     }
+}
+
+class ChatAttribute : Attribute
+{
+
+}
+
+class CompleteAttribute : Attribute
+{
+
 }
