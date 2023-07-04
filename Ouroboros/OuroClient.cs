@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using OpenAI.Managers;
-using static OpenAI.ObjectModels.SharedModels.IOpenAiModels;
+using OpenAI;
+using OpenAI.ObjectModels.RequestModels;
+using Ouroboros.LargeLanguageModels.ChatCompletions;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -13,10 +15,14 @@ namespace Ouroboros;
 
 public class OuroClient 
 {
-    private readonly OpenAiClient ApiClient;
-    private OuroModels? DefaultModel;
+    private readonly string ApiKey;
+    private OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
+    private OuroModels DefaultChatModel = OuroModels.Gpt_4;
     
-    public OpenAIService InnerClient => ApiClient.GetClient();
+    /// <summary>
+    /// For gaining direct access to a Betalgo client, without going through the OuroClient.
+    /// </summary>
+    public OpenAIService GetInnerClient => GetClient();
 
     /// <summary>
     /// Coverts text into tokens. Uses GPT3Tokenizer.
@@ -37,40 +43,74 @@ public class OuroClient
     }
 
     /// <summary>
-    /// Sends the text string to the LLM for completion. This is the most direct route
-    /// to completion and is ultimately the only place where we actually call the LLM.
+    /// Handles a text completion request.
     /// </summary>
-    public async Task<CompleteResponseBase> PromptToStringAsync(string prompt, CompleteOptions? options = null)
+    public async Task<CompleteResponseBase> CompleteAsync(string prompt, CompleteOptions? options = null)
     {
-        options = ConfigureOptions(options);
+        options ??= new CompleteOptions();
+        options.Model ??= DefaultCompletionModel;
+        var api = GetClient();
 
-        var response = await ApiClient.CompleteAsync(prompt, options);
+        var handler = new CompletionRequestHandler(api);
 
-        return response;
+        return await handler.Complete(prompt, options);
+    }
+
+    /// <summary>
+    /// Handles a chat completion request.
+    /// </summary>
+    public async Task<CompleteResponseBase> ChatAsync(List<ChatMessage> messages, ChatOptions? options = null)
+    {
+        var api = GetClient();
+        var handler = new ChatRequestHandler(api);
+
+        return await handler.CompleteAsync(messages, options);
     }
 
     /// <summary>
     /// Configures a default model that will be used for all completions initiated from this client,
     /// unless overriden by passing in a model via CompleteOptions.
     /// </summary>
-    public void SetDefaultModel(OuroModels model)
+    public void SetDefaultCompletionModel(OuroModels model)
     {
-        DefaultModel = model;
+        DefaultCompletionModel = model;
+    }
+
+    /// <summary>
+    /// Configures a default model that will be used for all completions initiated from this client,
+    /// unless overriden by passing in a model via CompleteOptions.
+    /// </summary>
+    public void SetDefaultChatModel(OuroModels model)
+    {
+        DefaultChatModel = model;
     }
 
     private CompleteOptions ConfigureOptions(CompleteOptions? options)
     {
         options ??= new CompleteOptions();
-        options.Model ??= DefaultModel;
+        options.Model ??= DefaultCompletionModel;
 
         return options;
     }
 
+    private ChatOptions ConfigureOptions(ChatOptions? options)
+    {
+        options ??= new ChatOptions();
+        options.Model ??= DefaultChatModel;
 
+        return options;
+    }
+
+    internal OpenAIService GetClient()
+    {
+        return new OpenAIService(new OpenAiOptions
+        {
+            ApiKey = ApiKey
+        });
+    }
 
     public OuroClient(string apiKey)
     {
-        ApiClient = new OpenAiClient(apiKey);
-        DefaultModel = null;
+        ApiKey = apiKey;
     }
 }

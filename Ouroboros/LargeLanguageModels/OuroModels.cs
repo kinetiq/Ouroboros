@@ -19,7 +19,6 @@ public enum OuroModels
     [MaxTokens(8192)] Gpt_4
 }
 
-
 class MaxTokensAttribute : Attribute
 {
     public int Tokens { get; private set; }

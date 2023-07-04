@@ -1,5 +1,4 @@
 ﻿using OpenAI.Managers;
-using Ouroboros.LargeLanguageModels.OpenAI;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,7 +38,10 @@ internal class CompletionRequestHandler
             .Text
             .Trim();
 
-        return new CompleteResponseSuccess(responseText);
+        return new CompleteResponseSuccess(responseText)
+        {
+            TotalTokenUsage = response.Usage.TotalTokens
+        };
     }
 
     private static CompleteResponseFailure GetError(CompletionCreateResponse completionResult)

@@ -74,7 +74,7 @@ public class ChatOptions
     /// <seealso cref="!:https://beta.openai.com/tokenizer?view=bpe" />
     public object? LogitBias { get; set; }
 
-    public Models.Model Model { get; set; }
+    public OuroModels? Model { get; set; }
 
     /// <summary>
     ///     What
@@ -94,7 +94,6 @@ public class ChatOptions
     public ChatOptions()
     {
         // Defaults
-        Model = Models.Model.Gpt_4;
         MaxTokens = 1000;
     }
 }
