@@ -1,8 +1,10 @@
 ﻿using OpenAI.Managers;
+using OpenAI.ObjectModels.ResponseModels;
+using Ouroboros.LargeLanguageModels.Resilience;
+using Polly;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using OpenAI.ObjectModels.ResponseModels;
 
 namespace Ouroboros.LargeLanguageModels.Completions;
 internal class CompletionRequestHandler
@@ -15,12 +17,25 @@ internal class CompletionRequestHandler
 
         var request = Mappings.MapOptions(prompt, options);
 
-        var completionResult = await Api.Completions.CreateCompletion(request);
+        var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
 
-        if (completionResult.Successful)
-            return GetResponseText(completionResult);
+        // TODO: consider more nuanced error handling: https://platform.openai.com/docs/guides/error-codes/api-errors
 
-        return GetError(completionResult);
+        var result = await Policy
+            .Handle<Exception>()
+            .OrResult<CompletionCreateResponse>(x => x == null || !x.Successful)
+            .WaitAndRetryAsync(delay)
+            .ExecuteAndCaptureAsync(async () => await Api.Completions.CreateCompletion(request));
+
+        if (result.Outcome == OutcomeType.Successful)
+            return GetResponseText(result.Result!);
+
+        return result switch
+        {
+            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new CompleteResponseFailure(result.FinalException!.Message),
+            { FaultType: FaultType.ResultHandledByThisPolicy } => GetError(result.FinalHandledResult!),
+            _ => throw new InvalidOperationException("Unhandled result type.")
+        };
     }
 
     /// <summary>

@@ -91,9 +91,12 @@ public class ChatOptions
     /// </summary>
     public string? User { get; set; }
 
+    public bool UseExponentialBackOff { get; set; }
+
     public ChatOptions()
     {
         // Defaults
         MaxTokens = 1000;
+        UseExponentialBackOff = true;
     }
 }

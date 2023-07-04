@@ -90,9 +90,12 @@ public class CompleteOptions
     /// </summary>
     public string? User { get; set; }
 
+    public bool UseExponentialBackOff { get; set; }
+
     public CompleteOptions()
     {
         // Defaults
+        UseExponentialBackOff = true;
         MaxTokens = 256;
         Temperature = 0.7f;
         TopP = 1;

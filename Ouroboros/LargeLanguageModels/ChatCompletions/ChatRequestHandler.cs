@@ -6,8 +6,8 @@ using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
 using OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.LargeLanguageModels.Completions;
+using Ouroboros.LargeLanguageModels.Resilience;
 using Polly;
-using Polly.Contrib.WaitAndRetry;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 internal class ChatRequestHandler
@@ -24,7 +24,9 @@ internal class ChatRequestHandler
         // Map our generic options to OpenAI options.
         var request = ChatMappings.MapOptions(messages, options);
 
-        var delay = Backoff.ExponentialBackoff(TimeSpan.FromSeconds(2), retryCount: 3);
+        var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
+
+        // TODO: consider more nuanced error handling: https://platform.openai.com/docs/guides/error-codes/api-errors
 
         var result = await Policy
             .Handle<Exception>()

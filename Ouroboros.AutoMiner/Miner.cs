@@ -1,4 +1,6 @@
-﻿using Ouroboros.Documents;
+﻿using System.Reflection.Metadata;
+using OpenAI.ObjectModels.RequestModels;
+using Ouroboros.Documents;
 using Ouroboros.Documents.Extensions;
 using Ouroboros.Scales;
 
@@ -22,12 +24,12 @@ public class Miner
             return new List<string>() { "Done" };
 
             //var doc = await GenerateInsightAsync(rawData);
-            
+
             //var likert = doc.GetLastAsLikert();
 
-            //if (likert < LikertAgreement4.Agree) 
+            //if (likert < LikertAgreement4.Agree)
             //    continue;
-            
+
             //var insight = doc.GetByName("insight");
             //results.Add(insight.ToString());
 
@@ -35,7 +37,7 @@ public class Miner
             //results.Add("citations:");
             //results.Add(citation.ToString());
 
-            insights++;
+            //insights++;
         } while (insights < insightGoal && attempts < maxAttempts);
 
         // TODO: go further - can we propose ways to research this? Sources to explore? 
@@ -49,20 +51,45 @@ public class Miner
     /// <summary>
     /// Run a series of requests to gather and validate research ideas.
     /// </summary>
-    //private async Task<Document> GenerateInsightAsync(string text)
-    //{
-    //    var response = await OuroClient
-    //        .Prompt(text)
-    //        .Chain("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\r\n",  newElementName: "insight")
-    //        .Chain("\n\n[CITATIONS] Using the data above, provide a few quotes that best support or prove the insight. \r\n1.", newElementName: "citations")
-    //        .Chain("\n\n[VALIDATION] Do you agree that these quotes exist in the data and sufficiently justify this insight? To qualify, the quotes must clearly exist in the data above. Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation")
-    //        .CompleteToDocumentAsync();
+    private async Task<Document> GenerateInsightAsync(string text)
+    {
+        return new Document();
 
-    //    if (!response.Success)
-    //        throw new InvalidOperationException("Failed: " + response.CompleteResponse.ResponseText);
+        var chat = new List<ChatMessage>()
+        {
+            ChatMessage.FromSystem(text),
+            ChatMessage.FromUser("[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?"),
+        };
 
-    //    return response.Value!;
-    //}
+        var r1 = await OuroClient.ChatAsync(chat);
+
+        // chat  = OurClient.CreateChat(); // ChatContext knows if anything resulted in an error, and has a reference to the client.
+        // dialog = chat
+        //      .SetSystem("..."),
+        //      .FromUser("...", "p1")
+        //      .Ask() //  AskAndAppend(), AskToString(), AskToLikert()     
+        //      .AddUserMessage("...");
+        //      
+        // if (chat.HasErrors) { ... }
+        //
+        // dialog.RemoveStartingAt("p1");
+
+        // Chat.SetSystem("...")
+        //     .SetUser("...", "elementName")
+        //     .CompleteAnd();
+
+        //var response = await OuroClient
+        //    .Prompt(text)
+        //    .Chain("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\r\n", newElementName: "insight")
+        //    .Chain("\n\n[CITATIONS] Using the data above, provide a few quotes that best support or prove the insight. \r\n1.", newElementName: "citations")
+        //    .Chain("\n\n[VALIDATION] Do you agree that these quotes exist in the data and sufficiently justify this insight? To qualify, the quotes must clearly exist in the data above. Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation")
+        //    .CompleteToDocumentAsync();
+
+        //if (!response.Success)
+        //    throw new InvalidOperationException("Failed: " + response.CompleteResponse.ResponseText);
+
+        //return response.Value!;
+    }
 
     public Miner(OuroClient ouroClient)
     {
