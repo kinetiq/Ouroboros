@@ -1,12 +1,11 @@
 ﻿using AI.Dev.OpenAI.GPT;
-using Ouroboros.Builder;
-using Ouroboros.Documents;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.Completions;
-using Ouroboros.LargeLanguageModels.Embeddings;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using OpenAI.Managers;
+using static OpenAI.ObjectModels.SharedModels.IOpenAiModels;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -14,31 +13,10 @@ namespace Ouroboros;
 
 public class OuroClient 
 {
-    private readonly IApiClient ApiClient;
+    private readonly OpenAiClient ApiClient;
     private OuroModels? DefaultModel;
     
-    /// <summary>
-    /// Start here if you want to chain several prompts together with multiple .Chain calls.
-    /// These are not executed until you call one of the async methods, such as .AsDocumentAsync
-    /// or .AsListAsync
-    /// </summary>
-    public ChainBuilder Prompt(string prompt, CompleteOptions? options = null)
-    {
-        options = ConfigureOptions(options);
-
-        var doc = new Document(this, prompt);
-
-        return new ChainBuilder(doc, options);
-    }
-
-    /// <summary>
-    /// Syntactic sugar for cases where you want to quickly complete a prompt and get back the results. 
-    /// </summary>
-    public async Task<PromptResponse<string>> PromptToStringAsync(string prompt, CompleteOptions? options = null)
-    {
-        return await Prompt(prompt, options)
-            .CompleteToStringAsync();
-    }
+    public OpenAIService InnerClient => ApiClient.GetClient();
 
     /// <summary>
     /// Coverts text into tokens. Uses GPT3Tokenizer.
@@ -62,11 +40,11 @@ public class OuroClient
     /// Sends the text string to the LLM for completion. This is the most direct route
     /// to completion and is ultimately the only place where we actually call the LLM.
     /// </summary>
-    internal async Task<CompleteResponseBase> SendForCompletionAsync(string prompt, CompleteOptions? options = null)
+    public async Task<CompleteResponseBase> PromptToStringAsync(string prompt, CompleteOptions? options = null)
     {
         options = ConfigureOptions(options);
 
-        var response = await ApiClient.Complete(prompt, options);
+        var response = await ApiClient.CompleteAsync(prompt, options);
 
         return response;
     }
@@ -88,27 +66,7 @@ public class OuroClient
         return options;
     }
 
-    /// <summary>
-    /// **In almost all cases, you should start with Prompt, not this.** This creates a new Document from the prompt.
-    /// It offers the most control, but is also the most verbose. Only necessary when you want to create a prompt and
-    /// then manipulate the DOM before sending it to the LLM for completion.
-    /// </summary>
-    public Document CreateDocument(string prompt)
-    {
-        return new Document(this, prompt); 
-    }
 
-    public async Task<EmbeddingResponseBase> RequestEmbeddings(List<string> inputs, OuroModels? model = null)
-    {
-        model ??= DefaultModel;
-
-        return await ApiClient.RequestEmbeddings(inputs, model);
-    }
-
-    public async Task<EmbeddingResponseBase> RequestEmbeddings(string input, OuroModels? model = null)
-    {
-        return await RequestEmbeddings(new List<string> { input }, model);
-    }
 
     public OuroClient(string apiKey)
     {

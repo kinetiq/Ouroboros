@@ -92,9 +92,7 @@ var client = new OuroClient("[SECRET]");
 
 client.SetDefaultModel(OuroModels.TextDavinciV3);
 
-var response = await client.PromptToStringAsync(
-    "How big is God?");
-
+var response = await client.PromptToStringAsync("How big is God?");
 
 AnsiConsole.Markup(response.ResponseText);
 

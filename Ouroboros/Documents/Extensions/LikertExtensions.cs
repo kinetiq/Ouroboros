@@ -1,16 +1,15 @@
-﻿using Ouroboros.Documents.Elements;
-using Ouroboros.Scales;
+﻿using Ouroboros.Scales;
 
 namespace Ouroboros.Documents.Extensions;
 
 public static class LikertAgreementExtensions
 {
     /// <summary>
-    /// Given a TextElement containing a likert response, this returns a likert enum.
+    /// Given a string containing a likert response, this returns a likert enum.
     /// </summary>
-    public static LikertAgreement4 ToAgreement4(this TextElement @this)
+    public static LikertAgreement4 ToAgreement4(this string @this)
     {
-        var content = @this.Text
+        var content = @this
             .Trim()
             .ToLower();
 

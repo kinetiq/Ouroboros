@@ -4,6 +4,7 @@ public abstract class CompleteResponseBase
 {
     public bool Success { get; set; }
     public string ResponseText { get; set; } = "";
+    public int TotalTokenUsage { get; set; } = 0;
 
     public override string ToString()
     {

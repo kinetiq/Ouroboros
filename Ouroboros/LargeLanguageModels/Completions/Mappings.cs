@@ -1,14 +1,12 @@
 ﻿using System;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
-using Ouroboros.LargeLanguageModels.Completions;
 
-namespace Ouroboros.LargeLanguageModels.OpenAI;
+namespace Ouroboros.LargeLanguageModels.Completions;
 
 internal class Mappings
 {
-    public const OuroModels DefaultModel = OuroModels.Gpt_4;
-    private const Models.Model DefaultBetalgoModel = Models.Model.Gpt_4;
+    private const Models.Model DefaultBetalgoModel = Models.Model.TextDavinciV3;
 
     /// <summary>
     /// Maps our generic options to OpenAI options.
