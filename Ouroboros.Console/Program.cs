@@ -1,7 +1,7 @@
-﻿using Ouroboros;
+﻿using OpenAI.ObjectModels.RequestModels;
+using Ouroboros;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.Completions;
-using Ouroboros.LargeLanguageModels.Embeddings;
 using Spectre.Console;
 
 // See https://aka.ms/new-console-template for more information
@@ -90,9 +90,16 @@ var client = new OuroClient("[SECRET]");
 //    Model = OuroModels.TextDavinciV3,
 //};
 
-client.SetDefaultModel(OuroModels.TextDavinciV3);
+client.SetDefaultCompletionModel(OuroModels.TextDavinciV3);
 
-var response = await client.PromptToStringAsync("How big is God?");
+var chat = new List<ChatMessage>()
+{
+    ChatMessage.FromSystem("# Theologian" + Environment.NewLine +
+                           "You are a Jewish theologian who knows everything about religion."),
+    ChatMessage.FromUser("How big is God?"),
+};
+
+var response = await client.ChatAsync(chat);
 
 AnsiConsole.Markup(response.ResponseText);
 

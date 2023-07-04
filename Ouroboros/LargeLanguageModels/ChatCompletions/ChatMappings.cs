@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using OpenAI.ObjectModels.RequestModels;
+using Ouroboros.LargeLanguageModels.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 
@@ -13,7 +14,7 @@ internal class ChatMappings
         return new ChatCompletionCreateRequest
         {
             Messages = messages,
-            Model = options.Model.EnumToString(),
+            Model = options.Model.GetModelNameAsString(),
             Temperature = options.Temperature,
             TopP = options.TopP,
             FrequencyPenalty = options.FrequencyPenalty,

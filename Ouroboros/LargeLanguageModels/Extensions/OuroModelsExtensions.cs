@@ -5,9 +5,12 @@ namespace Ouroboros.LargeLanguageModels.Extensions;
 
 public static class OuroModelsExtensions
 {
-    public static string GetModelNameAsString(this OuroModels @this)
+    public static string GetModelNameAsString(this OuroModels? @this)
     {
-        var betalgoModel = ToBetalgoModel(@this);
+        if (@this == null)
+            throw new ArgumentNullException(nameof(@this));
+
+        var betalgoModel = ToBetalgoModel((OuroModels) @this);
 
         return betalgoModel.EnumToString();
     }

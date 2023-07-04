@@ -61,6 +61,9 @@ public class OuroClient
     /// </summary>
     public async Task<CompleteResponseBase> ChatAsync(List<ChatMessage> messages, ChatOptions? options = null)
     {
+        options ??= new ChatOptions();
+        options.Model ??= DefaultChatModel;
+
         var api = GetClient();
         var handler = new ChatRequestHandler(api);
 
