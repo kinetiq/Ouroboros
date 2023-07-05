@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using OpenAI.Managers;
 using OpenAI;
 using OpenAI.ObjectModels.RequestModels;
+using Ouroboros.Chaining;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
@@ -23,6 +24,27 @@ public class OuroClient
     /// For gaining direct access to a Betalgo client, without going through the OuroClient.
     /// </summary>
     public OpenAIService GetInnerClient => GetClient();
+
+    // chat  = OurClient.CreateChat(); // ChatContext knows if anything resulted in an error, and has a reference to the client.
+    // dialog = chat
+    //      .SetSystem("..."),
+    //      .FromUser("...", "p1")
+    //      .Ask() //  AskAndAppend(), AskToString(), AskToLikert()     
+    //      .AddUserMessage("...");
+    //      
+    // if (chat.HasErrors) { ... }
+    //
+    // dialog.RemoveStartingAt("p1");
+
+    // Chat.SetSystem("...")
+    //     .SetUser("...", "elementName")
+    //     .CompleteAnd();
+
+
+    public ChatContext CreateChat()
+    {
+        return new ChatContext(this);
+    }
 
     /// <summary>
     /// Coverts text into tokens. Uses GPT3Tokenizer.

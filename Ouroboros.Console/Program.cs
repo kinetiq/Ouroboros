@@ -90,16 +90,26 @@ var client = new OuroClient("[SECRET]");
 //    Model = OuroModels.TextDavinciV3,
 //};
 
-client.SetDefaultCompletionModel(OuroModels.TextDavinciV3);
+var dialog = await client.CreateChat()
+    .SetSystem("# Theologian" + Environment.NewLine +
+               "You are a Jewish theologian who knows everything about religion.")
+    .AddUserMessage("How big is God?")
+    .AskAndAppend()
+    .AddUserMessage("And what would Satan say about that?")
+    .AskToString();
 
-var chat = new List<ChatMessage>()
-{
-    ChatMessage.FromSystem("# Theologian" + Environment.NewLine +
-                           "You are a Jewish theologian who knows everything about religion."),
-    ChatMessage.FromUser("How big is God?"),
-};
+AnsiConsole.Markup(dialog);
 
-var response = await client.ChatAsync(chat);
+//client.SetDefaultCompletionModel(OuroModels.TextDavinciV3);
 
-AnsiConsole.Markup(response.ResponseText);
+//var chat = new List<ChatMessage>()
+//{
+//    ChatMessage.FromSystem("# Theologian" + Environment.NewLine +
+//                           "You are a Jewish theologian who knows everything about religion."),
+//    ChatMessage.FromUser("How big is God?"),
+//};
+
+//var response = await client.ChatAsync(chat);
+
+//AnsiConsole.Markup(response.ResponseText);
 
