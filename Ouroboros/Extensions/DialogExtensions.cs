@@ -1,12 +1,6 @@
-﻿using Ouroboros.Scales;
-using System;
-using System.Collections.Generic;
+﻿using Ouroboros.Chaining;
+using Ouroboros.Scales;
 using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
-using OpenAI.ObjectModels;
-using Ouroboros.Chaining;
 using Z.Core.Extensions;
 
 namespace Ouroboros.Extensions;
