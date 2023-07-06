@@ -1,6 +1,4 @@
-﻿using System.Reflection.Metadata;
-using OpenAI.ObjectModels.RequestModels;
-using Ouroboros.Chaining;
+﻿using Ouroboros.Chaining;
 using Ouroboros.Extensions;
 using Ouroboros.Scales;
 
