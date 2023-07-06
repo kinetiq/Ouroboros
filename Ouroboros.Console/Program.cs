@@ -1,7 +1,5 @@
 ﻿using OpenAI.ObjectModels.RequestModels;
 using Ouroboros;
-using Ouroboros.LargeLanguageModels;
-using Ouroboros.LargeLanguageModels.Completions;
 using Spectre.Console;
 
 // See https://aka.ms/new-console-template for more information
@@ -82,13 +80,7 @@ AnsiConsole.MarkupLine("[red]Starting...[/]");
 //AnsiConsole.MarkupLine("Distance: " + distance);
 //AnsiConsole.MarkupLine("Dot Product: " + dotProductResult);
 
-
 var client = new OuroClient("[SECRET]");
-
-//var options = new CompleteOptions()
-//{
-//    Model = OuroModels.TextDavinciV3,
-//};
 
 var response = await client.CreateDialog()
     .SystemMessage("# Theologian" + Environment.NewLine +
@@ -99,17 +91,3 @@ var response = await client.CreateDialog()
     .SendToString();
 
 AnsiConsole.Markup(response);
-
-//client.SetDefaultCompletionModel(OuroModels.TextDavinciV3);
-
-//var chat = new List<ChatMessage>()
-//{
-//    ChatMessage.FromSystem("# Theologian" + Environment.NewLine +
-//                           "You are a Jewish theologian who knows everything about religion."),
-//    ChatMessage.FromUser("How big is God?"),
-//};
-
-//var response = await client.ChatAsync(chat);
-
-AnsiConsole.Markup(response.ResponseText);
-
