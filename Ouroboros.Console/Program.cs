@@ -1,7 +1,5 @@
-﻿using Ouroboros;
-using Ouroboros.LargeLanguageModels;
-using Ouroboros.LargeLanguageModels.Completions;
-using Ouroboros.LargeLanguageModels.Embeddings;
+﻿using OpenAI.ObjectModels.RequestModels;
+using Ouroboros;
 using Spectre.Console;
 
 // See https://aka.ms/new-console-template for more information
@@ -82,18 +80,14 @@ AnsiConsole.MarkupLine("[red]Starting...[/]");
 //AnsiConsole.MarkupLine("Distance: " + distance);
 //AnsiConsole.MarkupLine("Dot Product: " + dotProductResult);
 
-var client = new OuroClient("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");
+var client = new OuroClient("[SECRET]");
 
-//var options = new CompleteOptions()
-//{
-//    Model = OuroModels.TextDavinciV3,
-//};
+var response = await client.CreateDialog()
+    .SystemMessage("# Theologian" + Environment.NewLine +
+               "You are a Jewish theologian who knows everything about religion.")
+    .UserMessage("How big is God?")
+    .SendAndAppend()
+    .UserMessage("And what would Satan say about that?")
+    .SendToString();
 
-client.SetDefaultModel(OuroModels.TextDavinciV3);
-
-var response = await client.PromptToStringAsync(
-    "How big is God?");
-
-
-AnsiConsole.Markup(response.ResponseText);
-
+AnsiConsole.Markup(response);

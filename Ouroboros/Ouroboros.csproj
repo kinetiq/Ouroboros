@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>1.0.5</Version>
+		<Version>2.0.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,7 +21,7 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>1.0.5</PackageVersion>
+		<PackageVersion>2.0.0</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining and text processing. Still very early an .NET 6 only; Docs and broader support to follow.
 		</Description>
@@ -30,12 +30,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AI.Dev.OpenAI.GPT" Version="1.0.2" />
-		<PackageReference Include="Betalgo.OpenAI" Version="7.0.0" />
-		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
+	  <Compile Remove="LargeLanguageModels\OpenAI\**" />
+	  <EmbeddedResource Remove="LargeLanguageModels\OpenAI\**" />
+	  <None Remove="LargeLanguageModels\OpenAI\**" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="LargeLanguageModels\Chat\" />
+		<PackageReference Include="AI.Dev.OpenAI.GPT" Version="1.0.2" />
+		<PackageReference Include="Betalgo.OpenAI" Version="7.0.0" />
+		<PackageReference Include="Polly" Version="7.2.4" />
+		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
+		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
 	</ItemGroup>
 </Project>
