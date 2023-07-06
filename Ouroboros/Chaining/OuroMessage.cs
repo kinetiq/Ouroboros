@@ -7,7 +7,7 @@ using OpenAI.ObjectModels.RequestModels;
 
 namespace Ouroboros.Chaining;
 
-internal class OuroMessage 
+public class OuroMessage 
 {
     internal readonly ChatMessage Message;
     internal string ElementName { get; set; }

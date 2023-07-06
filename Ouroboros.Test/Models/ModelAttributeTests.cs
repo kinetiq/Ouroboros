@@ -1,5 +1,5 @@
-﻿using Ouroboros.LargeLanguageModels;
-using Ouroboros.LargeLanguageModels.Extensions;
+﻿using Ouroboros.Extensions;
+using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros.Test.Models;
 

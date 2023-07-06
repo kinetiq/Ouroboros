@@ -90,7 +90,7 @@ var client = new OuroClient("[SECRET]");
 //    Model = OuroModels.TextDavinciV3,
 //};
 
-var dialog = await client.CreateChat()
+var response = await client.CreateDialog()
     .SystemMessage("# Theologian" + Environment.NewLine +
                "You are a Jewish theologian who knows everything about religion.")
     .UserMessage("How big is God?")
@@ -98,7 +98,7 @@ var dialog = await client.CreateChat()
     .UserMessage("And what would Satan say about that?")
     .SendToString();
 
-AnsiConsole.Markup(dialog);
+AnsiConsole.Markup(response);
 
 //client.SetDefaultCompletionModel(OuroModels.TextDavinciV3);
 

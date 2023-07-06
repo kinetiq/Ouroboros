@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Ouroboros.Documents.Extensions;
+namespace Ouroboros.Extensions;
 
 public static class TextManipulationExtensions
 {

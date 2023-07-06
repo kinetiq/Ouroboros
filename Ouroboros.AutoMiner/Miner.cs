@@ -1,7 +1,7 @@
 ﻿using System.Reflection.Metadata;
 using OpenAI.ObjectModels.RequestModels;
-using Ouroboros.Documents;
-using Ouroboros.Documents.Extensions;
+using Ouroboros.Chaining;
+using Ouroboros.Extensions;
 using Ouroboros.Scales;
 
 namespace Ouroboros.AutoMiner;
@@ -21,21 +21,19 @@ public class Miner
         {
             attempts++;
 
-            return new List<string>() { "Done" };
+            var doc = await GenerateInsightAsync(rawData);
 
-            //var doc = await GenerateInsightAsync(rawData);
+            var likert = doc.GetLastAsLikert();
 
-            //var likert = doc.GetLastAsLikert();
+            if (likert < LikertAgreement4.Agree)
+                continue;
 
-            //if (likert < LikertAgreement4.Agree)
-            //    continue;
+            var insight = doc.GetByName("insight");
+            results.Add(insight);
 
-            //var insight = doc.GetByName("insight");
-            //results.Add(insight.ToString());
-
-            //var citation = doc.GetByName("citations");
-            //results.Add("citations:");
-            //results.Add(citation.ToString());
+            var citation = doc.GetByName("citations");
+            results.Add("citations:");
+            results.Add(citation);
 
             //insights++;
         } while (insights < insightGoal && attempts < maxAttempts);
@@ -51,44 +49,23 @@ public class Miner
     /// <summary>
     /// Run a series of requests to gather and validate research ideas.
     /// </summary>
-    private async Task<Document> GenerateInsightAsync(string text)
+    private async Task<Dialog> GenerateInsightAsync(string text)
     {
-        return new Document();
+        var dialog = OuroClient.CreateDialog();
 
-        var chat = new List<ChatMessage>()
-        {
-            ChatMessage.FromSystem(text),
-            ChatMessage.FromUser("[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?"),
-        };
+       var response = await dialog.SystemMessage(text)
+            .UserMessage("[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?")
+            .SendAndAppend("insight")
+            .UserMessage("[CITATIONS] Using the data above, provide a few quotes that best support or prove the insight.")
+            .SendAndAppend("citations")
+            .UserMessage("[VALIDATION] Do you agree that these quotes exist in the data and sufficiently justify this insight? To qualify, the quotes must clearly exist in the data above. Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree")
+            .SendAndAppend("validation")
+            .Execute();
 
-        var r1 = await OuroClient.ChatAsync(chat);
+        if (!response.Success)
+            throw new InvalidOperationException("Failed: " + response.ResponseText);
 
-        // chat  = OurClient.CreateChat(); // ChatContext knows if anything resulted in an error, and has a reference to the client.
-        // dialog = chat
-        //      .SetSystem("..."),
-        //      .FromUser("...", "p1")
-        //      .Ask() //  SendAndAppend(), SendToString(), AskToLikert()     
-        //      .AddUserMessage("...");
-        //      
-        // if (chat.HasErrors) { ... }
-        //
-        // dialog.RemoveStartingAt("p1");
-
-        // Chat.SetSystem("...")
-        //     .SetUser("...", "elementName")
-        //     .CompleteAnd();
-
-        //var response = await OuroClient
-        //    .Prompt(text)
-        //    .Chain("\n\n[INSIGHT] Based on this data, what is a clever insight that is worthy of further research?\r\n", newElementName: "insight")
-        //    .Chain("\n\n[CITATIONS] Using the data above, provide a few quotes that best support or prove the insight. \r\n1.", newElementName: "citations")
-        //    .Chain("\n\n[VALIDATION] Do you agree that these quotes exist in the data and sufficiently justify this insight? To qualify, the quotes must clearly exist in the data above. Answer using only these words: Strongly Disagree, Disagree, Agree, Strongly Agree\n.", newElementName: "validation")
-        //    .CompleteToDocumentAsync();
-
-        //if (!response.Success)
-        //    throw new InvalidOperationException("Failed: " + response.CompleteResponse.ResponseText);
-
-        //return response.Value!;
+        return dialog;
     }
 
     public Miner(OuroClient ouroClient)

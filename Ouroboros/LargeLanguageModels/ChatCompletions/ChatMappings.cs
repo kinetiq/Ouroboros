@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using OpenAI.ObjectModels.RequestModels;
-using Ouroboros.LargeLanguageModels.Extensions;
+using Ouroboros.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 

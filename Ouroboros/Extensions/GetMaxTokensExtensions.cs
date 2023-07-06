@@ -1,6 +1,7 @@
 ﻿using System;
+using Ouroboros.LargeLanguageModels;
 
-namespace Ouroboros.LargeLanguageModels.Extensions;
+namespace Ouroboros.Extensions;
 
 public static class GetMaxTokensExtensions
 {

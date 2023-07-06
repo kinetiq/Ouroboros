@@ -1,6 +1,6 @@
 ﻿using Ouroboros.Scales;
 
-namespace Ouroboros.Documents.Extensions;
+namespace Ouroboros.Extensions;
 
 public static class LikertAgreementExtensions
 {
@@ -19,7 +19,7 @@ public static class LikertAgreementExtensions
             "disagree" => LikertAgreement4.Disagree,
             "agree" => LikertAgreement4.Agree,
             "strongly agree" => LikertAgreement4.StronglyAgree,
-            _ => LikertAgreement4.None
+            _ => LikertAgreement4.NoMatch
         };
     }
 }

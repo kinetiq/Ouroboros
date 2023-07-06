@@ -7,14 +7,15 @@ using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using Ouroboros.TextProcessing;
 using Ouroboros.Responses;
-using Ouroboros.Responses.Extensions;
+using Ouroboros.LargeLanguageModels.ChatCompletions;
+using Ouroboros.Extensions;
 
 namespace Ouroboros.Chaining;
 
-public class ChatContext
+public class Dialog
 {
     private readonly OuroClient Client;
-    private readonly List<OuroMessage> InnerMessages = new();
+    internal readonly List<OuroMessage> InnerMessages = new();
 
     /// <summary>
     /// Without this, there could be an extra request at the end
@@ -24,19 +25,37 @@ public class ChatContext
 
     private OuroResponseBase? LastResponse;
 
-    public List<IChatCommand> Commands { get; set; } = new();
-    public bool HasErrors { get; set; } = false;
-    public string LastError { get; set; } = "";
+    /// <summary>
+    /// Allows setting options. This will be used for all operations in the chain.
+    /// </summary>
+    private ChatOptions? DefaultOptions = null;
 
-    #region Commands
+    /// <summary>
+    /// Internal list of chained commands. These are executed sequentially,
+    /// allowing us to chain together multiple commands and their output.
+    /// </summary>
+    private List<IChatCommand> Commands { get; set; } = new();
 
+    /// <summary>
+    /// Returns true if there are errors. Because Dialog does not always return
+    /// a response object, this gives us a way to be sure the entire chained operation
+    /// succeeded.
+    /// </summary>
+    public bool HasErrors { get; private set; } = false;
+    
+    /// <summary>
+    /// If there was an error, this provides a way to at least see the most recent one.
+    /// </summary>
+    public string LastError { get; private set; } = "";
+
+    #region Builder Pattern Commands
     /// <summary>
     /// Sets the system prompt. There can only be a single system prompt,
     /// so if you run this twice, it will replace the first one.
     /// </summary>
     /// <param name="prompt"></param>
     /// <returns></returns>
-    public ChatContext SystemMessage(string prompt)
+    public Dialog SystemMessage(string prompt)
     {
         Commands.Add(new SetSystemMessage(prompt));
 
@@ -46,7 +65,7 @@ public class ChatContext
     /// <summary>
     /// Adds an assistant message as the next message.
     /// </summary>
-    public ChatContext AddAssistantMessage(string prompt, string elementName = "")
+    public Dialog AssistantMessage(string prompt, string elementName = "")
     {
         Commands.Add(new AddAssistantMessage(prompt, elementName));
 
@@ -56,7 +75,7 @@ public class ChatContext
     /// <summary>
     /// Adds a user message as the next message.
     /// </summary>
-    public ChatContext UserMessage(string prompt, string elementName = "")
+    public Dialog UserMessage(string prompt, string elementName = "")
     {
         Commands.Add(new AddUserMessage(prompt, elementName));
 
@@ -66,7 +85,7 @@ public class ChatContext
     /// <summary>
     /// Sends the chat payload for completion and adds the result as an Assistant message.
     /// </summary>
-    public ChatContext SendAndAppend(string elementName = "")
+    public Dialog SendAndAppend(string elementName = "")
     {
         Commands.Add(new SendAndAppend(elementName));
 
@@ -76,7 +95,7 @@ public class ChatContext
     /// <summary>
     /// Removes the last item in the chat payload.
     /// </summary>
-    public ChatContext RemoveLast()
+    public Dialog RemoveLast()
     {
         Commands.Add(new RemoveLast());
 
@@ -86,7 +105,7 @@ public class ChatContext
     /// <summary>
     /// Removes the message at index and all messages after it.
     /// </summary>
-    public ChatContext RemoveStartingAt(int index)
+    public Dialog RemoveStartingAt(int index)
     {
         Commands.Add(new RemoveStartingAtIndex(index));
 
@@ -96,7 +115,7 @@ public class ChatContext
     /// <summary>
     /// Removes the message named elementName and all messages after it.
     /// </summary>
-    public ChatContext RemoveStartingAt(string elementName)
+    public Dialog RemoveStartingAt(string elementName)
     {
         Commands.Add(new RemoveStartingAtElement(elementName));
 
@@ -104,11 +123,78 @@ public class ChatContext
     }
     #endregion
 
+    #region Terminators
+    /// <summary>
+    /// Sends the chat payload for completion and converts the result to a string.
+    /// If there was an error, this will be an error message. Be sure to check the dialog
+    /// for errors via Dialog.HasErrors
+    /// </summary>
+    public async Task<string> SendToString()
+    {
+        var response = await ExecuteChainableCommands();
+
+        // This works even if there are errors. But it might be an error message.
+        return response.ResponseText;
+    }
+
+    /// <summary>
+    /// Sends the chat payload for completion, then senses the list type and splits the text into a list.
+    /// Works with numbered lists and lists separated by any type of newline. 
+    /// </summary>
+    public async Task<List<ListItem>> SendAndExtractList()
+    {
+        var response = await Send();
+
+        return response.ExtractList();
+    }
+
+    /// <summary>
+    /// Sends the chat payload for completion, then splits the result into a numbered list.
+    /// Any item that doesn't start with an number is discarded. Note that this is different than SendAndExtractList
+    /// in a few ways, including the result type, which in this case is able to include the item number (since these
+    /// items are numbered).
+    /// </summary>
+    public async Task<List<NumberedListItem>> SendAndExtractNumberedList()
+    {
+        var response = await Send();
+
+        return response.ExtractNumberedList();
+    }
+
+    /// <summary>
+    /// Sends the chat payload for completion and converts the result to a ResponseBase.
+    /// </summary>
+    public async Task<OuroResponseBase> Send()
+    {
+        return await ExecuteChainableCommands();
+    }
+
+    /// <summary>
+    /// Use this when you want to execute the chain and there isn't a reasonable terminator.
+    /// </summary>
+    public async Task<OuroResponseBase> Execute()
+    {
+        return await ExecuteChainableCommands();
+    }
+    #endregion
+
+    #region Settings
+    /// <summary>
+    /// Configures default options. This allows you to set the model, etc.
+    /// </summary>
+    public void SetDefaultChatOptions(ChatOptions options)
+    {
+        DefaultOptions = options;
+    }
+
+    #endregion
+
+    #region Command Execution and Handling
     /// <summary>
     /// Executes all commands that were chained in, and returns the last response.
     /// If there are any errors, we immediately stop and return.
     /// </summary>
-    private async Task<OuroResponseBase> ExecuteCommands()
+    private async Task<OuroResponseBase> ExecuteChainableCommands()
     {
         LastResponse = null;
 
@@ -119,6 +205,7 @@ public class ChatContext
                 case SendAndAppend sendAndAppend:
                     var response = await HandleSendAndAppend(sendAndAppend);
 
+                    // If there is an error talking to openAI, stop execution immediately.
                     if (!response.Success)
                         return response;
 
@@ -142,7 +229,7 @@ public class ChatContext
                     HandleRemoveStartingAtElement(removeStartingAtElement);
                     break;
                 default:
-                    throw new InvalidOperationException($"Unhandled command: { nameof(command) }");
+                    throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
             }
         }
 
@@ -154,7 +241,6 @@ public class ChatContext
         return await SendMessages();
     }
 
-    #region Command Handlers
     private void HandleRemoveStartingAtElement(RemoveStartingAtElement removeStartingAtElement)
     {
         if (!InnerMessages.Any())
@@ -225,55 +311,9 @@ public class ChatContext
     }
     #endregion
 
-    #region Terminators
+    #region OpenAI Calls
     /// <summary>
-    /// Sends the chat payload for completion and converts the result to a string.
-    /// If there was an error, this will be an error message. Be sure to check the dialog
-    /// for errors via Dialog.HasErrors
-    /// </summary>
-    public async Task<string> SendToString()
-    {
-        var response = await ExecuteCommands();
-
-        // This works even if there are errors. But it might be an error message.
-        return response.ResponseText;
-    }
-
-    /// <summary>
-    /// Sends the chat payload for completion, then senses the list type and splits the text into a list.
-    /// Works with numbered lists and lists separated by any type of newline. 
-    /// </summary>
-    public async Task<List<ListItem>> SendAndExtractList()
-    {
-        var response = await Send();
-
-        return response.ExtractList();
-    }
-
-    /// <summary>
-    /// Sends the chat payload for completion, then splits the result into a numbered list.
-    /// Any item that doesn't start with an number is discarded. Note that this is different than SendAndExtractList
-    /// in a few ways, including the result type, which in this case is able to include the item number (since these
-    /// items are numbered).
-    /// </summary>
-    public async Task<List<NumberedListItem>> SendAndExtractNumberedList()
-    {
-        var response = await Send();
-
-        return response.ExtractNumberedList();
-    }
-
-    /// <summary>
-    /// Sends the chat payload for completion and converts the result to a ResponseBase.
-    /// </summary>
-    public async Task<OuroResponseBase> Send()
-    {
-        return await ExecuteCommands();
-    }
-    #endregion
-
-    /// <summary>
-    /// Sends all messages in the context to the OpenAI API.
+    /// Sends all messages in the payload to the OpenAI API.
     /// If there are any errors, the HasErrors property will be set to true and
     /// the LastError property will be set to the error message.
     /// </summary>
@@ -282,20 +322,22 @@ public class ChatContext
         var messages = InnerMessages.Select(x => x.Message)
             .ToList();
 
-        var response = await Client.ChatAsync(messages);
+        var response = await Client.ChatAsync(messages, DefaultOptions);
 
         IsAllMessagesSent = true;
 
+        // Handle errors
         if (!response.Success)
         {
             HasErrors = true;
             LastError = response.ResponseText;
         }
-        
-        return response;
-    }
 
-    public ChatContext(OuroClient client)
+        return response;
+    } 
+    #endregion
+
+    public Dialog(OuroClient client)
     {
         Client = client;
     }

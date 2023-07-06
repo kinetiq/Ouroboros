@@ -26,9 +26,9 @@ public class OuroClient
     /// </summary>
     public OpenAIService GetInnerClient => GetClient();
 
-    public ChatContext CreateChat()
+    public Dialog CreateDialog()
     {
-        return new ChatContext(this);
+        return new Dialog(this);
     }
 
     /// <summary>
