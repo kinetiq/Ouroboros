@@ -111,5 +111,5 @@ AnsiConsole.Markup(response);
 
 //var response = await client.ChatAsync(chat);
 
-//AnsiConsole.Markup(response.ResponseText);
+AnsiConsole.Markup(response.ResponseText);
 
