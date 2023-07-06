@@ -9,6 +9,7 @@ using OpenAI;
 using OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Chaining;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
+using Ouroboros.Responses;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -24,22 +25,6 @@ public class OuroClient
     /// For gaining direct access to a Betalgo client, without going through the OuroClient.
     /// </summary>
     public OpenAIService GetInnerClient => GetClient();
-
-    // chat  = OurClient.CreateChat(); // ChatContext knows if anything resulted in an error, and has a reference to the client.
-    // dialog = chat
-    //      .SetSystem("..."),
-    //      .FromUser("...", "p1")
-    //      .Ask() //  AskAndAppend(), AskToString(), AskToLikert()     
-    //      .AddUserMessage("...");
-    //      
-    // if (chat.HasErrors) { ... }
-    //
-    // dialog.RemoveStartingAt("p1");
-
-    // Chat.SetSystem("...")
-    //     .SetUser("...", "elementName")
-    //     .CompleteAnd();
-
 
     public ChatContext CreateChat()
     {
@@ -67,7 +52,7 @@ public class OuroClient
     /// <summary>
     /// Handles a text completion request.
     /// </summary>
-    public async Task<CompleteResponseBase> CompleteAsync(string prompt, CompleteOptions? options = null)
+    public async Task<OuroResponseBase> CompleteAsync(string prompt, CompleteOptions? options = null)
     {
         options ??= new CompleteOptions();
         options.Model ??= DefaultCompletionModel;
@@ -81,7 +66,7 @@ public class OuroClient
     /// <summary>
     /// Handles a chat completion request.
     /// </summary>
-    public async Task<CompleteResponseBase> ChatAsync(List<ChatMessage> messages, ChatOptions? options = null)
+    public async Task<OuroResponseBase> ChatAsync(List<ChatMessage> messages, ChatOptions? options = null)
     {
         options ??= new ChatOptions();
         options.Model ??= DefaultChatModel;

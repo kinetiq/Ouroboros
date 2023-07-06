@@ -1,6 +1,7 @@
 ﻿using OpenAI.Managers;
 using OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.LargeLanguageModels.Resilience;
+using Ouroboros.Responses;
 using Polly;
 using System;
 using System.Linq;
@@ -11,7 +12,7 @@ internal class CompletionRequestHandler
 {
     private readonly OpenAIService Api;
 
-    public async Task<CompleteResponseBase> Complete(string prompt, CompleteOptions? options)
+    public async Task<OuroResponseBase> Complete(string prompt, CompleteOptions? options)
     {
         options ??= new CompleteOptions();
 
@@ -32,7 +33,7 @@ internal class CompletionRequestHandler
 
         return result switch
         {
-            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new CompleteResponseFailure(result.FinalException!.Message),
+            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(result.FinalException!.Message),
             { FaultType: FaultType.ResultHandledByThisPolicy } => GetError(result.FinalHandledResult!),
             _ => throw new InvalidOperationException("Unhandled result type.")
         };
@@ -42,7 +43,7 @@ internal class CompletionRequestHandler
     /// Extracts the ResponseText from a completion response we already know to be
     /// successful.
     /// </summary>
-    private static CompleteResponseSuccess GetResponseText(CompletionCreateResponse response)
+    private static OuroResponseSuccess GetResponseText(CompletionCreateResponse response)
     {
         if (!response.Successful)
             throw new InvalidOperationException("Called GetResponseText on a response that was not marked successful. This should never happen.");
@@ -53,13 +54,13 @@ internal class CompletionRequestHandler
             .Text
             .Trim();
 
-        return new CompleteResponseSuccess(responseText)
+        return new OuroResponseSuccess(responseText)
         {
             TotalTokenUsage = response.Usage.TotalTokens
         };
     }
 
-    private static CompleteResponseFailure GetError(CompletionCreateResponse completionResult)
+    private static OuroResponseFailure GetError(CompletionCreateResponse completionResult)
     {
         if (completionResult.Successful)
             throw new InvalidOperationException("Called GetError on a response that was successful. This should never happen.");
@@ -68,7 +69,7 @@ internal class CompletionRequestHandler
             ? "Unknown Error"
             : $"{completionResult.Error.Code}: {completionResult.Error.Message}";
 
-        return new CompleteResponseFailure(error);
+        return new OuroResponseFailure(error);
     }
 
     public CompletionRequestHandler(OpenAIService api)

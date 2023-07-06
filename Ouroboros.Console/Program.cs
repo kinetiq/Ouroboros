@@ -91,12 +91,12 @@ var client = new OuroClient("[SECRET]");
 //};
 
 var dialog = await client.CreateChat()
-    .SetSystem("# Theologian" + Environment.NewLine +
+    .SystemMessage("# Theologian" + Environment.NewLine +
                "You are a Jewish theologian who knows everything about religion.")
-    .AddUserMessage("How big is God?")
-    .AskAndAppend()
-    .AddUserMessage("And what would Satan say about that?")
-    .AskToString();
+    .UserMessage("How big is God?")
+    .SendAndAppend()
+    .UserMessage("And what would Satan say about that?")
+    .SendToString();
 
 AnsiConsole.Markup(dialog);
 

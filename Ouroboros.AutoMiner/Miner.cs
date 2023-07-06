@@ -67,7 +67,7 @@ public class Miner
         // dialog = chat
         //      .SetSystem("..."),
         //      .FromUser("...", "p1")
-        //      .Ask() //  AskAndAppend(), AskToString(), AskToLikert()     
+        //      .Ask() //  SendAndAppend(), SendToString(), AskToLikert()     
         //      .AddUserMessage("...");
         //      
         // if (chat.HasErrors) { ... }

@@ -19,11 +19,11 @@ internal class AddAssistantMessage : IChatCommand
     }
 }
 
-internal class AskAndAppend : IChatCommand
+internal class SendAndAppend : IChatCommand
 {
     public string ElementName { get; set; }
 
-    public AskAndAppend(string elementName = "")
+    public SendAndAppend(string elementName = "")
     {
         ElementName = elementName;
     }
