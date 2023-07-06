@@ -23,9 +23,9 @@
 		<!-- Release -->
 		<PackageVersion>2.0.0</PackageVersion>
 		<Description>
-			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining and text processing. Still very early an .NET 6 only; Docs and broader support to follow.
+			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Embeddings utils. Improved ListExtractor.</PackageReleaseNotes>
+		<PackageReleaseNotes>Moved to .NET 7, removed a lot of experimental recursion code, added new API for chat-mode chaining.</PackageReleaseNotes>
 		<PackageTags>gpt3 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
