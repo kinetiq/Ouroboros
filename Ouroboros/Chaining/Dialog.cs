@@ -2,6 +2,7 @@
 using Ouroboros.Chaining.Commands;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
@@ -9,6 +10,7 @@ using Ouroboros.TextProcessing;
 using Ouroboros.Responses;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Extensions;
+using Z.Core.Extensions;
 
 namespace Ouroboros.Chaining;
 
@@ -336,6 +338,20 @@ public class Dialog
         return response;
     } 
     #endregion
+
+    public override string ToString()
+    {
+        var builder = new StringBuilder();
+
+        foreach (var message in InnerMessages)
+        {
+            builder.AppendLine($"**{message.Role.ToTitleCase()} Message**{ (message.ElementName.IsNullOrWhiteSpace() ? "" : " (" + message.ElementName + ")") }");
+            builder.AppendLine(message.Content);
+            builder.AppendLine("---");
+        }
+
+        return builder.ToString();
+    }
 
     public Dialog(OuroClient client)
     {

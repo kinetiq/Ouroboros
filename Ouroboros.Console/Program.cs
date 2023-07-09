@@ -81,13 +81,20 @@ AnsiConsole.MarkupLine("[red]Starting...[/]");
 //AnsiConsole.MarkupLine("Dot Product: " + dotProductResult);
 
 var client = new OuroClient("[SECRET]");
+var dialog = client.CreateDialog();
 
-var response = await client.CreateDialog()
+var response = await dialog
     .SystemMessage("# Theologian" + Environment.NewLine +
-               "You are a Jewish theologian who knows everything about religion.")
+                   "You are a Jewish theologian who knows everything about religion.")
     .UserMessage("How big is God?")
     .SendAndAppend()
     .UserMessage("And what would Satan say about that?")
-    .SendToString();
+    .SendAndAppend()
+    .Execute();
 
-AnsiConsole.Markup(response);
+if (dialog.HasErrors)
+{
+    AnsiConsole.MarkupLine("[red]Last Error: " + dialog.LastError + "[/]");
+}
+
+AnsiConsole.Markup(dialog.ToString());
