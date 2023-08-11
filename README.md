@@ -1,5 +1,5 @@
 # What is Ouroboros?
-Ouroboros makes it super easy to chain API calls with OpenAI. You get:
+Ouroboros makes it easy to chain API calls with OpenAI. You get:
  - Fluent interface for chaining LLM calls
  - Powerful tools for transforming results into useful forms. For instance, we can detect a numbered list and transform that into a List\<String> or List\<NumberedListItem>
  - Retry capability for transient outages via <a href="https://github.com/App-vNext/Polly">Polly</a>.
