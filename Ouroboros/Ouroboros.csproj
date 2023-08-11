@@ -7,7 +7,7 @@
 
 	<PropertyGroup>
 		<!-- Identity -->
-		<PackageId>Ouroboros.Net</PackageId>
+		<PackageId>OuroborosAI.Core</PackageId>
 		<Authors>Brian MacKay</Authors>
 
 		<!-- Legal -->
