@@ -10,11 +10,11 @@ Check out the [Getting Started Guide](https://github.com/kinetiq/Ouroboros/wiki/
 # Where do I get it?
 First, <a href="http://docs.nuget.org/docs/start-here/installing-nuget">install NuGet</a>. Then you can install Ouroboros from the package manager console:
 
->PM> Install-Package Ouroboros.Net
+>PM> Install-Package OuroborosAI.Core
 
-# Current Limitations
+# Limits and Possible Contributions
 Ouroboros is production-ready, but it does have limits. If you would like those limits to go away, get involved!
  - Only supports OpenAI API calls. We built this on top of Betalgo, so it should also be possible to support OpenAI on Azure.
- - Only supports chat-based API calls, meaning GPT 3.5-turbo, GPT 4, etc.
+ - Chaining only supports chat-based API calls, meaning GPT 3.5-turbo, GPT 4, etc.
  - You can't modify our retry policy, although you _can_ turn it off.
  - It would be great if there was an event of some kind that could be called any time we make a call to OpenAI, to make logging easier. But that doesn't exist.
