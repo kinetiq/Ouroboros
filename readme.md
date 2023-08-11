@@ -10,7 +10,7 @@ Check out the [Getting Started Guide](https://github.com/kinetiq/Ouroboros/wiki/
 # Where do I get it?
 First, <a href="http://docs.nuget.org/docs/start-here/installing-nuget">install NuGet</a>. Then you can install Ouroboros from the package manager console:
 
->PM> Install-Package Ouroboros.Net
+>PM> Install-Package OuroborosAI.Core
 
 # Current Limitations
 Ouroboros is production-ready, but it does have limits. If you would like those limits to go away, get involved!
