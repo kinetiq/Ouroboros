@@ -24,6 +24,10 @@ public class Dialog
     /// of the command buffer if the last command was SendAndAppend.
     /// </summary>
     private bool IsAllMessagesSent = true;
+    
+    public int TotalPromptTokensUsed { get; internal set; } = 0;
+    public int TotalCompletionTokensUsed { get; internal set; } = 0;
+    public int TotalTokensUsed { get; internal set; } = 0;
 
     private OuroResponseBase? LastResponse;
 
@@ -327,6 +331,11 @@ public class Dialog
         var response = await Client.ChatAsync(messages, DefaultOptions);
 
         IsAllMessagesSent = true;
+
+        // Update token usage
+        TotalPromptTokensUsed += response.PromptTokens;
+        TotalCompletionTokensUsed += response.CompletionTokens ?? 0;
+        TotalTokensUsed += response.TotalTokenUsage;
 
         // Handle errors
         if (!response.Success)
