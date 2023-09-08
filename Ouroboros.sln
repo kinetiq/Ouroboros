@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ouroboros.Console", "Ourobo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ouroboros.Test", "Ouroboros.Test\Ouroboros.Test.csproj", "{7E66B27D-ACC0-4620-B584-97AE7104C7E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ouroboros.AutoMiner", "Ouroboros.AutoMiner\Ouroboros.AutoMiner.csproj", "{FAFD11A7-9373-48FA-B71E-DB93257A68FA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ouroboros.AutoMiner", "Ouroboros.AutoMiner\Ouroboros.AutoMiner.csproj", "{FAFD11A7-9373-48FA-B71E-DB93257A68FA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
