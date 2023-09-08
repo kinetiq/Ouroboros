@@ -1,15 +1,15 @@
 ﻿using AI.Dev.OpenAI.GPT;
+using OpenAI;
+using OpenAI.Managers;
+using OpenAI.ObjectModels.RequestModels;
+using Ouroboros.Chaining;
 using Ouroboros.LargeLanguageModels;
+using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Completions;
+using Ouroboros.Responses;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using OpenAI.Managers;
-using OpenAI;
-using OpenAI.ObjectModels.RequestModels;
-using Ouroboros.Chaining;
-using Ouroboros.LargeLanguageModels.ChatCompletions;
-using Ouroboros.Responses;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
