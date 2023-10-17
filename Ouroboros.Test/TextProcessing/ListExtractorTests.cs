@@ -75,6 +75,24 @@ public class ListExtractorTests
         Assert.Equal(12, items[1].Index);
     }
 
+
+    [Fact]
+    public void Numbered_List_Extraction_With_Extra_NewLines2()
+    {
+        var text = "1. Emotional Intelligence\n\r\n\r2. Time Management\r\n\r\n3. Communication\n\n";
+
+        var items = ListExtractor.ExtractNumbered(text);
+
+        Assert.Equal(3, items.Count);
+        Assert.Equal("Emotional Intelligence", items[0].Text);
+        Assert.Equal(1, items[0].Index);
+        Assert.Equal("Time Management", items[1].Text);
+        Assert.Equal(2, items[1].Index);
+        Assert.Equal("Communication", items[2].Text);
+        Assert.Equal(3, items[2].Index);
+    }
+
+
     [Fact]
     public void NewLine_List_Extraction_Works()
     {
