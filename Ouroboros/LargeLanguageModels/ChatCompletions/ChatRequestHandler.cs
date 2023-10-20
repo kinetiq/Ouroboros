@@ -8,6 +8,7 @@ using OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
 using Polly;
+using Z.Core.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 internal class ChatRequestHandler
@@ -28,13 +29,17 @@ internal class ChatRequestHandler
 
         // TODO: consider more nuanced error handling: https://platform.openai.com/docs/guides/error-codes/api-errors
 
+        // 401 should not retry.
+        // 429 should retry.
+        // 500 and 503 could retry. 
+
         var result = await Policy
             .Handle<Exception>()
-            .OrResult<ChatCompletionCreateResponse>(x => x == null || !x.Successful)
+            .OrResult<ChatCompletionCreateResponse>(x => !x.Successful && (x.Error == null || x.Error.Code.In("429", "503")))
             .WaitAndRetryAsync(delay)
             .ExecuteAndCaptureAsync(async () => await Api.ChatCompletion
                                                          .CreateCompletion(request));
-
+        
         if (result.Outcome == OutcomeType.Successful)
             return GetResponseText(result.Result!);
 
