@@ -34,7 +34,7 @@ public class OuroClient
     /// <summary>
     /// Coverts text into tokens. Uses GPT3Tokenizer.
     /// </summary>
-    public List<int> Tokenize(string text)
+    public static List<int> Tokenize(string text)
     {
         return GPT3Tokenizer.Encode(text);
     }
@@ -42,7 +42,7 @@ public class OuroClient
     /// <summary>
     /// Gets the number of tokens the given text would take up. Uses GPT3Tokenizer.
     /// </summary>
-    public int TokenCount(string text)
+    public static int TokenCount(string text)
     {
         var tokens = Tokenize(text);
 
