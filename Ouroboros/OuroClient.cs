@@ -1,5 +1,4 @@
-﻿using AI.Dev.OpenAI.GPT;
-using OpenAI;
+﻿using OpenAI;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Chaining;
@@ -8,8 +7,10 @@ using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Completions;
 using Ouroboros.Responses;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using OpenAI.Tokenizer.GPT3;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -36,7 +37,9 @@ public class OuroClient
     /// </summary>
     public static List<int> Tokenize(string text)
     {
-        return GPT3Tokenizer.Encode(text);
+        var tokens = TokenizerGpt3.Encode(text, cleanUpCREOL: true); // cleanup improves accuracy
+
+        return tokens.ToList();
     }
 
     /// <summary>
