@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>2.4.2</Version>
+		<Version>2.5.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,11 +21,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.4.2</PackageVersion>
+		<PackageVersion>2.5.0</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Fixes for template engine and fragment support to work with other assemblies.</PackageReleaseNotes>
+		<PackageReleaseNotes>Re-worked the template and fragment engines. It is much more elegant now.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
