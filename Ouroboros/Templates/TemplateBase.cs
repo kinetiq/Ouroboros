@@ -2,29 +2,30 @@
 using System.Dynamic;
 using System.Threading.Tasks;
 using OpenAI.ObjectModels.RequestModels;
+using Ouroboros.Core;
 
 namespace Ouroboros.Templates;
 
-public abstract class OptionsTemplateBase<T> : RootTemplateBase
+public abstract class TemplateBase : RootTemplateBase
 {
-    public async Task<string> Generate(T options)
+    public async Task<string> Generate()
     {
-        return await LoadAndRender(options);
+        return await LoadAndRender();
     }
 
     /// <summary>
     /// Generates as a message, inferring the role from the beginning of the template name.
     /// </summary>
     /// <exception cref="InvalidOperationException">Throws if the start of the template is not a valid message role.</exception>
-    public virtual async Task<ChatMessage> AsMessage(T context)
+    public virtual async Task<ChatMessage> AsMessage()
     {
         var role = GetMessageRole();
 
         return role switch
         {
-            "system"    => await AsSystem(context),
-            "user"      => await AsUser(context),
-            "assistant" => await AsAssistant(context),
+            MessageRoles.System    => await AsSystem(),
+            MessageRoles.User      => await AsUser(),
+            MessageRoles.Assistant => await AsAssistant(),
             _           => throw new InvalidOperationException("Unexpected role: " + role)
         };
     }
@@ -32,9 +33,9 @@ public abstract class OptionsTemplateBase<T> : RootTemplateBase
     /// <summary>
     /// Generates as a System message.
     /// </summary>
-    public virtual async Task<ChatMessage> AsSystem(T context)
+    public virtual async Task<ChatMessage> AsSystem()
     {
-        var text = await Generate(context);
+        var text = await Generate();
 
         return ChatMessage.FromSystem(text);
     }
@@ -42,9 +43,9 @@ public abstract class OptionsTemplateBase<T> : RootTemplateBase
     /// <summary>
     /// Generates as a User message.
     /// </summary>
-    public virtual async Task<ChatMessage> AsUser(T context)
+    public virtual async Task<ChatMessage> AsUser()
     {
-        var text = await Generate(context);
+        var text = await Generate();
 
         return ChatMessage.FromUser(text);
     }
@@ -52,20 +53,19 @@ public abstract class OptionsTemplateBase<T> : RootTemplateBase
     /// <summary>
     /// Generates as an Assistant message.
     /// </summary>
-    public virtual async Task<ChatMessage> AsAssistant(T context)
+    public virtual async Task<ChatMessage> AsAssistant()
     {
-        var text = await Generate(context);
+        var text = await Generate();
 
         return ChatMessage.FromAssistant(text);
     }
 
-
-    protected OptionsTemplateBase()
+    protected TemplateBase()
     {
         GlobalContext = new ExpandoObject();
     }
 
-    protected OptionsTemplateBase(object globalContext) : base(globalContext)
+    protected TemplateBase(object globalContext) : base(globalContext)
     {
     }
 }

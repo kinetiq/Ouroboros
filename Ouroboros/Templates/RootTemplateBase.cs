@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Dynamic;
-using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Scriban;
-using Scriban.Runtime;
+using Ouroboros.Core;
+using Ouroboros.Templates.Engine;
 
 namespace Ouroboros.Templates;
 
@@ -12,7 +12,7 @@ namespace Ouroboros.Templates;
 /// </summary>
 public abstract class RootTemplateBase
 {
-    protected dynamic GlobalContext { get; set; }
+    internal dynamic GlobalContext { get; set; }
 
     /// <summary>
     /// Filename of the template we're working with. If this isn't overridden, it will attempt to derive the
@@ -20,66 +20,32 @@ public abstract class RootTemplateBase
     /// </summary>
     protected virtual string FileName => GetType().Name;
 
-    protected string GetMessageRole()
+    protected virtual MessageRoles GetMessageRole()
     {
         var fileName = FileName.ToLower();
 
         if (fileName.StartsWith("system"))
-            return "system";
+            return MessageRoles.System;
 
         if (fileName.StartsWith("user"))
-            return "user";
+            return MessageRoles.User;
 
         if (fileName.StartsWith("assistant"))
-            return "assistant";
+            return MessageRoles.Assistant;
 
         throw new InvalidOperationException($"Could not infer message role from filename: { FileName }. It must start with System, User, or Assistant.");
     }
 
-    protected async Task<string> LoadAndRender(object? context = null)
+    protected async Task<string> LoadAndRender(string name)
     {
-        var nonNullableContext = context ?? new { };
+        var engine = new RenderEngine(this);
 
-        return await LoadAndRender(FileName, nonNullableContext);
+        return await engine.LoadAndRender(name);
     }
 
-    protected async Task<string> LoadAndRender(string name, object localContext)
+    protected async Task<string> LoadAndRender()
     {
-        var raw = await LoadEmbeddedAsync(name);
-        var final = await Render(raw, localContext);
-
-        return final;
-    }
-
-    /// <summary>
-    /// Run the raw prompt through our rendering engine.
-    /// </summary>
-    protected async Task<string> Render(string raw, object localContext)
-    {
-        var combinedContext = TypeMerger.TypeMerger.Merge(GlobalContext, localContext);
-
-        var template = Template.Parse(raw);
-
-        // The default is to use this_type_of_syntax, but we want to mirror our objects.
-        // https://github.com/scriban/scriban/blob/master/doc/runtime.md#member-renamer
-        var renamer = new MemberRenamerDelegate(member => member.Name);
-
-        return await template.RenderAsync(combinedContext, renamer);
-    }
-
-    protected async Task<string> LoadEmbeddedAsync(string name)
-    {
-        var assembly = GetType().Assembly;
-        var resourceName = $"{GetType().Namespace}.{name}.md";
-
-        await using var stream = assembly.GetManifestResourceStream(resourceName);
-
-        if (stream == null)
-            throw new Exception($"Resource { resourceName } not found.\r\nMake sure the file is marked Embedded Resource and exists in the right namespace.");
-
-        using var reader = new StreamReader(stream);
-
-        return await reader.ReadToEndAsync();
+        return await LoadAndRender(FileName);
     }
 
     protected RootTemplateBase()
