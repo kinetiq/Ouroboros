@@ -12,7 +12,7 @@ public class TemplateTests
     {
         var template = new TestTemplate();
 
-        var result = await template.Generate();
+        var result = await template.RenderAsync();
 
         Assert.Equal("This is a test substitution.\r\n\r\nThis is a test fragment. Yeehaw.", result);
     }

@@ -11,9 +11,9 @@ namespace Ouroboros.Templates.Engine;
 /// </summary>
 internal class RenderEngine
 {
-    private readonly RootTemplateBase Template;
+    private readonly TemplateBase Template;
 
-    internal RenderEngine(RootTemplateBase template)
+    internal RenderEngine(TemplateBase template)
     {
         Template = template;
     }
