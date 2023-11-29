@@ -6,13 +6,16 @@ using Polly;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Z.Core.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ouroboros.LargeLanguageModels.Completions;
 internal class CompletionRequestHandler
 {
-    private readonly OpenAIService Api;
+    private readonly IServiceProvider Services;
 
-    public async Task<OuroResponseBase> Complete(string prompt, CompleteOptions? options)
+    public async Task<OuroResponseBase> Complete(string prompt, OpenAIService api, CompleteOptions? options)
     {
         options ??= new CompleteOptions();
 
@@ -20,13 +23,29 @@ internal class CompletionRequestHandler
 
         var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
 
-        // TODO: consider more nuanced error handling: https://platform.openai.com/docs/guides/error-codes/api-errors
+        // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
 
         var policyResult = await Policy
             .Handle<Exception>()
-            .OrResult<CompletionCreateResponse>(x => x == null || !x.Successful)
-            .WaitAndRetryAsync(delay)
-            .ExecuteAndCaptureAsync(async () => await Api.Completions.CreateCompletion(request));
+            .OrResult<CompletionCreateResponse>(response =>
+                !response.Successful &&
+                (response.Error == null || response.Error.Code.In("429", "500", "503")))
+            .WaitAndRetryAsync(
+                sleepDurations: delay,
+                onRetry: (outcome, timespan, retryAttempt, context) =>
+            {
+                var logger = Services.GetService<ILogger<CompletionRequestHandler>>();
+
+                if (logger == null)
+                    return;
+
+                // TODO: look into outcome and try to log more information
+
+                logger?.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.", timespan.TotalMilliseconds, retryAttempt);
+            })
+            .ExecuteAndCaptureAsync(async () => await api.Completions
+                                                         .CreateCompletion(request));
+
 
         if (policyResult.Outcome == OutcomeType.Successful)
         {
@@ -84,8 +103,8 @@ internal class CompletionRequestHandler
         return new OuroResponseFailure(error);
     }
 
-    public CompletionRequestHandler(OpenAIService api)
+    public CompletionRequestHandler(IServiceProvider services)
     {
-        Api = api;
+        this.Services = services;
     }
 }

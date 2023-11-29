@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using OpenAI.Tokenizer.GPT3;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
@@ -19,6 +20,9 @@ namespace Ouroboros;
 public class OuroClient 
 {
     private readonly string ApiKey;
+    private readonly CompletionRequestHandler CompletionHandler;
+    private readonly ChatRequestHandler ChatHandler;
+
     private OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
     private OuroModels DefaultChatModel = OuroModels.Gpt_4;
     
@@ -61,9 +65,7 @@ public class OuroClient
         options.Model ??= DefaultCompletionModel;
         var api = GetClient();
 
-        var handler = new CompletionRequestHandler(api);
-
-        return await handler.Complete(prompt, options);
+        return await CompletionHandler.Complete(prompt, api, options);
     }
 
     /// <summary>
@@ -75,9 +77,8 @@ public class OuroClient
         options.Model ??= DefaultChatModel;
 
         var api = GetClient();
-        var handler = new ChatRequestHandler(api);
 
-        return await handler.CompleteAsync(messages, options);
+        return await ChatHandler.CompleteAsync(messages, api, options);
     }
 
     /// <summary>
@@ -124,6 +125,12 @@ public class OuroClient
 
     public OuroClient(string apiKey)
     {
+        // Create an empty services collection, which we need downstream for Polly's retry policy.
+        var serviceProvider = new ServiceCollection()
+            .BuildServiceProvider();
+
+        CompletionHandler = new CompletionRequestHandler(serviceProvider);
+        ChatHandler = new ChatRequestHandler(serviceProvider);
         ApiKey = apiKey;
     }
 }
