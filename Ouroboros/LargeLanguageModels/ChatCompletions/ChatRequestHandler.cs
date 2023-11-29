@@ -33,20 +33,30 @@ internal class ChatRequestHandler
         // 429 should retry.
         // 500 and 503 could retry. 
 
-        var result = await Policy
+        var policyResult = await Policy
             .Handle<Exception>()
             .OrResult<ChatCompletionCreateResponse>(x => !x.Successful && (x.Error == null || x.Error.Code.In("429", "503")))
             .WaitAndRetryAsync(delay)
             .ExecuteAndCaptureAsync(async () => await Api.ChatCompletion
                                                          .CreateCompletion(request));
-        
-        if (result.Outcome == OutcomeType.Successful)
-            return GetResponseText(result.Result!);
 
-        return result switch
+        if (policyResult.Outcome == OutcomeType.Successful)
         {
-            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(result.FinalException!.Message),
-            { FaultType: FaultType.ResultHandledByThisPolicy } => GetError(result.FinalHandledResult!),
+            var chat = policyResult.Result;
+
+            if (chat == null)
+                return new OuroResponseFailure("policyResult was successful, but the inner result was null. This should never happen.");
+
+            if (!chat.Successful)
+                return GetFailureResponse(chat);
+
+            return GetSuccessResponse(chat);
+        }
+
+        return policyResult switch
+        {
+            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(policyResult.FinalException!.Message),
+            { FaultType: FaultType.ResultHandledByThisPolicy } => GetFailureResponse(policyResult.FinalHandledResult!),
             _ => throw new InvalidOperationException("Unhandled result type.")
         };
     }
@@ -55,7 +65,7 @@ internal class ChatRequestHandler
     /// Extracts the ResponseText from from a completion response we already know to be
     /// successful.
     /// </summary>
-    private static OuroResponseSuccess GetResponseText(ChatCompletionCreateResponse response)
+    private static OuroResponseSuccess GetSuccessResponse(ChatCompletionCreateResponse response)
     {
         if (!response.Successful)
             throw new InvalidOperationException("Called GetResponseText on a response that was not marked successful. This should never happen.");
@@ -74,7 +84,7 @@ internal class ChatRequestHandler
         };
     }
 
-    private static OuroResponseFailure GetError(ChatCompletionCreateResponse completionResult)
+    private static OuroResponseFailure GetFailureResponse(ChatCompletionCreateResponse completionResult)
     {
         if (completionResult.Successful)
             throw new InvalidOperationException("Called GetError on a response that was successful. This should never happen.");
