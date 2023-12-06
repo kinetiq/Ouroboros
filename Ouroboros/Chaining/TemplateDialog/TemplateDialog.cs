@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Ouroboros.Chaining.TemplateDialog.Commands;
+using Ouroboros.Chaining.TemplateDialog.Templates;
 using Ouroboros.Endpoints;
 using Ouroboros.Responses;
 
@@ -50,16 +51,16 @@ public class TemplateDialog
 	
 	#region Builder Pattern Commands
 	
-	public TemplateDialog Send<T>(T template, bool fillFromStorage = false)
+	public TemplateDialog Send(IDialogTemplate template, bool fillFromStorage = false)
 	{
-		Commands.Add(new Send<T>(template, fillFromStorage));
+		Commands.Add(new Send<IDialogTemplate>(template, fillFromStorage));
 
 		return this;
 	}
 
-	public TemplateDialog Send<T>(string templateName, T template, bool fillFromStorage = false)
+	public TemplateDialog Send(string templateName, IDialogTemplate template, bool fillFromStorage = false)
 	{
-		Commands.Add(new Send<T>(templateName, template, fillFromStorage));
+		Commands.Add(new Send<IDialogTemplate>(templateName, template, fillFromStorage));
 
 		return this;
 	}
@@ -80,9 +81,15 @@ public class TemplateDialog
 	#endregion
 
 	#region Command Execution and Handling
-		private async Task<OuroResponseBase> Execute()
+		public async Task<OuroResponseBase> Execute()
 		{
 			return await ExecuteChainableCommands();
+		}
+
+		public async Task<string> ExecuteToString()
+		{
+			var result = await ExecuteChainableCommands();
+			return result.ResponseText;
 		}
 
 		private async Task<OuroResponseBase> ExecuteChainableCommands()
@@ -93,7 +100,7 @@ public class TemplateDialog
 			{
 				switch (command)
 				{
-					case Send<Task> send:
+					case Send<IDialogTemplate> send:
 						LastResponse = await HandleSend(send);
 						break;
 					case StoreOutputAs storeOutputAs:
@@ -110,15 +117,17 @@ public class TemplateDialog
 			return LastResponse ?? new OuroResponseFailure("Unknown Error");
 		}
 
-		private async Task<OuroResponseBase> HandleSend<T>(Send<T> send)
+		private async Task<OuroResponseBase> HandleSend(Send<IDialogTemplate> send)
 		{
 			//Clear TempVariableStorage
 			TempVariableStorage.Clear();
 
+			
+			var type = send.Template.GetType();
+
 			//Fill Template Parameters
-			if (send.FillParametersFromStorage && send.Template != null)
+			if (send.FillParametersFromStorage)
 			{
-				var type = send.Template.GetType();
 				foreach (var variable in VariableStorage)
 				{
 					var propertyInfo = type.GetProperty(variable.Key);
@@ -131,7 +140,7 @@ public class TemplateDialog
 			}
 				
 			//Store Template Params in TempVariableStorage. We may save them later.
-			var properties = typeof(T).GetProperties();
+			var properties = type.GetProperties();
 			foreach (var property in properties)
 			{
 				var value = property.GetValue(send.Template);
@@ -156,7 +165,8 @@ public class TemplateDialog
 			if (LastResponse == null)
 				throw new InvalidOperationException($"A response is required. Used .Send() before calling .StoreOutputAs()");
 			
-			VariableStorage.Add(storeOutputAs.VariableName, LastResponse.ResponseText);
+			VariableStorage[storeOutputAs.VariableName] = LastResponse.ResponseText;
+			
 		}
 
 
