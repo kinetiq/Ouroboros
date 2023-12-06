@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Ouroboros.Chaining.TemplateDialog.Commands;
+using Ouroboros.Endpoints;
 using Ouroboros.Responses;
 
 namespace Ouroboros.Chaining.TemplateDialog;
 public class TemplateDialog
 {
+	private readonly ITemplateEndpoint AiEndpoint;
 
 	/// <summary>
 	/// Internal list of chained commands. These are executed sequentially,
@@ -16,15 +19,35 @@ public class TemplateDialog
 	/// </summary>
 	private List<ITemplateCommand> Commands { get; set; } = new();
 
-	#region Variable Storage
-	private Dictionary<string, string> TempVariableStorage = new();
-
-	private Dictionary<string, string> VariableStorage = new();
-
+	/// <summary>
+	/// The last response we've received from our Endpoint.
+	/// </summary>
 	private OuroResponseBase? LastResponse;
+
+	#region Error Handling
+
+		/// <summary>
+		/// Returns true if there are errors. Because TemplateDialog does not always return
+		/// a response object, this gives us a way to be sure the entire chained operation
+		/// succeeded.
+		/// </summary>
+		public bool HasErrors { get; private set; } = false;
+
+		/// <summary>
+		/// If there was an error, this provides a way to at least see the most recent one.
+		/// </summary>
+		public string LastError { get; private set; } = "";
+
+	#endregion
+	
+	#region Variable Storage
+	
+		private Dictionary<string, string> TempVariableStorage = new();
+
+		private Dictionary<string, string> VariableStorage = new();
+
 	#endregion 
 	
-
 	#region Builder Pattern Commands
 	
 	public TemplateDialog Send<T>(T template, bool fillFromStorage = false)
@@ -93,12 +116,39 @@ public class TemplateDialog
 			TempVariableStorage.Clear();
 
 			//Fill Template Parameters
+			if (send.FillParametersFromStorage && send.Template != null)
+			{
+				var type = send.Template.GetType();
+				foreach (var variable in VariableStorage)
+				{
+					var propertyInfo = type.GetProperty(variable.Key);
+					if (propertyInfo == null || !propertyInfo.CanWrite) continue;
+
+					var propertyType = propertyInfo.PropertyType;
+					var value = Convert.ChangeType(variable.Value, propertyType);
+					propertyInfo.SetValue(send.Template, value);
+				}
+			}
+				
+			//Store Template Params in TempVariableStorage. We may save them later.
+			var properties = typeof(T).GetProperties();
+			foreach (var property in properties)
+			{
+				var value = property.GetValue(send.Template);
+				TempVariableStorage[property.Name] = value?.ToString() ?? string.Empty;
+			}
 			
-			//Store Template Params in TempVariableStorage
-
 			//Await Endpoint Response
-			//Parse response and return
+			var response = await AiEndpoint.SendTemplateAsync(send.TemplateName, send.Template);
 
+			//Parse response and return
+			if (!response.Success)
+			{
+				HasErrors = true;
+				LastError = response.ResponseText;
+			}
+
+			return response;
 		}
 
 		private void HandleStoreOutputAs(StoreOutputAs storeOutputAs)
@@ -134,6 +184,9 @@ public class TemplateDialog
 
 	#endregion
 
-	
+	public TemplateDialog(ITemplateEndpoint aiEndpoint)
+	{
+		AiEndpoint = aiEndpoint;
+	}
 
 }
