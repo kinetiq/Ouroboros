@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Ouroboros.Chaining.TemplateDialog.Commands;
 using Ouroboros.Chaining.TemplateDialog.Templates;
 using Ouroboros.Endpoints;
 using Ouroboros.Responses;
+using Z.Core.Extensions;
 
 namespace Ouroboros.Chaining.TemplateDialog;
 public class TemplateDialog
@@ -24,6 +27,11 @@ public class TemplateDialog
 	/// The last response we've received from our Endpoint.
 	/// </summary>
 	private OuroResponseBase? LastResponse;
+
+	public static string GetByName(string name)
+	{
+		return $"[[x]]{name}[[x]]";
+	}
 
 	#region Error Handling
 
@@ -47,6 +55,16 @@ public class TemplateDialog
 
 		private Dictionary<string, string> VariableStorage = new();
 
+		public string GetParameter(string name)
+		{
+			if (VariableStorage.TryGetValue(name, out var result))
+			{
+				return result;
+			}
+
+			throw new InvalidOperationException($"Variable {name} couldn't be found in Parameters.");
+		}
+
 	#endregion 
 	
 	#region Builder Pattern Commands
@@ -67,7 +85,7 @@ public class TemplateDialog
 
 	public TemplateDialog StoreParams(bool overrideExisting = false)
 	{
-		Commands.Add(new StoreParams());
+		Commands.Add(new StoreParams(overrideExisting));
 
 		return this;
 	}
@@ -121,26 +139,49 @@ public class TemplateDialog
 		{
 			//Clear TempVariableStorage
 			TempVariableStorage.Clear();
+		
+			var templateType = send.Template.GetType();
+			var defaultTemplateInstance = Activator.CreateInstance(templateType);
 
-			
-			var type = send.Template.GetType();
-
-			//Fill Template Parameters
-			if (send.FillParametersFromStorage)
+			// Check all the template Properties and update them as requested
+			// Manually declared values are not touched by this process
+			foreach (var property in templateType.GetProperties())
 			{
-				foreach (var variable in VariableStorage)
-				{
-					var propertyInfo = type.GetProperty(variable.Key);
-					if (propertyInfo == null || !propertyInfo.CanWrite) continue;
+				var currentValue = property.GetValue(send.Template);
+				var defaultValue = property.GetValue(defaultTemplateInstance);
 
-					var propertyType = propertyInfo.PropertyType;
-					var value = Convert.ChangeType(variable.Value, propertyType);
-					propertyInfo.SetValue(send.Template, value);
+				// If the currentValue isn't different, and we want to Fill Parameters From Storage,
+				// Check if there is a matching parameter in storage and use that
+				if (Equals(currentValue, defaultValue) && send.FillParametersFromStorage)
+				{
+					if (!VariableStorage.TryGetValue(property.Name, out var storedValue)) continue;
+					
+					var value = Convert.ChangeType(storedValue, property.PropertyType);
+					property.SetValue(send.Template, value);
+				}
+				// If the current value is a string, and contains [[x]], the user want's to manually put a variable in
+				// Find that variable and set the property value to it.
+				else if (currentValue != null && currentValue.IsValidString() && currentValue.ToString()!.Contains("[[x]]"))
+				{
+					var pattern = @"\[\[x\]\](.*?)\[\[x\]\]";
+					var match = Regex.Match(currentValue.ToString()!, pattern);
+
+					if (!match.Success) continue;
+
+					var variableName = match.Groups[1].Value;
+					if (!VariableStorage.TryGetValue(variableName, out var storedValue))
+						throw new InvalidOperationException($"Variable {variableName} was not stored and cannot be retrieved.");
+
+					var updatedPropertyValue = Regex.Replace(currentValue.ToString()!, pattern, storedValue);
+					var value = Convert.ChangeType(updatedPropertyValue, property.PropertyType);
+						
+					property.SetValue(send.Template, value);
+
 				}
 			}
-				
+			
 			//Store Template Params in TempVariableStorage. We may save them later.
-			var properties = type.GetProperties();
+			var properties = templateType.GetProperties();
 			foreach (var property in properties)
 			{
 				var value = property.GetValue(send.Template);

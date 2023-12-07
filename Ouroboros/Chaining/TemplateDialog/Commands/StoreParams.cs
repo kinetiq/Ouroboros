@@ -8,4 +8,9 @@ namespace Ouroboros.Chaining.TemplateDialog.Commands;
 internal class StoreParams : ITemplateCommand
 {
 	public bool OverrideExisting { get; set; }
+
+	public StoreParams(bool overrideExisting)
+	{
+		OverrideExisting = overrideExisting;
+	}
 }
