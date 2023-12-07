@@ -28,11 +28,6 @@ public class TemplateDialog
 	/// </summary>
 	private OuroResponseBase? LastResponse;
 
-	public static string GetByName(string name)
-	{
-		return $"[[x]]{name}[[x]]";
-	}
-
 	#region Error Handling
 
 		/// <summary>
@@ -51,41 +46,26 @@ public class TemplateDialog
 	
 	#region Variable Storage
 	
-		private Dictionary<string, string> TempVariableStorage = new();
-
 		private Dictionary<string, string> VariableStorage = new();
 
-		public string GetParameter(string name)
+		public static string GetByName(string name)
 		{
-			if (VariableStorage.TryGetValue(name, out var result))
-			{
-				return result;
-			}
-
-			throw new InvalidOperationException($"Variable {name} couldn't be found in Parameters.");
+			return $"[[x]]{name}[[x]]";
 		}
-
 	#endregion 
 	
 	#region Builder Pattern Commands
 	
-	public TemplateDialog Send(IDialogTemplate template, bool fillFromStorage = false)
+	public TemplateDialog Send(IDialogTemplate template)
 	{
-		Commands.Add(new Send<IDialogTemplate>(template, fillFromStorage));
+		Commands.Add(new Send<IDialogTemplate>(template));
 
 		return this;
 	}
 
-	public TemplateDialog Send(string templateName, IDialogTemplate template, bool fillFromStorage = false)
+	public TemplateDialog Send(string templateName, IDialogTemplate template)
 	{
-		Commands.Add(new Send<IDialogTemplate>(templateName, template, fillFromStorage));
-
-		return this;
-	}
-
-	public TemplateDialog StoreParams(bool overrideExisting = false)
-	{
-		Commands.Add(new StoreParams(overrideExisting));
+		Commands.Add(new Send<IDialogTemplate>(templateName, template));
 
 		return this;
 	}
@@ -124,9 +104,6 @@ public class TemplateDialog
 					case StoreOutputAs storeOutputAs:
 						HandleStoreOutputAs(storeOutputAs);
 						break;
-					case StoreParams storeParams:
-						HandleStoreParams(storeParams);
-						break;
 					default:
 						throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
 				}
@@ -137,55 +114,31 @@ public class TemplateDialog
 
 		private async Task<OuroResponseBase> HandleSend(Send<IDialogTemplate> send)
 		{
-			//Clear TempVariableStorage
-			TempVariableStorage.Clear();
-		
 			var templateType = send.Template.GetType();
-			var defaultTemplateInstance = Activator.CreateInstance(templateType);
 
 			// Check all the template Properties and update them as requested
 			// Manually declared values are not touched by this process
 			foreach (var property in templateType.GetProperties())
 			{
 				var currentValue = property.GetValue(send.Template);
-				var defaultValue = property.GetValue(defaultTemplateInstance);
-
-				// If the currentValue isn't different, and we want to Fill Parameters From Storage,
-				// Check if there is a matching parameter in storage and use that
-				if (Equals(currentValue, defaultValue) && send.FillParametersFromStorage)
-				{
-					if (!VariableStorage.TryGetValue(property.Name, out var storedValue)) continue;
-					
-					var value = Convert.ChangeType(storedValue, property.PropertyType);
-					property.SetValue(send.Template, value);
-				}
 				// If the current value is a string, and contains [[x]], the user want's to manually put a variable in
 				// Find that variable and set the property value to it.
-				else if (currentValue != null && currentValue.IsValidString() && currentValue.ToString()!.Contains("[[x]]"))
-				{
-					var pattern = @"\[\[x\]\](.*?)\[\[x\]\]";
-					var match = Regex.Match(currentValue.ToString()!, pattern);
+				if (currentValue == null || !currentValue.IsValidString() ||
+				    !currentValue.ToString()!.Contains("[[x]]")) continue;
 
-					if (!match.Success) continue;
+				var pattern = @"\[\[x\]\](.*?)\[\[x\]\]";
+				var match = Regex.Match(currentValue.ToString()!, pattern);
 
-					var variableName = match.Groups[1].Value;
-					if (!VariableStorage.TryGetValue(variableName, out var storedValue))
-						throw new InvalidOperationException($"Variable {variableName} was not stored and cannot be retrieved.");
+				if (!match.Success) continue;
 
-					var updatedPropertyValue = Regex.Replace(currentValue.ToString()!, pattern, storedValue);
-					var value = Convert.ChangeType(updatedPropertyValue, property.PropertyType);
+				var variableName = match.Groups[1].Value;
+				if (!VariableStorage.TryGetValue(variableName, out var storedValue))
+					throw new InvalidOperationException($"Variable {variableName} was not stored and cannot be retrieved.");
+
+				var updatedPropertyValue = Regex.Replace(currentValue.ToString()!, pattern, storedValue);
+				var value = Convert.ChangeType(updatedPropertyValue, property.PropertyType);
 						
-					property.SetValue(send.Template, value);
-
-				}
-			}
-			
-			//Store Template Params in TempVariableStorage. We may save them later.
-			var properties = templateType.GetProperties();
-			foreach (var property in properties)
-			{
-				var value = property.GetValue(send.Template);
-				TempVariableStorage[property.Name] = value?.ToString() ?? string.Empty;
+				property.SetValue(send.Template, value);
 			}
 			
 			//Await Endpoint Response
@@ -209,30 +162,7 @@ public class TemplateDialog
 			VariableStorage[storeOutputAs.VariableName] = LastResponse.ResponseText;
 			
 		}
-
-
-		private void HandleStoreParams(StoreParams storeParams)
-		{
-			Dictionary<string, string> result;
-
-			if (storeParams.OverrideExisting)
-			{
-				result = TempVariableStorage
-					.Union(VariableStorage.Where(pair => !TempVariableStorage.ContainsKey(pair.Key)))
-					.ToDictionary(pair => pair.Key, pair => pair.Value);
-			}
-			else
-			{
-				result = VariableStorage
-					.Union(TempVariableStorage.Where(pair => !VariableStorage.ContainsKey(pair.Key)))
-					.ToDictionary(pair => pair.Key, pair => pair.Value);
-			}
-
-			VariableStorage.Clear();
-			VariableStorage = result;
-			TempVariableStorage.Clear();
-		}
-
+		
 	#endregion
 
 	public TemplateDialog(ITemplateEndpoint aiEndpoint)

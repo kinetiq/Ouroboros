@@ -10,20 +10,17 @@ internal class Send<TDialogTemplate> : ITemplateCommand
 {
 	public TDialogTemplate Template { get; set; }
 	public string TemplateName { get; set; }
-	public bool FillParametersFromStorage { get; set; } = false;
 
-	public Send(TDialogTemplate template, bool fillFromStorage)
+	public Send(TDialogTemplate template)
 	{
 		Template = template;
 		TemplateName = nameof(template);
-		FillParametersFromStorage = fillFromStorage;
 	}
 
-	public Send(string templateName, TDialogTemplate template, bool fillFromStorage)
+	public Send(string templateName, TDialogTemplate template)
 	{
 		TemplateName = templateName;
 		Template = template;
-		FillParametersFromStorage = fillFromStorage;
 	}
 
 }
