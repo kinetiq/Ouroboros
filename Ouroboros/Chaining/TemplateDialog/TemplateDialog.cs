@@ -126,18 +126,27 @@ public class TemplateDialog
 				if (currentValue == null || !currentValue.IsValidString() ||
 				    !currentValue.ToString()!.Contains("[[x]]")) continue;
 
+				//Get all the matching patterns
 				var pattern = @"\[\[x\]\](.*?)\[\[x\]\]";
-				var match = Regex.Match(currentValue.ToString()!, pattern);
+				var matches = Regex.Matches(currentValue.ToString()!, pattern);
 
-				if (!match.Success) continue;
+				if (matches.Count == 0) continue;
 
-				var variableName = match.Groups[1].Value;
-				if (!VariableStorage.TryGetValue(variableName, out var storedValue))
-					throw new InvalidOperationException($"Variable {variableName} was not stored and cannot be retrieved.");
+				//Update each match found in the value
+				var updatedPropertyValue = currentValue.ToString()!;
 
-				var updatedPropertyValue = Regex.Replace(currentValue.ToString()!, pattern, storedValue);
+				foreach (Match match in matches)
+				{
+					var variableName = match.Groups[1].Value;
+					if (!VariableStorage.TryGetValue(variableName, out var storedValue))
+						throw new InvalidOperationException($"Variable {variableName} was not stored and cannot be retrieved.");
+
+					updatedPropertyValue = Regex.Replace(updatedPropertyValue,@"\[\[x\]\]" + Regex.Escape(variableName) + @"\[\[x\]\]", storedValue);
+					
+				}
+
+				//Finally, update the property itself
 				var value = Convert.ChangeType(updatedPropertyValue, property.PropertyType);
-						
 				property.SetValue(send.Template, value);
 			}
 			
