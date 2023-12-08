@@ -2,22 +2,25 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
 using OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
 using Polly;
+using Z.Core.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 internal class ChatRequestHandler
 {
-    private readonly OpenAIService Api;
+    private readonly IServiceProvider Services;
 
     /// <summary>
     /// Executes a call to OpenAI using the ChatGPT API.
     /// </summary>
-    public async Task<OuroResponseBase> CompleteAsync(List<ChatMessage> messages, ChatOptions? options = null)
+    public async Task<OuroResponseBase> CompleteAsync(List<ChatMessage> messages, OpenAIService api, ChatOptions? options = null)
     {
         options ??= new ChatOptions();
 
@@ -26,22 +29,46 @@ internal class ChatRequestHandler
 
         var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
 
-        // TODO: consider more nuanced error handling: https://platform.openai.com/docs/guides/error-codes/api-errors
+        // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
 
-        var result = await Policy
+        var policyResult = await Policy
             .Handle<Exception>()
-            .OrResult<ChatCompletionCreateResponse>(x => x == null || !x.Successful)
-            .WaitAndRetryAsync(delay)
-            .ExecuteAndCaptureAsync(async () => await Api.ChatCompletion
+            .OrResult<ChatCompletionCreateResponse>(response => 
+                !response.Successful && 
+                (response.Error == null || response.Error.Code.In("429", "500", "503")))
+            .WaitAndRetryAsync(
+                sleepDurations: delay,
+                onRetry: (outcome, timespan, retryAttempt, context) =>
+                {
+                    var logger = Services.GetService<ILogger<ChatRequestHandler>>();
+
+                    if (logger == null)
+                        return;
+
+                    // TODO: look into outcome and try to log more information
+
+                    logger?.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.", timespan.TotalMilliseconds, retryAttempt);
+                })
+            .ExecuteAndCaptureAsync(async () => await api.ChatCompletion
                                                          .CreateCompletion(request));
 
-        if (result.Outcome == OutcomeType.Successful)
-            return GetResponseText(result.Result!);
-
-        return result switch
+        if (policyResult.Outcome == OutcomeType.Successful)
         {
-            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(result.FinalException!.Message),
-            { FaultType: FaultType.ResultHandledByThisPolicy } => GetError(result.FinalHandledResult!),
+            var chat = policyResult.Result;
+
+            if (chat == null)
+                return new OuroResponseFailure("policyResult was successful, however the inner result was null. This should never happen.");
+
+            if (!chat.Successful) // the response can still be a failure at this point
+                return GetFailureResponse(chat);
+
+            return GetSuccessResponse(chat);
+        }
+
+        return policyResult switch
+        {
+            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(policyResult.FinalException!.Message),
+            { FaultType: FaultType.ResultHandledByThisPolicy } => GetFailureResponse(policyResult.FinalHandledResult!),
             _ => throw new InvalidOperationException("Unhandled result type.")
         };
     }
@@ -50,7 +77,7 @@ internal class ChatRequestHandler
     /// Extracts the ResponseText from from a completion response we already know to be
     /// successful.
     /// </summary>
-    private static OuroResponseSuccess GetResponseText(ChatCompletionCreateResponse response)
+    private static OuroResponseSuccess GetSuccessResponse(ChatCompletionCreateResponse response)
     {
         if (!response.Successful)
             throw new InvalidOperationException("Called GetResponseText on a response that was not marked successful. This should never happen.");
@@ -63,11 +90,14 @@ internal class ChatRequestHandler
 
         return new OuroResponseSuccess(responseText)
         {
+            Model = response.Model,
+            PromptTokens = response.Usage.PromptTokens,
+            CompletionTokens = response.Usage.CompletionTokens,
             TotalTokenUsage = response.Usage.TotalTokens
         };
     }
 
-    private static OuroResponseFailure GetError(ChatCompletionCreateResponse completionResult)
+    private static OuroResponseFailure GetFailureResponse(ChatCompletionCreateResponse completionResult)
     {
         if (completionResult.Successful)
             throw new InvalidOperationException("Called GetError on a response that was successful. This should never happen.");
@@ -79,8 +109,8 @@ internal class ChatRequestHandler
         return new OuroResponseFailure(error);
     }
 
-    public ChatRequestHandler(OpenAIService api)    
+    public ChatRequestHandler(IServiceProvider services)
     {
-        Api = api;
+        Services = services;
     }
 }

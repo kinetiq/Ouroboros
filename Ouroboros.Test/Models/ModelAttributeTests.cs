@@ -3,7 +3,7 @@ using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros.Test.Models;
 
-public class ModelAttributeTests
+public class TokenizerTests
 {
     [Fact]
     public void GetMaxTokens_Returns_Correct_Value()

@@ -2,6 +2,7 @@
 using Ouroboros.Chaining.Commands;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
@@ -9,6 +10,7 @@ using Ouroboros.TextProcessing;
 using Ouroboros.Responses;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Extensions;
+using Z.Core.Extensions;
 
 namespace Ouroboros.Chaining;
 
@@ -22,6 +24,10 @@ public class Dialog
     /// of the command buffer if the last command was SendAndAppend.
     /// </summary>
     private bool IsAllMessagesSent = true;
+    
+    public int TotalPromptTokensUsed { get; internal set; } = 0;
+    public int TotalCompletionTokensUsed { get; internal set; } = 0;
+    public int TotalTokensUsed { get; internal set; } = 0;
 
     private OuroResponseBase? LastResponse;
 
@@ -326,6 +332,11 @@ public class Dialog
 
         IsAllMessagesSent = true;
 
+        // Update token usage
+        TotalPromptTokensUsed += response.PromptTokens;
+        TotalCompletionTokensUsed += response.CompletionTokens ?? 0;
+        TotalTokensUsed += response.TotalTokenUsage;
+
         // Handle errors
         if (!response.Success)
         {
@@ -336,6 +347,20 @@ public class Dialog
         return response;
     } 
     #endregion
+
+    public override string ToString()
+    {
+        var builder = new StringBuilder();
+
+        foreach (var message in InnerMessages)
+        {
+            builder.AppendLine($"**{message.Role.ToTitleCase()} Message**{ (message.ElementName.IsNullOrWhiteSpace() ? "" : " (" + message.ElementName + ")") }");
+            builder.AppendLine(message.Content);
+            builder.AppendLine("---");
+        }
+
+        return builder.ToString();
+    }
 
     public Dialog(OuroClient client)
     {

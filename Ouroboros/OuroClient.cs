@@ -1,10 +1,20 @@
-﻿using System;
-using AI.Dev.OpenAI.GPT;
+using OpenAI;
+using OpenAI.Managers;
+using OpenAI.ObjectModels.RequestModels;
+using Ouroboros.Chaining;
 using Ouroboros.LargeLanguageModels;
+using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Completions;
+using Ouroboros.Responses;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using OpenAI.Tokenizer.GPT3;
+
+using System;
+using AI.Dev.OpenAI.GPT;
 using OpenAI.Managers;
 using OpenAI;
 using OpenAI.ObjectModels.RequestModels;
@@ -15,6 +25,7 @@ using Ouroboros.Endpoints;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
 
+
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
 namespace Ouroboros;
@@ -22,6 +33,9 @@ namespace Ouroboros;
 public class OuroClient 
 {
     private readonly string ApiKey;
+    private readonly CompletionRequestHandler CompletionHandler;
+    private readonly ChatRequestHandler ChatHandler;
+
     private OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
     private OuroModels DefaultChatModel = OuroModels.Gpt_4;
     private ITemplateEndpoint? TemplateRequestHandler;
@@ -80,15 +94,17 @@ public class OuroClient
     /// <summary>
     /// Coverts text into tokens. Uses GPT3Tokenizer.
     /// </summary>
-    public List<int> Tokenize(string text)
+    public static List<int> Tokenize(string text)
     {
-        return GPT3Tokenizer.Encode(text);
+        var tokens = TokenizerGpt3.Encode(text, cleanUpCREOL: true); // cleanup improves accuracy
+
+        return tokens.ToList();
     }
 
     /// <summary>
     /// Gets the number of tokens the given text would take up. Uses GPT3Tokenizer.
     /// </summary>
-    public int TokenCount(string text)
+    public static int TokenCount(string text)
     {
         var tokens = Tokenize(text);
 
@@ -104,9 +120,7 @@ public class OuroClient
         options.Model ??= DefaultCompletionModel;
         var api = GetClient();
 
-        var handler = new CompletionRequestHandler(api);
-
-        return await handler.Complete(prompt, options);
+        return await CompletionHandler.Complete(prompt, api, options);
     }
 
     /// <summary>
@@ -118,9 +132,8 @@ public class OuroClient
         options.Model ??= DefaultChatModel;
 
         var api = GetClient();
-        var handler = new ChatRequestHandler(api);
 
-        return await handler.CompleteAsync(messages, options);
+        return await ChatHandler.CompleteAsync(messages, api, options);
     }
 
     /// <summary>
@@ -167,6 +180,12 @@ public class OuroClient
 
     public OuroClient(string apiKey, ITemplateEndpoint? customEndpoint = null)
     {
+        // Create an empty services collection, which we need downstream for Polly's retry policy.
+        var serviceProvider = new ServiceCollection()
+            .BuildServiceProvider();
+
+        CompletionHandler = new CompletionRequestHandler(serviceProvider);
+        ChatHandler = new ChatRequestHandler(serviceProvider);
         ApiKey = apiKey;
         TemplateRequestHandler = customEndpoint;
     }
