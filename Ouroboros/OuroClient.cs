@@ -1,3 +1,7 @@
+using System;
+using Ouroboros.Chaining.TemplateDialog;
+using Ouroboros.Chaining.TemplateDialog.Templates;
+using Ouroboros.Endpoints;
 using OpenAI;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
@@ -12,19 +16,6 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using OpenAI.Tokenizer.GPT3;
-
-using System;
-using AI.Dev.OpenAI.GPT;
-using OpenAI.Managers;
-using OpenAI;
-using OpenAI.ObjectModels.RequestModels;
-using Ouroboros.Chaining;
-using Ouroboros.Chaining.TemplateDialog;
-using Ouroboros.Chaining.TemplateDialog.Templates;
-using Ouroboros.Endpoints;
-using Ouroboros.LargeLanguageModels.ChatCompletions;
-using Ouroboros.Responses;
-
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
