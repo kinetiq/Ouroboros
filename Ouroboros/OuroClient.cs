@@ -51,26 +51,26 @@ public class OuroClient
 		    TemplateRequestHandler = endpoint;
 	    }
 
-	    public async Task<OuroResponseBase> SendTemplateAsync(IDialogTemplate template,
+	    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase,
 		    ITemplateEndpoint? customEndpoint = null)
 	    {
 		    if (customEndpoint != null)
-			    return await customEndpoint.SendTemplateAsync(nameof(template), template);
+			    return await customEndpoint.SendTemplateAsync(nameof(templateBase), templateBase);
 
             if (TemplateRequestHandler != null)
-                return await TemplateRequestHandler.SendTemplateAsync(nameof(template), template);
+                return await TemplateRequestHandler.SendTemplateAsync(nameof(templateBase), templateBase);
 
             throw new NotImplementedException("OuroClient does not have a TemplateEndpoint. Either set an endpoint on OuroClient using SetTemplateEndpoint, or provide an ITemplateEndpoint.");
 	    }
 
-	    public async Task<OuroResponseBase> SendTemplateAsync(string templateName, IDialogTemplate template,
+	    public async Task<OuroResponseBase> SendTemplateAsync(string templateName, IOuroTemplateBase templateBase,
 		    ITemplateEndpoint? customEndpoint = null)
 	    {
 		    if (customEndpoint != null)
-			    return await customEndpoint.SendTemplateAsync(templateName, template);
+			    return await customEndpoint.SendTemplateAsync(templateName, templateBase);
 
 		    if (TemplateRequestHandler != null)
-			    return await TemplateRequestHandler.SendTemplateAsync(templateName, template);
+			    return await TemplateRequestHandler.SendTemplateAsync(templateName, templateBase);
 
 		    throw new NotImplementedException("OuroClient does not have a TemplateEndpoint. Either set an endpoint on OuroClient using SetTemplateEndpoint, or provide an ITemplateEndpoint.");
 	    }
