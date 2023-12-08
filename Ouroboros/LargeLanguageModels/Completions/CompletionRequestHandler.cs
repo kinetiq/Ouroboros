@@ -6,13 +6,16 @@ using Polly;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Z.Core.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ouroboros.LargeLanguageModels.Completions;
 internal class CompletionRequestHandler
 {
-    private readonly OpenAIService Api;
+    private readonly IServiceProvider Services;
 
-    public async Task<OuroResponseBase> Complete(string prompt, CompleteOptions? options)
+    public async Task<OuroResponseBase> Complete(string prompt, OpenAIService api, CompleteOptions? options)
     {
         options ??= new CompleteOptions();
 
@@ -20,21 +23,47 @@ internal class CompletionRequestHandler
 
         var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
 
-        // TODO: consider more nuanced error handling: https://platform.openai.com/docs/guides/error-codes/api-errors
+        // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
 
-        var result = await Policy
+        var policyResult = await Policy
             .Handle<Exception>()
-            .OrResult<CompletionCreateResponse>(x => x == null || !x.Successful)
-            .WaitAndRetryAsync(delay)
-            .ExecuteAndCaptureAsync(async () => await Api.Completions.CreateCompletion(request));
+            .OrResult<CompletionCreateResponse>(response =>
+                !response.Successful &&
+                (response.Error == null || response.Error.Code.In("429", "500", "503")))
+            .WaitAndRetryAsync(
+                sleepDurations: delay,
+                onRetry: (outcome, timespan, retryAttempt, context) =>
+            {
+                var logger = Services.GetService<ILogger<CompletionRequestHandler>>();
 
-        if (result.Outcome == OutcomeType.Successful)
-            return GetResponseText(result.Result!);
+                if (logger == null)
+                    return;
 
-        return result switch
+                // TODO: look into outcome and try to log more information
+
+                logger?.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.", timespan.TotalMilliseconds, retryAttempt);
+            })
+            .ExecuteAndCaptureAsync(async () => await api.Completions
+                                                         .CreateCompletion(request));
+
+
+        if (policyResult.Outcome == OutcomeType.Successful)
         {
-            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(result.FinalException!.Message),
-            { FaultType: FaultType.ResultHandledByThisPolicy } => GetError(result.FinalHandledResult!),
+            var completion = policyResult.Result;
+
+            if (completion == null)
+                return new OuroResponseFailure("policyResult was successful, however the inner result was null. This should never happen.");
+
+            if (!completion.Successful) // the response can still be a failure at this point
+                return GetFailureResponse(completion);
+
+            return GetSuccessResponse(completion);
+        }
+
+        return policyResult switch
+        {
+            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(policyResult.FinalException!.Message),
+            { FaultType: FaultType.ResultHandledByThisPolicy } => GetFailureResponse(policyResult.FinalHandledResult!),
             _ => throw new InvalidOperationException("Unhandled result type.")
         };
     }
@@ -43,7 +72,7 @@ internal class CompletionRequestHandler
     /// Extracts the ResponseText from a completion response we already know to be
     /// successful.
     /// </summary>
-    private static OuroResponseSuccess GetResponseText(CompletionCreateResponse response)
+    private static OuroResponseSuccess GetSuccessResponse(CompletionCreateResponse response)
     {
         if (!response.Successful)
             throw new InvalidOperationException("Called GetResponseText on a response that was not marked successful. This should never happen.");
@@ -56,11 +85,14 @@ internal class CompletionRequestHandler
 
         return new OuroResponseSuccess(responseText)
         {
+            Model = response.Model,
+            PromptTokens = response.Usage.PromptTokens,
+            CompletionTokens = response.Usage.CompletionTokens,
             TotalTokenUsage = response.Usage.TotalTokens
         };
     }
 
-    private static OuroResponseFailure GetError(CompletionCreateResponse completionResult)
+    private static OuroResponseFailure GetFailureResponse(CompletionCreateResponse completionResult)
     {
         if (completionResult.Successful)
             throw new InvalidOperationException("Called GetError on a response that was successful. This should never happen.");
@@ -72,8 +104,8 @@ internal class CompletionRequestHandler
         return new OuroResponseFailure(error);
     }
 
-    public CompletionRequestHandler(OpenAIService api)
+    public CompletionRequestHandler(IServiceProvider services)
     {
-        Api = api;
+        this.Services = services;
     }
 }

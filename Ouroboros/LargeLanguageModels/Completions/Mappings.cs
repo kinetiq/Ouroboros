@@ -53,8 +53,11 @@ internal class Mappings
             OuroModels.TextDavinciV2 => Models.Model.TextDavinciV2,
             OuroModels.TextDavinciV3 => Models.Model.TextDavinciV3,
 //          OuroModels.TextEmbeddingAdaV2 => Models.Model.TextEmbeddingAdaV2,
-            OuroModels.ChatGpt3_5Turbo => Models.Model.ChatGpt3_5Turbo,
+            OuroModels.Gpt3_5_Turbo => Models.Model.Gpt_3_5_Turbo,
+            OuroModels.Gpt3_5_Turbo_16k => Models.Model.Gpt_3_5_Turbo_16k,
             OuroModels.Gpt_4 => Models.Model.Gpt_4,
+            OuroModels.Gpt_4_32k => Models.Model.Gpt_4_32k,
+            
             _ => throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null)
         };
 

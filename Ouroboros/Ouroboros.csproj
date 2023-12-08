@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>2.0.0</Version>
+		<Version>2.6.1</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -12,7 +12,7 @@
 
 		<!-- Legal -->
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Copyright>Brian MacKay 2022-2023</Copyright> 
+		<Copyright>Brian MacKay 2022-2024</Copyright> 
 
 		<!-- Location -->
 		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
@@ -21,12 +21,12 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.0.0</PackageVersion>
+		<PackageVersion>2.6.1</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Moved to .NET 7, removed a lot of experimental recursion code, added new API for chat-mode chaining.</PackageReleaseNotes>
-		<PackageTags>gpt3 llm openai chatgpt c#</PackageTags>
+		<PackageReleaseNotes>Retry policies now support ILogger and have better handling of OpenAI error codes.</PackageReleaseNotes>
+		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -36,10 +36,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AI.Dev.OpenAI.GPT" Version="1.0.2" />
-		<PackageReference Include="Betalgo.OpenAI" Version="7.0.0" />
-		<PackageReference Include="Polly" Version="7.2.4" />
+		<PackageReference Include="Betalgo.OpenAI" Version="7.4.1" />
+		<PackageReference Include="Polly" Version="8.2.0" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
+		<PackageReference Include="Scriban" Version="5.9.0" />
+		<PackageReference Include="TypeMerger" Version="2.1.4" />
 		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
 	</ItemGroup>
 </Project>
