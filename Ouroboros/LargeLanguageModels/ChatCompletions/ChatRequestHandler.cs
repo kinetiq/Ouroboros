@@ -90,6 +90,7 @@ internal class ChatRequestHandler
 
         return new OuroResponseSuccess(responseText)
         {
+            Model = response.Model,
             PromptTokens = response.Usage.PromptTokens,
             CompletionTokens = response.Usage.CompletionTokens,
             TotalTokenUsage = response.Usage.TotalTokens
