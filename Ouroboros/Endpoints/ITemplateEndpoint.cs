@@ -9,10 +9,7 @@ using Ouroboros.Responses;
 namespace Ouroboros.Endpoints;
 public interface ITemplateEndpoint
 {
-	public string Name { get; set; }
-	public Dictionary<string, string> Parameters { get; set; }
-
-	Task<OuroResponseBase> SendTemplateAsync(string templateName, IDialogTemplate template);
+	Task<OuroResponseBase> SendTemplateAsync(string templateName, IOuroTemplateBase templateBase);
 
 	
 
