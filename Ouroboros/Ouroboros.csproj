@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>2.6.1</Version>
+		<Version>2.7</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,11 +21,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.6.1</PackageVersion>
+		<PackageVersion>2.7</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Retry policies now support ILogger and have better handling of OpenAI error codes.</PackageReleaseNotes>
+		<PackageReleaseNotes>New model for dealing with template-based middleware with dialogs and custom endpoints.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
@@ -36,7 +36,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Betalgo.OpenAI" Version="7.4.1" />
+		<PackageReference Include="Betalgo.OpenAI" Version="7.4.3" />
 		<PackageReference Include="Polly" Version="8.2.0" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
 		<PackageReference Include="Scriban" Version="5.9.0" />
