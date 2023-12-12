@@ -1,4 +1,8 @@
-﻿using OpenAI;
+using System;
+using Ouroboros.Chaining.TemplateDialog;
+using Ouroboros.Chaining.TemplateDialog.Templates;
+using Ouroboros.Endpoints;
+using OpenAI;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Chaining;
@@ -25,6 +29,7 @@ public class OuroClient
 
     private OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
     private OuroModels DefaultChatModel = OuroModels.Gpt_4;
+    private ITemplateEndpoint? TemplateRequestHandler;
     
     /// <summary>
     /// For gaining direct access to a Betalgo client, without going through the OuroClient.
@@ -35,6 +40,47 @@ public class OuroClient
     {
         return new Dialog(this);
     }
+
+    #region TemplateDialog & TemplateEndpoints
+	    public TemplateDialog CreateTemplateDialog()
+	    {
+			return new TemplateDialog(this);
+	    }
+
+	    /// <summary>
+	    /// Set the TemplateEndpoint for this Ouro Client. All calls to 
+	    /// </summary>
+	    /// <param name="endpoint"></param>
+	    public void SetTemplateEndpoint(ITemplateEndpoint endpoint)
+	    {
+		    TemplateRequestHandler = endpoint;
+	    }
+
+	    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase,
+		    ITemplateEndpoint? customEndpoint = null)
+	    {
+		    if (customEndpoint != null)
+			    return await customEndpoint.SendTemplateAsync(nameof(templateBase), templateBase);
+
+            if (TemplateRequestHandler != null)
+                return await TemplateRequestHandler.SendTemplateAsync(nameof(templateBase), templateBase);
+
+            throw new NotImplementedException("OuroClient does not have a TemplateEndpoint. Either set an endpoint on OuroClient using SetTemplateEndpoint, or provide an ITemplateEndpoint.");
+	    }
+
+	    public async Task<OuroResponseBase> SendTemplateAsync(string templateName, IOuroTemplateBase templateBase,
+		    ITemplateEndpoint? customEndpoint = null)
+	    {
+		    if (customEndpoint != null)
+			    return await customEndpoint.SendTemplateAsync(templateName, templateBase);
+
+		    if (TemplateRequestHandler != null)
+			    return await TemplateRequestHandler.SendTemplateAsync(templateName, templateBase);
+
+		    throw new NotImplementedException("OuroClient does not have a TemplateEndpoint. Either set an endpoint on OuroClient using SetTemplateEndpoint, or provide an ITemplateEndpoint.");
+	    }
+    #endregion
+    
 
     /// <summary>
     /// Coverts text into tokens. Uses GPT3Tokenizer.
@@ -123,7 +169,7 @@ public class OuroClient
         });
     }
 
-    public OuroClient(string apiKey)
+    public OuroClient(string apiKey, ITemplateEndpoint? customEndpoint = null)
     {
         // Create an empty services collection, which we need downstream for Polly's retry policy.
         var serviceProvider = new ServiceCollection()
@@ -132,5 +178,6 @@ public class OuroClient
         CompletionHandler = new CompletionRequestHandler(serviceProvider);
         ChatHandler = new ChatRequestHandler(serviceProvider);
         ApiKey = apiKey;
+        TemplateRequestHandler = customEndpoint;
     }
 }
