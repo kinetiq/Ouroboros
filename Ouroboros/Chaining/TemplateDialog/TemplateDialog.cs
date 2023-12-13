@@ -15,7 +15,7 @@ using Z.Core.Extensions;
 namespace Ouroboros.Chaining.TemplateDialog;
 public class TemplateDialog
 {
-	private readonly ITemplateEndpoint AiEndpoint;
+	private readonly OuroClient Client;
 
 	/// <summary>
 	/// Internal list of chained commands. These are executed sequentially,
@@ -48,24 +48,20 @@ public class TemplateDialog
 	
 		private Dictionary<string, string> VariableStorage = new();
 
-		public static string GetByName(string name)
-		{
-			return $"[[x]]{name}[[x]]";
-		}
 	#endregion 
 	
 	#region Builder Pattern Commands
 	
-	public TemplateDialog Send(IDialogTemplate template)
+	public TemplateDialog Send(IOuroTemplateBase templateBase, ITemplateEndpoint? customEndpoint = null)
 	{
-		Commands.Add(new Send<IDialogTemplate>(template));
+		Commands.Add(new Send<IOuroTemplateBase>(templateBase, customEndpoint));
 
 		return this;
 	}
 
-	public TemplateDialog Send(string templateName, IDialogTemplate template)
+	public TemplateDialog Send(string templateName, IOuroTemplateBase templateBase, ITemplateEndpoint? customEndpoint = null)
 	{
-		Commands.Add(new Send<IDialogTemplate>(templateName, template));
+		Commands.Add(new Send<IOuroTemplateBase>(templateName, templateBase, customEndpoint));
 
 		return this;
 	}
@@ -98,7 +94,7 @@ public class TemplateDialog
 			{
 				switch (command)
 				{
-					case Send<IDialogTemplate> send:
+					case Send<IOuroTemplateBase> send:
 						LastResponse = await HandleSend(send);
 						break;
 					case StoreOutputAs storeOutputAs:
@@ -112,7 +108,7 @@ public class TemplateDialog
 			return LastResponse ?? new OuroResponseFailure("Unknown Error");
 		}
 
-		private async Task<OuroResponseBase> HandleSend(Send<IDialogTemplate> send)
+		private async Task<OuroResponseBase> HandleSend(Send<IOuroTemplateBase> send)
 		{
 			var templateType = send.Template.GetType();
 
@@ -151,7 +147,7 @@ public class TemplateDialog
 			}
 			
 			//Await Endpoint Response
-			var response = await AiEndpoint.SendTemplateAsync(send.TemplateName, send.Template);
+			var response = await Client.SendTemplateAsync(send.TemplateName, send.Template, send.CustomEndpoint);
 
 			//Parse response and return
 			if (!response.Success)
@@ -174,9 +170,9 @@ public class TemplateDialog
 		
 	#endregion
 
-	public TemplateDialog(ITemplateEndpoint aiEndpoint)
+	public TemplateDialog(OuroClient client)
 	{
-		AiEndpoint = aiEndpoint;
+		Client = client;
 	}
 
 }
