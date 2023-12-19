@@ -14,7 +14,7 @@ public static class UseOuroborosExtension
 	    services.AddTransient<OuroClient>(serviceProvider =>
 	    {
 		    var resolvedEndpoint = endpoint ?? serviceProvider.GetService<ITemplateEndpoint>();
-		    return new OuroClient(apiKey, endpoint);
+		    return new OuroClient(apiKey, resolvedEndpoint);
 	    });
         
         return services;
