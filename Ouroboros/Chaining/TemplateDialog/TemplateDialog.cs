@@ -45,7 +45,7 @@ public class TemplateDialog
 	
 	#region Variable Storage
 	
-    private Dictionary<string, string> VariableStorage = new();
+    private readonly Dictionary<string, string> VariableStorage = new();
 
 	#endregion 
 	
@@ -88,15 +88,24 @@ public class TemplateDialog
 	}
 
 	/// <summary>
-	/// Extracts to an arbitrary enum. The enum must have a member called "NoMatch", or there will be an
-	/// exception any time a match fails.
+	/// Extracts to an arbitrary enum. The enum must have a member called "NoMatch", or there will be exceptions at runtime.
 	/// </summary>
 	/// <typeparam name="TEnum">An enum that has a member called NoMatch.</typeparam>
     public async Task<TEnum> ExtractEnum<TEnum>() where TEnum : struct, Enum
     {
-        var result = await ExecuteChainableCommands();
+        var response = await ExecuteChainableCommands();
 
-        return result.ExtractEnum<TEnum>();
+        var enumResult = response.ExtractEnum<TEnum>();
+
+		// If we didn't get a match, and we don't already have an error, set the error. 
+		// If we do have an error, that will be the more specific problem, so we don't want to overwrite it.
+        if (enumResult.IsNoMatch() && HasErrors == false)
+        {
+            HasErrors = true;
+			LastError = $"After executing the chain with no errors, tried to extract to {typeof(TEnum).Name} from the response text, but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
+        }
+
+		return enumResult;
     }
 
     /// <summary>
