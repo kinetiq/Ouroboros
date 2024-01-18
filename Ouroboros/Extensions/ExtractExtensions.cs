@@ -15,12 +15,16 @@ public static class ExtractExtensions
         return @this.ResponseText;
     }
 
+    /// <summary>
+    /// Extracts to an arbitrary enum. The enum must have a member called "NoMatch", or there will be an
+    /// exception when a match fails.
+    /// </summary>
     public static TEnum ExtractEnum<TEnum>(this OuroResponseBase @this) where TEnum : struct, Enum
     {
         var text = @this.ResponseText;
 
         if (string.IsNullOrWhiteSpace(text))
-            return default;
+            return GetNoMatchOrThrow<TEnum>();
 
         text = text.Trim().ToLower();
 
@@ -35,7 +39,17 @@ public static class ExtractExtensions
                 return (TEnum)value;
         }
 
-        return default;
+        return GetNoMatchOrThrow<TEnum>();
+    }
+
+    private static TEnum GetNoMatchOrThrow<TEnum>() where TEnum : struct, Enum
+    {
+        if (Enum.TryParse("NoMatch", out TEnum noMatchValue))
+        {
+            return noMatchValue;
+        }
+
+        throw new InvalidOperationException("No matching enum value found, and 'NoMatch' is not a member of the enum.");
     }
 
     public static YesNo ExtractYesNo(this OuroResponseBase @this)

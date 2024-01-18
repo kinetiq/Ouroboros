@@ -74,6 +74,8 @@ public class TemplateDialog
 	#endregion
 
 	#region Command Execution and Handling
+
+    #region Terminators
 	public async Task<OuroResponseBase> Execute()
 	{
 		return await ExecuteChainableCommands();
@@ -85,41 +87,54 @@ public class TemplateDialog
 		return result.ResponseText;
 	}
 
+	/// <summary>
+	/// Extracts to an arbitrary enum. The enum must have a member called "NoMatch", or there will be an
+	/// exception any time a match fails.
+	/// </summary>
+	/// <typeparam name="TEnum">An enum that has a member called NoMatch.</typeparam>
+    public async Task<TEnum> ExtractEnum<TEnum>() where TEnum : struct, Enum
+    {
+        var result = await ExecuteChainableCommands();
+
+        return result.ExtractEnum<TEnum>();
+    }
+
     /// <summary>
     /// Sends the chat payload for completion, then senses the list type and splits the text into a list.
     /// Works with numbered lists and lists separated by any type of newline. 
     /// </summary>
     public async Task<List<ListItem>> ExecuteAndExtractList()
-    {
-        var response = await Execute();
+	{
+		var response = await Execute();
 
-        return response.ExtractList();
-    }
+		return response.ExtractList();
+	}
 
-    /// <summary>
-    /// Sends the chat payload for completion, then splits the result into a numbered list.
-    /// Any item that doesn't start with a number is discarded. Note that this is different from SendAndExtractList
-    /// in a few ways, including the result type, which in this case is able to include the item number (since these
-    /// items are numbered).
-    /// </summary>
-    public async Task<List<NumberedListItem>> ExecuteAndExtractNumberedList()
-    {
-        var response = await Execute();
+	/// <summary>
+	/// Sends the chat payload for completion, then splits the result into a numbered list.
+	/// Any item that doesn't start with a number is discarded. Note that this is different from SendAndExtractList
+	/// in a few ways, including the result type, which in this case is able to include the item number (since these
+	/// items are numbered).
+	/// </summary>
+	public async Task<List<NumberedListItem>> ExecuteAndExtractNumberedList()
+	{
+		var response = await Execute();
 
-        return response.ExtractNumberedList();
-    }
+		return response.ExtractNumberedList();
+	}
 
 	/// <summary>
 	/// Returns an enum containing Yes, No, or NoMatch if we are unable to parse the response.
 	/// </summary>
-    public async Task<YesNo> ExecuteToYesNo()
-    {
-        var result = await ExecuteChainableCommands();
+	public async Task<YesNo> ExecuteToYesNo()
+	{
+		var result = await ExecuteChainableCommands();
 
-        return result.ExtractYesNo();
-    }
+		return result.ExtractYesNo();
+	} 
+	#endregion
 
-    private async Task<OuroResponseBase> ExecuteChainableCommands()
+	private async Task<OuroResponseBase> ExecuteChainableCommands()
 		{
 			LastResponse = null;
 
