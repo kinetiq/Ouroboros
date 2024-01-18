@@ -1,6 +1,6 @@
 ﻿using Ouroboros.Chaining;
-using Ouroboros.Scales;
 using System.Linq;
+using Ouroboros.Enums;
 using Z.Core.Extensions;
 
 namespace Ouroboros.Extensions;

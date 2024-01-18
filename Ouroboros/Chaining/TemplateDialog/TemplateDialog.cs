@@ -9,7 +9,10 @@ using System.Threading.Tasks;
 using Ouroboros.Chaining.TemplateDialog.Commands;
 using Ouroboros.Chaining.TemplateDialog.Templates;
 using Ouroboros.Endpoints;
+using Ouroboros.Enums;
+using Ouroboros.Extensions;
 using Ouroboros.Responses;
+using Ouroboros.TextProcessing;
 using Z.Core.Extensions;
 
 namespace Ouroboros.Chaining.TemplateDialog;
@@ -86,27 +89,61 @@ public class TemplateDialog
 			return result.ResponseText;
 		}
 
-		private async Task<OuroResponseBase> ExecuteChainableCommands()
-		{
-			LastResponse = null;
+        /// <summary>
+        /// Sends the chat payload for completion, then senses the list type and splits the text into a list.
+        /// Works with numbered lists and lists separated by any type of newline. 
+        /// </summary>
+        public async Task<List<ListItem>> ExecuteAndExtractList()
+        {
+            var response = await Execute();
 
-			foreach (var command in Commands)
-			{
-				switch (command)
-				{
-					case Send<IOuroTemplateBase> send:
-						LastResponse = await HandleSend(send);
-						break;
-					case StoreOutputAs storeOutputAs:
-						HandleStoreOutputAs(storeOutputAs);
-						break;
-					default:
-						throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
-				}
-			}
+            return response.ExtractList();
+        }
 
-			return LastResponse ?? new OuroResponseFailure("Unknown Error");
-		}
+        /// <summary>
+        /// Sends the chat payload for completion, then splits the result into a numbered list.
+        /// Any item that doesn't start with a number is discarded. Note that this is different from SendAndExtractList
+        /// in a few ways, including the result type, which in this case is able to include the item number (since these
+        /// items are numbered).
+        /// </summary>
+        public async Task<List<NumberedListItem>> ExecuteAndExtractNumberedList()
+        {
+            var response = await Execute();
+
+            return response.ExtractNumberedList();
+        }
+
+		/// <summary>
+		/// Returns an enum containing Yes, No, or NoMatch if we are unable to parse the response.
+		/// </summary>
+        public async Task<YesNo> ExecuteToYesNo()
+        {
+            var result = await ExecuteChainableCommands();
+
+            return result.ExtractYesNo();
+        }
+
+        private async Task<OuroResponseBase> ExecuteChainableCommands()
+		    {
+			    LastResponse = null;
+
+			    foreach (var command in Commands)
+			    {
+				    switch (command)
+				    {
+					    case Send<IOuroTemplateBase> send:
+						    LastResponse = await HandleSend(send);
+						    break;
+					    case StoreOutputAs storeOutputAs:
+						    HandleStoreOutputAs(storeOutputAs);
+						    break;
+					    default:
+						    throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
+				    }
+			    }
+
+			    return LastResponse ?? new OuroResponseFailure("Unknown Error");
+		    }
 
 		private async Task<OuroResponseBase> HandleSend(Send<IOuroTemplateBase> send)
 		{

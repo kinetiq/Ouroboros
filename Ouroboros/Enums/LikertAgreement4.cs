@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Scales;
+﻿namespace Ouroboros.Enums;
 
 public enum LikertAgreement4
 {
