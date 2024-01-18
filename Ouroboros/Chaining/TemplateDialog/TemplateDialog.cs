@@ -215,6 +215,15 @@ public class TemplateDialog
 		VariableStorage[storeOutputAs.VariableName] = LastResponse.ResponseText;
 		
 	}
+
+	/// <summary>
+	/// Gets the last response. Useful in cases where we try to extract a specific type of result and there is no match, and then
+	/// we want find ourselves wanting the actual message.
+	/// </summary>
+    public OuroResponseBase? GetLastResponse()
+    {
+        return LastResponse;
+    }
 		
 	#endregion
 
