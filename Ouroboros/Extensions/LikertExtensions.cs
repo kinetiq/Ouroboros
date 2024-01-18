@@ -1,4 +1,4 @@
-﻿using Ouroboros.Scales;
+﻿using Ouroboros.Enums;
 
 namespace Ouroboros.Extensions;
 
@@ -9,6 +9,9 @@ public static class LikertAgreementExtensions
     /// </summary>
     public static LikertAgreement4 ToAgreement4(this string @this)
     {
+        // TODO: this is not in alignment with other similar extension methods; they should all take OuroResponseBase and 
+        // use ExtractEnum.
+
         var content = @this
             .Trim()
             .ToLower();

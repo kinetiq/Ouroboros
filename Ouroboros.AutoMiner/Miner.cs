@@ -1,6 +1,6 @@
 ﻿using Ouroboros.Chaining;
+using Ouroboros.Enums;
 using Ouroboros.Extensions;
-using Ouroboros.Scales;
 
 namespace Ouroboros.AutoMiner;
 

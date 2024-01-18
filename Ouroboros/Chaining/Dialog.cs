@@ -149,20 +149,20 @@ public class Dialog
     /// </summary>
     public async Task<List<ListItem>> SendAndExtractList()
     {
-        var response = await Send();
+        var response = await ExecuteChainableCommands();
 
         return response.ExtractList();
     }
 
     /// <summary>
     /// Sends the chat payload for completion, then splits the result into a numbered list.
-    /// Any item that doesn't start with an number is discarded. Note that this is different than SendAndExtractList
+    /// Any item that doesn't start with a number is discarded. Note that this is different from SendAndExtractList
     /// in a few ways, including the result type, which in this case is able to include the item number (since these
     /// items are numbered).
     /// </summary>
     public async Task<List<NumberedListItem>> SendAndExtractNumberedList()
     {
-        var response = await Send();
+        var response = await ExecuteChainableCommands();
 
         return response.ExtractNumberedList();
     }
