@@ -144,28 +144,57 @@ public class TemplateDialog
 	#endregion
 
 	private async Task<OuroResponseBase> ExecuteChainableCommands()
+	{
+		LastResponse = null;
+
+		foreach (var command in Commands)
 		{
-			LastResponse = null;
-
-			foreach (var command in Commands)
+			switch (command)
 			{
-				switch (command)
-				{
-					case Send<IOuroTemplateBase> send:
-						LastResponse = await HandleSend(send);
-						break;
-					case StoreOutputAs storeOutputAs:
-						HandleStoreOutputAs(storeOutputAs);
-						break;
-					default:
-						throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
-				}
-			}
+				case Send<IOuroTemplateBase> send:
+                    var response = await HandleSend(send);
 
-			return LastResponse ?? new OuroResponseFailure("Unknown Error");
+                    // If there is an error talking to OpenAI, stop execution immediately.
+                    if (!response.Success)
+                        return response;
+
+                    break;
+                case StoreOutputAs storeOutputAs:
+					HandleStoreOutputAs(storeOutputAs);
+					break;
+				default:
+					throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
+			}
 		}
 
+		return LastResponse ?? new OuroResponseFailure("Unknown Error");
+	}
+
 	private async Task<OuroResponseBase> HandleSend(Send<IOuroTemplateBase> send)
+	{
+		UpdateTemplateProperties(send);
+		
+		//Send to endpoint
+		var response = await Client.SendTemplateAsync(send.TemplateName, send.Template, send.CustomEndpoint);
+
+        LastResponse = response;
+
+        //Parse response and return
+        if (!response.Success)
+		{
+			HasErrors = true;
+			LastError = response.ResponseText;
+		}
+
+        return response;
+	}
+
+	#region Template Properties
+	/// <summary>
+	/// Update template properties with stored values. This allows us to use [[x]] to manually insert variables into the template,
+	/// which is how Storage.GetByName works.
+	/// </summary>
+	private void UpdateTemplateProperties(Send<IOuroTemplateBase> send)
 	{
 		var templateType = send.Template.GetType();
 
@@ -174,10 +203,12 @@ public class TemplateDialog
 		foreach (var property in templateType.GetProperties())
 		{
 			var currentValue = property.GetValue(send.Template);
-			// If the current value is a string, and contains [[x]], the user want's to manually put a variable in
+
+			// If the current value is a string, and contains [[x]], the user wants to manually put a variable in
 			// Find that variable and set the property value to it.
-			if (currentValue == null || !currentValue.IsValidString() ||
-				!currentValue.ToString()!.Contains("[[x]]")) continue;
+			if (currentValue == null || 
+                !currentValue.IsValidString() || 
+                !currentValue.ToString()!.Contains("[[x]]")) continue;
 
 			//Get all the matching patterns
 			var pattern = @"\[\[x\]\](.*?)\[\[x\]\]";
@@ -186,35 +217,33 @@ public class TemplateDialog
 			if (matches.Count == 0) continue;
 
 			//Update each match found in the value
-			var updatedPropertyValue = currentValue.ToString()!;
-
-			foreach (Match match in matches)
-			{
-				var variableName = match.Groups[1].Value;
-				if (!VariableStorage.TryGetValue(variableName, out var storedValue))
-					throw new InvalidOperationException($"Variable {variableName} was not stored and cannot be retrieved.");
-
-				updatedPropertyValue = Regex.Replace(updatedPropertyValue,@"\[\[x\]\]" + Regex.Escape(variableName) + @"\[\[x\]\]", storedValue);
-				
-			}
+			var updatedPropertyValue = ReplaceMatchesWithVariables(matches, currentValue.ToString()!);
 
 			//Finally, update the property itself
 			var value = Convert.ChangeType(updatedPropertyValue, property.PropertyType);
 			property.SetValue(send.Template, value);
 		}
-		
-		//Await Endpoint Response
-		var response = await Client.SendTemplateAsync(send.TemplateName, send.Template, send.CustomEndpoint);
+	}
 
-		//Parse response and return
-		if (!response.Success)
+	/// <summary>
+	/// For each [[x]], replace the [[x]] with our stored variable.
+	/// </summary>
+	/// <returns>The updated property value after substitutions.</returns>
+	/// <exception cref="InvalidOperationException">If a variable is referenced in an [[x]] but doesn't exist, we throw.</exception>
+	private string ReplaceMatchesWithVariables(MatchCollection matches, string propertyValue)
+	{
+		foreach (Match match in matches)
 		{
-			HasErrors = true;
-			LastError = response.ResponseText;
+			var variableName = match.Groups[1].Value;
+			if (!VariableStorage.TryGetValue(variableName, out var storedValue))
+				throw new InvalidOperationException($"Variable {variableName} was not stored and cannot be retrieved.");
+
+			propertyValue = Regex.Replace(propertyValue, @"\[\[x\]\]" + Regex.Escape(variableName) + @"\[\[x\]\]", storedValue);
 		}
 
-		return response;
-	}
+		return propertyValue;
+	} 
+	#endregion
 
 	private void HandleStoreOutputAs(StoreOutputAs storeOutputAs)
 	{
