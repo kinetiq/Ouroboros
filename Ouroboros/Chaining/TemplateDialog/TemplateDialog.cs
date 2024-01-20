@@ -154,6 +154,8 @@ public class TemplateDialog
 				case Send<IOuroTemplateBase> send:
                     var response = await HandleSend(send);
 
+                    LastResponse = response;
+
                     // If there is an error talking to OpenAI, stop execution immediately.
                     if (!response.Success)
                         return response;
@@ -167,8 +169,9 @@ public class TemplateDialog
 			}
 		}
 
-		return LastResponse ?? new OuroResponseFailure("Unknown Error");
-	}
+        return LastResponse ?? new OuroResponseInternalError("ExecuteChainableCommands was called, but when it was finished, " + 
+                                                             "there were no responses to return. This should never happen.");
+    }
 
 	private async Task<OuroResponseBase> HandleSend(Send<IOuroTemplateBase> send)
 	{
@@ -176,8 +179,6 @@ public class TemplateDialog
 		
 		//Send to endpoint
 		var response = await Client.SendTemplateAsync(send.TemplateName, send.Template, send.CustomEndpoint);
-
-        LastResponse = response;
 
         //Parse response and return
         if (!response.Success)

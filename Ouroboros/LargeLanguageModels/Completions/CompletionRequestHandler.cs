@@ -55,7 +55,7 @@ internal class CompletionRequestHandler
                 return new OuroResponseFailure("policyResult was successful, however the inner result was null. This should never happen.");
 
             if (!completion.Successful) // the response can still be a failure at this point
-                return GetFailureResponse(completion);
+                return new OuroResponseOpenAiError(completion.Error);
 
             return GetSuccessResponse(completion);
         }
@@ -63,7 +63,7 @@ internal class CompletionRequestHandler
         return policyResult switch
         {
             { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(policyResult.FinalException!.Message),
-            { FaultType: FaultType.ResultHandledByThisPolicy } => GetFailureResponse(policyResult.FinalHandledResult!),
+            { FaultType: FaultType.ResultHandledByThisPolicy } => new OuroResponseOpenAiError(policyResult.FinalHandledResult!.Error),
             _ => throw new InvalidOperationException("Unhandled result type.")
         };
     }
@@ -90,18 +90,6 @@ internal class CompletionRequestHandler
             CompletionTokens = response.Usage.CompletionTokens,
             TotalTokenUsage = response.Usage.TotalTokens
         };
-    }
-
-    private static OuroResponseFailure GetFailureResponse(CompletionCreateResponse completionResult)
-    {
-        if (completionResult.Successful)
-            throw new InvalidOperationException("Called GetError on a response that was successful. This should never happen.");
-
-        var error = completionResult.Error == null
-            ? "Unknown Error"
-            : $"{completionResult.Error.Code}: {completionResult.Error.Message}";
-
-        return new OuroResponseFailure(error);
     }
 
     public CompletionRequestHandler(IServiceProvider services)

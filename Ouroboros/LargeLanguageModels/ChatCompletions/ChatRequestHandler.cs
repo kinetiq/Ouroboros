@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
@@ -10,6 +6,10 @@ using OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
 using Polly;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Z.Core.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -57,10 +57,10 @@ internal class ChatRequestHandler
             var chat = policyResult.Result;
 
             if (chat == null)
-                return new OuroResponseFailure("policyResult was successful, however the inner result was null. This should never happen.");
+                return new OuroResponseInternalError("While retrying, PolicyResult was successful, however the inner result was null. This should never happen.");
 
             if (!chat.Successful) // the response can still be a failure at this point
-                return GetFailureResponse(chat);
+                return new OuroResponseOpenAiError(chat.Error);
 
             return GetSuccessResponse(chat);
         }
@@ -68,13 +68,13 @@ internal class ChatRequestHandler
         return policyResult switch
         {
             { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseFailure(policyResult.FinalException!.Message),
-            { FaultType: FaultType.ResultHandledByThisPolicy } => GetFailureResponse(policyResult.FinalHandledResult!),
-            _ => throw new InvalidOperationException("Unhandled result type.")
+            { FaultType: FaultType.ResultHandledByThisPolicy } => new OuroResponseOpenAiError(policyResult.FinalHandledResult!.Error),
+        _ => throw new InvalidOperationException("Unhandled result type.")
         };
     }
 
     /// <summary>
-    /// Extracts the ResponseText from from a completion response we already know to be
+    /// Extracts the ResponseText from a completion response we already know to be
     /// successful.
     /// </summary>
     private static OuroResponseSuccess GetSuccessResponse(ChatCompletionCreateResponse response)
@@ -85,7 +85,7 @@ internal class ChatRequestHandler
         var responseText = response.Choices
             .First()
             .Message
-            .Content
+            .Content!
             .Trim();
 
         return new OuroResponseSuccess(responseText)
@@ -95,18 +95,6 @@ internal class ChatRequestHandler
             CompletionTokens = response.Usage.CompletionTokens,
             TotalTokenUsage = response.Usage.TotalTokens
         };
-    }
-
-    private static OuroResponseFailure GetFailureResponse(ChatCompletionCreateResponse completionResult)
-    {
-        if (completionResult.Successful)
-            throw new InvalidOperationException("Called GetError on a response that was successful. This should never happen.");
-
-        var error = completionResult.Error == null
-            ? "Unknown Error"
-            : $"{completionResult.Error.Code}: {completionResult.Error.Message}";
-
-        return new OuroResponseFailure(error);
     }
 
     public ChatRequestHandler(IServiceProvider services)

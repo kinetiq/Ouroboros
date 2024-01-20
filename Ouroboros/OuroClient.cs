@@ -1,21 +1,21 @@
-using System;
-using Ouroboros.Chaining.TemplateDialog;
-using Ouroboros.Chaining.TemplateDialog.Templates;
-using Ouroboros.Endpoints;
+using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
+using OpenAI.Tokenizer.GPT3;
 using Ouroboros.Chaining;
+using Ouroboros.Chaining.TemplateDialog;
+using Ouroboros.Chaining.TemplateDialog.Templates;
+using Ouroboros.Endpoints;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Completions;
 using Ouroboros.Responses;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using OpenAI.Tokenizer.GPT3;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -56,8 +56,7 @@ public class OuroClient
 		    TemplateRequestHandler = endpoint;
 	    }
 
-	    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase,
-		    ITemplateEndpoint? customEndpoint = null)
+	    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase, ITemplateEndpoint? customEndpoint = null)
 	    {
 		    if (customEndpoint != null)
 			    return await customEndpoint.SendTemplateAsync(nameof(templateBase), templateBase);
@@ -68,8 +67,7 @@ public class OuroClient
             throw new NotImplementedException("OuroClient does not have a TemplateEndpoint. Either set an endpoint on OuroClient using SetTemplateEndpoint, or provide an ITemplateEndpoint.");
 	    }
 
-	    public async Task<OuroResponseBase> SendTemplateAsync(string templateName, IOuroTemplateBase templateBase,
-		    ITemplateEndpoint? customEndpoint = null)
+	    public async Task<OuroResponseBase> SendTemplateAsync(string templateName, IOuroTemplateBase templateBase, ITemplateEndpoint? customEndpoint = null)
 	    {
 		    if (customEndpoint != null)
 			    return await customEndpoint.SendTemplateAsync(templateName, templateBase);
