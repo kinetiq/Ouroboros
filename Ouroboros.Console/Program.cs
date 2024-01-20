@@ -5,7 +5,7 @@ using Spectre.Console;
 // See https://aka.ms/new-console-template for more information
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new OuroClient("[SECRET]");
+var client = new OuroClient("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");
 var dialog = client.CreateDialog();
 
 await dialog

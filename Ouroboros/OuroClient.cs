@@ -71,7 +71,7 @@ public class OuroClient
 
         var endpoint = DetermineEndpoint(templateEndpoint);
 
-        return await TemplateHandler.SendTemplateAsync(templateBase, endpoint, api, options);
+        return await TemplateHandler.SendTemplateAsync(templateBase, endpoint, options);
 	}
 
     private ITemplateEndpoint DetermineEndpoint(ITemplateEndpoint? endpoint)
