@@ -14,7 +14,7 @@ internal static class EnumExtensions
         if (noMatchMember == null)
             throw new InvalidOperationException($"The enum {typeof(TEnum).Name} does not have a 'NoMatch' member.");
 
-        var noMatchValue = (TEnum)noMatchMember.GetValue(null);
+        var noMatchValue = (TEnum)noMatchMember.GetValue(null)!;
         
         return EqualityComparer<TEnum>.Default.Equals(enumValue, noMatchValue);
     }

@@ -1,21 +1,22 @@
-using System;
-using Ouroboros.Chaining.TemplateDialog;
-using Ouroboros.Chaining.TemplateDialog.Templates;
-using Ouroboros.Endpoints;
+using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
+using OpenAI.Tokenizer.GPT3;
 using Ouroboros.Chaining;
+using Ouroboros.Chaining.TemplateDialog;
+using Ouroboros.Chaining.TemplateDialog.Templates;
+using Ouroboros.Endpoints;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Completions;
 using Ouroboros.Responses;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using OpenAI.Tokenizer.GPT3;
+using Ouroboros.LargeLanguageModels.Templates;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -26,10 +27,11 @@ public class OuroClient
     private readonly string ApiKey;
     private readonly CompletionRequestHandler CompletionHandler;
     private readonly ChatRequestHandler ChatHandler;
+    private readonly TemplateRequestHandler TemplateHandler;
 
     private OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
     private OuroModels DefaultChatModel = OuroModels.Gpt_4;
-    private ITemplateEndpoint? TemplateRequestHandler;
+    private ITemplateEndpoint? DefaultTemplateEndpoint;
     
     /// <summary>
     /// For gaining direct access to a Betalgo client, without going through the OuroClient.
@@ -42,43 +44,47 @@ public class OuroClient
     }
 
     #region TemplateDialog & TemplateEndpoints
-	    public TemplateDialog CreateTemplateDialog()
-	    {
-			return new TemplateDialog(this);
-	    }
+	public TemplateDialog CreateTemplateDialog()
+	{
+		return new TemplateDialog(this);
+	}
 
-	    /// <summary>
-	    /// Set the TemplateEndpoint for this Ouro Client. All calls to 
-	    /// </summary>
-	    /// <param name="endpoint"></param>
-	    public void SetTemplateEndpoint(ITemplateEndpoint endpoint)
-	    {
-		    TemplateRequestHandler = endpoint;
-	    }
+	/// <summary>
+	/// Set the TemplateEndpoint for this Ouro Client. All calls to 
+	/// </summary>
+	/// <param name="endpoint"></param>
+	public void SetTemplateEndpoint(ITemplateEndpoint endpoint)
+	{
+		DefaultTemplateEndpoint = endpoint;
+	}
 
-	    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase,
-		    ITemplateEndpoint? customEndpoint = null)
-	    {
-		    if (customEndpoint != null)
-			    return await customEndpoint.SendTemplateAsync(nameof(templateBase), templateBase);
+    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase, TemplateOptions? options = null)
+    {
+        return await SendTemplateAsync(templateBase, null, options);
+    }
 
-            if (TemplateRequestHandler != null)
-                return await TemplateRequestHandler.SendTemplateAsync(nameof(templateBase), templateBase);
+    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase, ITemplateEndpoint? templateEndpoint = null, TemplateOptions? options = null)
+	{
+        options ??= new TemplateOptions();
+        options.Model ??= DefaultChatModel;
+        var api = GetClient();
 
-            throw new NotImplementedException("OuroClient does not have a TemplateEndpoint. Either set an endpoint on OuroClient using SetTemplateEndpoint, or provide an ITemplateEndpoint.");
-	    }
+        var endpoint = DetermineEndpoint(templateEndpoint);
 
-	    public async Task<OuroResponseBase> SendTemplateAsync(string templateName, IOuroTemplateBase templateBase,
-		    ITemplateEndpoint? customEndpoint = null)
-	    {
-		    if (customEndpoint != null)
-			    return await customEndpoint.SendTemplateAsync(templateName, templateBase);
+        return await TemplateHandler.SendTemplateAsync(templateBase, endpoint, options);
+	}
 
-		    if (TemplateRequestHandler != null)
-			    return await TemplateRequestHandler.SendTemplateAsync(templateName, templateBase);
+    private ITemplateEndpoint DetermineEndpoint(ITemplateEndpoint? endpoint)
+    {
+        if (endpoint != null)
+            return endpoint;
 
-		    throw new NotImplementedException("OuroClient does not have a TemplateEndpoint. Either set an endpoint on OuroClient using SetTemplateEndpoint, or provide an ITemplateEndpoint.");
-	    }
+        if (DefaultTemplateEndpoint == null)
+            throw new NotImplementedException("Called SendTemplateAsync without an endpoint parameter, and OuroClient does not have a DefaultTemplateEndpoint set. " +
+                                              "You must either set an endpoint on OuroClient using SetTemplateEndpoint, or use the override that takes an endpoint.");
+
+        return DefaultTemplateEndpoint;
+    }
     #endregion
     
 
@@ -177,7 +183,8 @@ public class OuroClient
 
         CompletionHandler = new CompletionRequestHandler(serviceProvider);
         ChatHandler = new ChatRequestHandler(serviceProvider);
+        TemplateHandler = new TemplateRequestHandler(serviceProvider);
         ApiKey = apiKey;
-        TemplateRequestHandler = customEndpoint;
+        DefaultTemplateEndpoint = customEndpoint;
     }
 }

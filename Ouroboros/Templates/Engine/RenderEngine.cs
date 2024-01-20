@@ -73,7 +73,7 @@ internal class RenderEngine
             if (property.PropertyType != typeof(Fragment))
                 continue;
 
-            var fragment = (Fragment)property.GetValue(obj);
+            var fragment = (Fragment?)property.GetValue(obj);
 
             if (fragment != null)
             {

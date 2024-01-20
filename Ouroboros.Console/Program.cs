@@ -8,6 +8,8 @@ AnsiConsole.MarkupLine("[red]Starting...[/]");
 var client = new OuroClient("[SECRET]");
 var dialog = client.CreateDialog();
 
+AnsiConsole.MarkupLine("[red]Let's go...[/]");
+
 await dialog
     .SystemMessage("# Writer\r\n" +
                    "You are a brilliant writer who creates and refines scenes for sci-fi stories.")
