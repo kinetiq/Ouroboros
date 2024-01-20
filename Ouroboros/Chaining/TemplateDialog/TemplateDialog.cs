@@ -58,13 +58,6 @@ public class TemplateDialog
 		return this;
 	}
 
-	public TemplateDialog Send(string templateName, IOuroTemplateBase templateBase, ITemplateEndpoint? customEndpoint = null)
-	{
-		Commands.Add(new Send<IOuroTemplateBase>(templateName, templateBase, customEndpoint));
-
-		return this;
-	}
-
 	public TemplateDialog StoreOutputAs(string variableName)
 	{
 		Commands.Add(new StoreOutputAs(variableName));
@@ -177,8 +170,8 @@ public class TemplateDialog
 	{
 		UpdateTemplateProperties(send);
 		
-		//Send to endpoint
-		var response = await Client.SendTemplateAsync(send.TemplateName, send.Template, send.CustomEndpoint);
+		// Send to endpoint
+		var response = await Client.SendTemplateAsync(send.Template, send.CustomEndpoint);
 
         //Parse response and return
         if (!response.Success)

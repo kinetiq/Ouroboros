@@ -9,8 +9,5 @@ using Ouroboros.Responses;
 namespace Ouroboros.Endpoints;
 public interface ITemplateEndpoint
 {
-	Task<OuroResponseBase> SendTemplateAsync(string templateName, IOuroTemplateBase templateBase);
-
-	
-
+	Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase);
 }
