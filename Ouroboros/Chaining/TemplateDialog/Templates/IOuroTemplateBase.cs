@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 namespace Ouroboros.Chaining.TemplateDialog.Templates;
 public interface IOuroTemplateBase
 {
-    public string TemplateName { get; set; }
+    public string PromptName { get; set; }
 }
