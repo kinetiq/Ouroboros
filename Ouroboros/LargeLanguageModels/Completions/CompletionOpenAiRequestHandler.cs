@@ -25,6 +25,9 @@ internal class CompletionRequestHandler : OpenAiRequestHandlerBase<CompletionCre
 
         // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
 
+        Logger.LogInformation(
+            "Sending complete message (length {size}) to OpenAI with UseExponentialBackoff = {useBackoff}", prompt.Length, options.UseExponentialBackOff);
+
         var policyResult = await Policy
             .Handle<Exception>()
             .OrResult<CompletionCreateResponse>(response =>

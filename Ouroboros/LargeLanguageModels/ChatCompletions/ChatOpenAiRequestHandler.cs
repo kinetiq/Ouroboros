@@ -31,6 +31,9 @@ internal class ChatRequestHandler: OpenAiRequestHandlerBase<ChatCompletionCreate
 
         // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
 
+        Logger.LogInformation(
+            "Sending {count} chat messages to OpenAI with UseExponentialBackoff = {useBackoff}", messages.Count, options.UseExponentialBackOff);
+
         var policyResult = await Policy
             .Handle<Exception>()
             .OrResult<ChatCompletionCreateResponse>(response => 
