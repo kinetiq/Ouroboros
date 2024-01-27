@@ -2,6 +2,10 @@
 
 namespace Ouroboros.Responses;
 
+/// <summary>
+/// Generic failure response. This is often extended to make it easier to work with. See OuroResponseInternalError and
+/// OuroResponseOpenAiError for examples.
+/// </summary>
 public class OuroResponseFailure : OuroResponseBase
 {
     /// <summary>
@@ -19,6 +23,11 @@ public class OuroResponseFailure : OuroResponseBase
     /// </summary>
     public string ErrorDetails { get; set; }
 
+    public override string ToString()
+    {
+        return $"({ErrorOrigin}) {ResponseText}: {ErrorCode} {ErrorDetails}";
+    }
+
     public OuroResponseFailure(string errorDetails)
     {
         Success = false;
@@ -29,19 +38,24 @@ public class OuroResponseFailure : OuroResponseBase
     }
 }
 
-
+/// <summary>
+/// Indicates an error occurred within Ouroboros itself, which is to say not OpenAI or in some endpoint code.
+/// </summary>
 public class OuroResponseInternalError : OuroResponseFailure
 {
-    public OuroResponseInternalError(string errorDetails) : base("Ouroboros internal error")
+    public OuroResponseInternalError(string errorDetails) : base("Ouroboros Internal Error")
     {
         ErrorOrigin = "Ouroboros";
         ErrorDetails = errorDetails;
     }
 }
 
+/// <summary>
+/// Indicates an error occurred within OpenAI.
+/// </summary>
 public class OuroResponseOpenAiError : OuroResponseFailure
 {
-    public OuroResponseOpenAiError(Error? error) : base($"Error calling openAI")
+    public OuroResponseOpenAiError(Error? error) : base($"Error Calling OpenAI")
     {
         ErrorOrigin = "OpenAI";
         ErrorDetails = error?.Message ?? "Unknown Error";

@@ -10,6 +10,6 @@ public abstract class OuroResponseBase
 
     public override string ToString()
     {
-        return ResponseText;
+        return $"{ResponseText}";
     }
 }

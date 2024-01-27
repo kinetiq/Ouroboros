@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
@@ -50,28 +49,19 @@ public class OuroClient
 	}
 
 	/// <summary>
-	/// Set the TemplateEndpoint for this Ouro Client. All calls to 
+	/// Set the TemplateEndpoint for this Ouro Client. All template-based requests will use this endpoint
+	/// unless overriden by passing in an endpoint via SendTemplateAsync.
 	/// </summary>
-	/// <param name="endpoint"></param>
 	public void SetTemplateEndpoint(ITemplateEndpoint endpoint)
 	{
 		DefaultTemplateEndpoint = endpoint;
 	}
 
-    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase, TemplateOptions? options = null)
-    {
-        return await SendTemplateAsync(templateBase, null, options);
-    }
-
-    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase, ITemplateEndpoint? templateEndpoint = null, TemplateOptions? options = null)
+    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase, ITemplateEndpoint? templateEndpoint = null)
 	{
-        options ??= new TemplateOptions();
-        options.Model ??= DefaultChatModel;
-        var api = GetClient();
-
         var endpoint = DetermineEndpoint(templateEndpoint);
 
-        return await TemplateHandler.SendTemplateAsync(templateBase, endpoint, options);
+        return await TemplateHandler.SendTemplateAsync(templateBase, endpoint);
 	}
 
     private ITemplateEndpoint DetermineEndpoint(ITemplateEndpoint? endpoint)
@@ -117,7 +107,7 @@ public class OuroClient
         options.Model ??= DefaultCompletionModel;
         var api = GetClient();
 
-        return await CompletionHandler.Complete(prompt, api, options);
+        return await CompletionHandler.CompleteAsync(prompt, api, options);
     }
 
     /// <summary>
@@ -175,16 +165,19 @@ public class OuroClient
         });
     }
 
-    public OuroClient(string apiKey, ITemplateEndpoint? customEndpoint = null)
+    public OuroClient(string apiKey)
     {
-        // Create an empty services collection, which we need downstream for Polly's retry policy.
-        var serviceProvider = new ServiceCollection()
-            .BuildServiceProvider();
-
-        CompletionHandler = new CompletionRequestHandler(serviceProvider);
-        ChatHandler = new ChatRequestHandler(serviceProvider);
-        TemplateHandler = new TemplateRequestHandler(serviceProvider);
+        CompletionHandler = new CompletionRequestHandler(null);
+        ChatHandler = new ChatRequestHandler(null);
+        TemplateHandler = new TemplateRequestHandler(null);
         ApiKey = apiKey;
-        DefaultTemplateEndpoint = customEndpoint;
+    }
+
+    internal OuroClient(string apiKey, CompletionRequestHandler completionHandler, ChatRequestHandler chatHandler, TemplateRequestHandler templateHandler)
+    {
+        ApiKey = apiKey;
+        CompletionHandler = completionHandler;
+        ChatHandler = chatHandler;
+        TemplateHandler = templateHandler;
     }
 }

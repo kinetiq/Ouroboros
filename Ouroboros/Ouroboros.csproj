@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>2.8.5-beta</Version>
+		<Version>2.8.6-beta</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,11 +21,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.8.5-beta</PackageVersion>
+		<PackageVersion>2.8.8</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Added GetLastResponse to Dialog and TemplateDialog.</PackageReleaseNotes>
+		<PackageReleaseNotes>ILogger is now working correctly.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
@@ -37,6 +37,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Betalgo.OpenAI" Version="7.4.3" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
 		<PackageReference Include="Polly" Version="8.2.0" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
 		<PackageReference Include="Scriban" Version="5.9.0" />
