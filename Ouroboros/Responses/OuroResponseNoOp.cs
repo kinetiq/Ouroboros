@@ -5,6 +5,11 @@
 /// </summary>
 public class OuroResponseNoOp : OuroResponseBase
 {
+    public override string ToString()
+    {
+        return $"(NoOp) API call was cancelled: {ResponseText}";
+    }
+
     public OuroResponseNoOp()
     {
         Success = true;

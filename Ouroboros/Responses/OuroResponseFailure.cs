@@ -23,6 +23,11 @@ public class OuroResponseFailure : OuroResponseBase
     /// </summary>
     public string ErrorDetails { get; set; }
 
+    public override string ToString()
+    {
+        return $"({ErrorOrigin}) {ResponseText}: {ErrorCode} {ErrorDetails}";
+    }
+
     public OuroResponseFailure(string errorDetails)
     {
         Success = false;
@@ -38,7 +43,7 @@ public class OuroResponseFailure : OuroResponseBase
 /// </summary>
 public class OuroResponseInternalError : OuroResponseFailure
 {
-    public OuroResponseInternalError(string errorDetails) : base("Ouroboros internal error")
+    public OuroResponseInternalError(string errorDetails) : base("Ouroboros Internal Error")
     {
         ErrorOrigin = "Ouroboros";
         ErrorDetails = errorDetails;
@@ -50,7 +55,7 @@ public class OuroResponseInternalError : OuroResponseFailure
 /// </summary>
 public class OuroResponseOpenAiError : OuroResponseFailure
 {
-    public OuroResponseOpenAiError(Error? error) : base($"Error calling openAI")
+    public OuroResponseOpenAiError(Error? error) : base($"Error Calling OpenAI")
     {
         ErrorOrigin = "OpenAI";
         ErrorDetails = error?.Message ?? "Unknown Error";

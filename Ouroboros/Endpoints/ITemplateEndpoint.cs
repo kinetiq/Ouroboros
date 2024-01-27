@@ -9,5 +9,6 @@ using Ouroboros.Responses;
 namespace Ouroboros.Endpoints;
 public interface ITemplateEndpoint
 {
-	Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase);
+	Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase); 
+    bool UseExponentialBackOff { get; set; }
 }
