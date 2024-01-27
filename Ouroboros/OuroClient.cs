@@ -175,9 +175,9 @@ public class OuroClient
 
     internal OuroClient(string apiKey, CompletionRequestHandler completionHandler, ChatRequestHandler chatHandler, TemplateRequestHandler templateHandler)
     {
+        ApiKey = apiKey;
         CompletionHandler = completionHandler;
         ChatHandler = chatHandler;
         TemplateHandler = templateHandler;
-        ApiKey = apiKey;
     }
 }

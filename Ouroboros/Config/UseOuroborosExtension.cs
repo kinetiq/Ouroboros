@@ -19,7 +19,11 @@ public static class UseOuroborosExtension
 
         services.AddTransient<OuroClient>(serviceProvider =>
 	    {
-		    var client = new OuroClient(apiKey);
+            var chat = serviceProvider.GetService<ChatRequestHandler>();
+            var completion = serviceProvider.GetService<CompletionRequestHandler>();
+            var template = serviceProvider.GetService<TemplateRequestHandler>();
+
+		    var client = new OuroClient(apiKey, completion!, chat!, template!);
 
             // If a template endpoint is provided, set it up. Otherwise, leave this alone and
             // devs can provide it via SendTemplateAsync or manually on the client.

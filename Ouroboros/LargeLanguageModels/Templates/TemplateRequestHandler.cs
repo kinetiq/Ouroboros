@@ -7,7 +7,6 @@ using Ouroboros.Responses;
 using Polly;
 using System;
 using System.Threading.Tasks;
-using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Z.Core.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.Templates;
@@ -27,6 +26,9 @@ internal class TemplateRequestHandler : RequestHandlerBase<OuroResponseBase>
         var delay = BackoffPolicy.GetBackoffPolicy(endpoint.UseExponentialBackOff);
 
         // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
+
+        Logger.LogInformation(
+            "Sending template {template} to endpoint {endpoint} with UseExponentialBackoff = {useBackoff}", template.PromptName, endpoint.GetType().Name, endpoint.UseExponentialBackOff);
 
         var policyResult = await Policy
             .Handle<Exception>()
