@@ -7,14 +7,14 @@ using System.Threading.Tasks;
 namespace Ouroboros.Enums;
 
 
-[AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
+[AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 public sealed class AliasAttribute : Attribute
 {
-    public string Alias { get; }
+    public string[] Aliases { get; }
 
-    public AliasAttribute(string alias)
+    public AliasAttribute(params string[] aliases)
     {
-        Alias = alias;
+        Aliases = aliases;
     }
 }
 

@@ -33,9 +33,10 @@ internal static class Helpers
 
         foreach (var field in type.GetFields())
         {
-            var attribute = field.GetCustomAttribute<TAttribute>();
+            var attribute = field.GetCustomAttributes<TAttribute>()
+                .FirstOrDefault(x => predicate(x));
 
-            if (attribute != null && predicate(attribute))
+            if (attribute != null)
                 return field;
         }
 

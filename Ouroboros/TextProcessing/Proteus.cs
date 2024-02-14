@@ -41,7 +41,7 @@ public static class ProteusConvert
         if (Enum.TryParse(text, ignoreCase: true, out T enumValue))
             return enumValue;
 
-        var field = Helpers.GetFieldWithAttribute<T, AliasAttribute>(x => x.Alias.Equals(text, StringComparison.InvariantCultureIgnoreCase));
+        var field = Helpers.GetFieldWithAttribute<T, AliasAttribute>(x => x.Aliases.Any(alias => alias.Equals(text, StringComparison.InvariantCultureIgnoreCase)));
 
         if (field != null)
             return Enum.Parse<T>(field.Name);

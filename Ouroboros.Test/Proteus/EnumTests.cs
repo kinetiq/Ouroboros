@@ -40,7 +40,6 @@ public class EnumTests
         // For certain cases where the type is not known at compile time, the type can be passed in as a parameter.
         Assert.Equal(BasicTestEnum.Value1, ProteusConvert.ToEnum(typeof(BasicTestEnum), "Value1"));
     }
-
 }
 
 

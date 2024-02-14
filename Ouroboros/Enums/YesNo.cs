@@ -8,14 +8,14 @@ namespace Ouroboros.Enums;
 
 public enum YesNo
 {
-    Yes,
-    No,
-    NoMatch
+    NoMatch,
+    [Alias("True", "Y")] Yes,
+    [Alias("False", "N")] No
 }
 
 public enum TrueFalse
 {
-    True,
-    False,
-    NoMatch
+    NoMatch,
+    [Alias("Yes", "1", "Y")] True,
+    [Alias("No", "0", "N")] False
 }
