@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>2.8.6-beta</Version>
+		<Version>2.8.9</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,11 +21,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.8.8</PackageVersion>
+		<PackageVersion>2.8.9</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>ILogger is now working correctly.</PackageReleaseNotes>
+		<PackageReleaseNotes>Hermetic Codex and Proteus Convert are now part of this package.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
