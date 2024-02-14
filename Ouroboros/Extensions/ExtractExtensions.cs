@@ -23,34 +23,9 @@ public static class ExtractExtensions
     {
         var text = @this.ResponseText;
 
-        if (string.IsNullOrWhiteSpace(text))
-            return GetNoMatchOrThrow<TEnum>();
-
-        text = text.Trim().ToLower();
-
-        foreach (var value in Enum.GetValues(typeof(TEnum)))
-        {
-            var stringValue  = value.ToString()!.ToLower();
-
-            if (stringValue == "nomatch")
-                continue;
-
-            if (text.StartsWith(stringValue))
-                return (TEnum)value;
-        }
-
-        return GetNoMatchOrThrow<TEnum>();
+        return ProteusConvert.ToEnum<TEnum>(text);
     }
 
-    private static TEnum GetNoMatchOrThrow<TEnum>() where TEnum : struct, Enum
-    {
-        if (Enum.TryParse("NoMatch", out TEnum noMatchValue))
-        {
-            return noMatchValue;
-        }
-
-        throw new InvalidOperationException("No matching enum value found, and 'NoMatch' is not a member of the enum.");
-    }
 
     public static YesNo ExtractYesNo(this OuroResponseBase @this)
     {

@@ -9,7 +9,7 @@ public class EnumExtractorTests
     [Fact]
     public void Basic_Enum_Extraction_Works()
     {
-        var response = new OuroResponseSuccess("   yes indeed");
+        var response = new OuroResponseSuccess("   yes");
 
         Assert.Equal(YesNo.Yes, response.ExtractEnum<YesNo>());
     }
