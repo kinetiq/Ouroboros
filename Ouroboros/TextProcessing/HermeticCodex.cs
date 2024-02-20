@@ -1,12 +1,13 @@
-﻿using Ouroboros.Reflection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using Ouroboros.Extensions;
+using Ouroboros.Reflection;
 
 namespace Ouroboros.TextProcessing;
+
 public class HermeticCodex<T> where T : CodexModel
 {
     private Dictionary<string, string> Bindings = new(StringComparer.InvariantCultureIgnoreCase);
@@ -16,8 +17,8 @@ public class HermeticCodex<T> where T : CodexModel
     public T Bind(string text)
     {
         // Reset
-        Bindings = new();
-        Buffer = new();
+        Bindings = new Dictionary<string, string>();
+        Buffer = new StringBuilder();
         CurrentKey = "Intro";
 
         var lines = text
@@ -28,6 +29,7 @@ public class HermeticCodex<T> where T : CodexModel
 
         var instance = Activator.CreateInstance<T>();
 
+        // Create a new instance of T, and bind it.
         return BindInstance(instance);
     }
 
@@ -35,10 +37,12 @@ public class HermeticCodex<T> where T : CodexModel
     {
         var properties = Helpers.GetBindableProperties<T>();
 
-        // Loop through all public, writable properties on instance. Bind them if we can.
+        // Loop through all public / writable properties on our instance of T. Bind them if we can.
         foreach (var property in properties)
         {
-            if (Bindings.ContainsKey(property.Name))     
+            // TODO: aliases for property names, or maybe remove spaces to make things map easier.
+
+            if (Bindings.ContainsKey(property.Name))
             {
                 BindValue(instance, property, Bindings[property.Name]);
                 continue;
@@ -75,11 +79,13 @@ public class HermeticCodex<T> where T : CodexModel
             return;
         }
 
-        throw new NotImplementedException($"While binding { typeof(T).Name }, property { property.Name } had an unhandled type ({ property.PropertyType.Name }). " + 
-                                          $"The string value we tried to bind was: { value }");
-    } 
+        throw new NotImplementedException(
+            $"While binding {typeof(T).Name}, property {property.Name} had an unhandled type ({property.PropertyType.Name}). " +
+            $"The string value we tried to bind was: {value}");
+    }
 
     #region Parsing
+
     private void ParseBindings(List<string> lines)
     {
         foreach (var line in lines)
@@ -103,16 +109,18 @@ public class HermeticCodex<T> where T : CodexModel
         Buffer.Clear();
 
         CurrentKey = heading.ExtractHeadingText();
-    } 
+    }
+
     #endregion
 }
 
 public class BindResult<T> where T : class
 {
     /// <summary>
-    /// True if all properties were successfully bound.
+    ///     True if all properties were successfully bound.
     /// </summary>
     public bool IsComplete { get; set; } = false;
+
     public T Model { get; set; }
 
     public BindResult(T model)
