@@ -1,10 +1,8 @@
-﻿using Ouroboros.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Z.Collections.Extensions;
-using Z.Core.Extensions;
+using Ouroboros.Extensions;
 
 namespace Ouroboros.TextProcessing;
 
@@ -12,7 +10,7 @@ public static class ListExtractor
 {
     /// <summary>
     /// Given a block of text, senses the format, and splits the block into a list. Works with numbered lists (top priority)
-    /// followed by lists separated by any type of newline. 
+    /// followed by lists separated by any type of newline.
     /// </summary>
     public static List<ListItem> Extract(string rawText)
     {
@@ -21,9 +19,7 @@ public static class ListExtractor
 
         rawText = rawText.Trim();
 
-        return IsNumberedList(rawText) ? 
-            ExtractNumberedList(rawText).ToList<ListItem>() : 
-            ExtractNewLineList(rawText);
+        return IsNumberedList(rawText) ? ExtractNumberedList(rawText).ToList<ListItem>() : ExtractNewLineList(rawText);
     }
 
     /// <summary>
@@ -43,7 +39,7 @@ public static class ListExtractor
 
     /// <summary>
     /// If we don't have a numbered list, we look for newlines and try splitting on those.
-    /// Empty lines are discarded. 
+    /// Empty lines are discarded.
     /// </summary>
     private static List<ListItem> ExtractNewLineList(string rawText)
     {
@@ -81,9 +77,9 @@ public static class ListExtractor
 
         // Get the text part of the list. Toss the number.
         return matches
-            .Select(x => 
-                new NumberedListItem(index: ExtractInt(x.Groups[1].Value), 
-                                     text: x.Groups[3].Value.Trim()))
+            .Select(x =>
+                new NumberedListItem(ExtractInt(x.Groups[1].Value),
+                    x.Groups[3].Value.Trim()))
             .ToList();
     }
 
@@ -94,7 +90,7 @@ public static class ListExtractor
     private static int ExtractInt(string value)
     {
         // Get everything up to the first dot or space.
-        var dotIndex = value.IndexOfAny(new char[] { '.', ' ' });
+        var dotIndex = value.IndexOfAny(new[] { '.', ' ' });
 
         // This could only happen if we've got a number with no text at all.
         if (dotIndex == -1)

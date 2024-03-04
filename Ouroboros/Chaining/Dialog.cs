@@ -1,16 +1,15 @@
 ﻿using System;
-using Ouroboros.Chaining.Commands;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
-using Ouroboros.TextProcessing;
-using Ouroboros.Responses;
-using Ouroboros.LargeLanguageModels.ChatCompletions;
+using Ouroboros.Chaining.Commands;
 using Ouroboros.Extensions;
-using Z.Core.Extensions;
+using Ouroboros.LargeLanguageModels.ChatCompletions;
+using Ouroboros.Responses;
+using Ouroboros.TextProcessing;
 
 namespace Ouroboros.Chaining;
 
@@ -20,41 +19,117 @@ public class Dialog
     internal readonly List<OuroMessage> InnerMessages = new();
 
     /// <summary>
+    /// Allows setting options. This will be used for all operations in the chain.
+    /// </summary>
+    private ChatOptions? DefaultOptions;
+
+    /// <summary>
     /// Without this, there could be an extra request at the end
     /// of the command buffer if the last command was SendAndAppend.
     /// </summary>
     private bool IsAllMessagesSent = true;
-    
-    public int TotalPromptTokensUsed { get; internal set; } = 0;
-    public int TotalCompletionTokensUsed { get; internal set; } = 0;
-    public int TotalTokensUsed { get; internal set; } = 0;
 
     private OuroResponseBase? LastResponse;
 
-    /// <summary>
-    /// Allows setting options. This will be used for all operations in the chain.
-    /// </summary>
-    private ChatOptions? DefaultOptions = null;
+    public int TotalPromptTokensUsed { get; internal set; }
+    public int TotalCompletionTokensUsed { get; internal set; }
+    public int TotalTokensUsed { get; internal set; }
 
     /// <summary>
     /// Internal list of chained commands. These are executed sequentially,
     /// allowing us to chain together multiple commands and their output.
     /// </summary>
-    private List<IChatCommand> Commands { get; set; } = new();
+    private List<IChatCommand> Commands { get; } = new();
 
     /// <summary>
     /// Returns true if there are errors. Because Dialog does not always return
     /// a response object, this gives us a way to be sure the entire chained operation
     /// succeeded.
     /// </summary>
-    public bool HasErrors { get; private set; } = false;
-    
+    public bool HasErrors { get; private set; }
+
     /// <summary>
     /// If there was an error, this provides a way to at least see the most recent one.
     /// </summary>
     public string LastError { get; private set; } = "";
 
+    #region Settings
+
+    /// <summary>
+    /// Configures default options. This allows you to set the model, etc.
+    /// </summary>
+    public void SetDefaultChatOptions(ChatOptions options)
+    {
+        DefaultOptions = options;
+    }
+
+    #endregion
+
+    #region OpenAI Calls
+
+    /// <summary>
+    /// Sends all messages in the payload to the OpenAI API.
+    /// If there are any errors, the HasErrors property will be set to true and
+    /// the LastError property will be set to the error message.
+    /// </summary>
+    private async Task<OuroResponseBase> SendMessages()
+    {
+        var messages = InnerMessages.Select(x => x.Message)
+            .ToList();
+
+        var response = await Client.ChatAsync(messages, DefaultOptions);
+
+        IsAllMessagesSent = true;
+
+        // Update token usage
+        TotalPromptTokensUsed += response.PromptTokens;
+        TotalCompletionTokensUsed += response.CompletionTokens ?? 0;
+        TotalTokensUsed += response.TotalTokenUsage;
+
+        // Handle errors
+        if (!response.Success)
+        {
+            HasErrors = true;
+            LastError = response.ResponseText;
+        }
+
+        return response;
+    }
+
+    #endregion
+
+    public override string ToString()
+    {
+        var builder = new StringBuilder();
+
+        foreach (var message in InnerMessages)
+        {
+            builder.AppendLine(
+                $"**{message.Role.ToTitleCase()} Message**{(message.ElementName.IsNullOrWhiteSpace() ? "" : " (" + message.ElementName + ")")}");
+            builder.AppendLine(message.Content);
+            builder.AppendLine("---");
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// Gets the last response. Useful in cases where we try to extract a specific type of result and there is no match, and
+    /// then
+    /// we want find ourselves wanting the actual message.
+    /// </summary>
+    public OuroResponseBase? GetLastResponse()
+    {
+        return LastResponse;
+    }
+
+    public Dialog(OuroClient client)
+    {
+        Client = client;
+    }
+
     #region Builder Pattern Commands
+
     /// <summary>
     /// Sets the system prompt. There can only be a single system prompt,
     /// so if you run this twice, it will replace the first one.
@@ -127,9 +202,11 @@ public class Dialog
 
         return this;
     }
+
     #endregion
 
     #region Terminators
+
     /// <summary>
     /// Sends the chat payload for completion and converts the result to a string.
     /// If there was an error, this will be an error message. Be sure to check the dialog
@@ -145,7 +222,7 @@ public class Dialog
 
     /// <summary>
     /// Sends the chat payload for completion, then senses the list type and splits the text into a list.
-    /// Works with numbered lists and lists separated by any type of newline. 
+    /// Works with numbered lists and lists separated by any type of newline.
     /// </summary>
     public async Task<List<ListItem>> SendAndExtractList()
     {
@@ -182,20 +259,11 @@ public class Dialog
     {
         return await ExecuteChainableCommands();
     }
-    #endregion
-
-    #region Settings
-    /// <summary>
-    /// Configures default options. This allows you to set the model, etc.
-    /// </summary>
-    public void SetDefaultChatOptions(ChatOptions options)
-    {
-        DefaultOptions = options;
-    }
 
     #endregion
 
     #region Command Execution and Handling
+
     /// <summary>
     /// Executes all commands that were chained in, and returns the last response.
     /// If there are any errors, we immediately stop and return.
@@ -205,7 +273,6 @@ public class Dialog
         LastResponse = null;
 
         foreach (var command in Commands)
-        {
             switch (command)
             {
                 case SendAndAppend sendAndAppend:
@@ -237,7 +304,6 @@ public class Dialog
                 default:
                     throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
             }
-        }
 
         // If we've already sent all messages, just return the last response.
         if (IsAllMessagesSent)
@@ -256,7 +322,6 @@ public class Dialog
 
         if (index != -1)
             InnerMessages.RemoveRange(index, InnerMessages.Count - index);
-
     }
 
     private void HandleRemoveStartingAtIndex(RemoveStartingAtIndex removeStartingAtIndex)
@@ -295,9 +360,7 @@ public class Dialog
 
         // Remove any existing system message and drop this at position 0.
         if (InnerMessages.Any() && InnerMessages[0].Role == StaticValues.ChatMessageRoles.System)
-        {
             InnerMessages.RemoveAt(0);
-        }
 
         InnerMessages.Insert(0, systemMessage.ToOuroMessage());
     }
@@ -315,64 +378,6 @@ public class Dialog
 
         return response;
     }
+
     #endregion
-
-    #region OpenAI Calls
-    /// <summary>
-    /// Sends all messages in the payload to the OpenAI API.
-    /// If there are any errors, the HasErrors property will be set to true and
-    /// the LastError property will be set to the error message.
-    /// </summary>
-    private async Task<OuroResponseBase> SendMessages()
-    {
-        var messages = InnerMessages.Select(x => x.Message)
-            .ToList();
-
-        var response = await Client.ChatAsync(messages, DefaultOptions);
-
-        IsAllMessagesSent = true;
-
-        // Update token usage
-        TotalPromptTokensUsed += response.PromptTokens;
-        TotalCompletionTokensUsed += response.CompletionTokens ?? 0;
-        TotalTokensUsed += response.TotalTokenUsage;
-
-        // Handle errors
-        if (!response.Success)
-        {
-            HasErrors = true;
-            LastError = response.ResponseText;
-        }
-
-        return response;
-    } 
-    #endregion
-
-    public override string ToString()
-    {
-        var builder = new StringBuilder();
-
-        foreach (var message in InnerMessages)
-        {
-            builder.AppendLine($"**{message.Role.ToTitleCase()} Message**{ (message.ElementName.IsNullOrWhiteSpace() ? "" : " (" + message.ElementName + ")") }");
-            builder.AppendLine(message.Content);
-            builder.AppendLine("---");
-        }
-
-        return builder.ToString();
-    }
-
-    /// <summary>
-    /// Gets the last response. Useful in cases where we try to extract a specific type of result and there is no match, and then
-    /// we want find ourselves wanting the actual message.
-    /// </summary>
-    public OuroResponseBase? GetLastResponse()
-    {
-        return LastResponse;
-    }
-
-    public Dialog(OuroClient client)
-    {
-        Client = client;
-    }
 }

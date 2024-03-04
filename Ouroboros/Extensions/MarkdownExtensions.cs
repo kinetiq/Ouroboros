@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Ouroboros.TextProcessing;
-using Z.Core.Extensions;
+﻿namespace Ouroboros.Extensions;
 
-namespace Ouroboros.Extensions;
 public static class MarkdownExtensions
 {
     public static bool IsMarkdownHeading(this string @this)

@@ -42,6 +42,5 @@
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
 		<PackageReference Include="Scriban" Version="5.9.1" />
 		<PackageReference Include="TypeMerger" Version="2.1.4" />
-		<PackageReference Include="Z.ExtensionMethods.WithNamespace" Version="2.1.1" />
 	</ItemGroup>
 </Project>

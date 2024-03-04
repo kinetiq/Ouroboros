@@ -1,27 +1,28 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.RequestModels;
 using OpenAI.ObjectModels.ResponseModels;
+using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
 using Polly;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Z.Core.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 
-internal class ChatRequestHandler: OpenAiRequestHandlerBase<ChatCompletionCreateResponse>
+internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreateResponse>
 {
     private readonly ILogger<ChatRequestHandler> Logger;
 
     /// <summary>
     /// Executes a call to OpenAI using the ChatGPT API.
     /// </summary>
-    public async Task<OuroResponseBase> CompleteAsync(List<ChatMessage> messages, OpenAIService api, ChatOptions? options = null)
+    public async Task<OuroResponseBase> CompleteAsync(List<ChatMessage> messages, OpenAIService api,
+        ChatOptions? options = null)
     {
         options ??= new ChatOptions();
 
@@ -32,23 +33,25 @@ internal class ChatRequestHandler: OpenAiRequestHandlerBase<ChatCompletionCreate
         // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
 
         Logger.LogInformation(
-            "Sending {count} chat messages to OpenAI with UseExponentialBackoff = {useBackoff}", messages.Count, options.UseExponentialBackOff);
+            "Sending {count} chat messages to OpenAI with UseExponentialBackoff = {useBackoff}", messages.Count,
+            options.UseExponentialBackOff);
 
         var policyResult = await Policy
             .Handle<Exception>()
-            .OrResult<ChatCompletionCreateResponse>(response => 
-                !response.Successful && 
+            .OrResult<ChatCompletionCreateResponse>(response =>
+                !response.Successful &&
                 (response.Error == null || response.Error.Code.In("429", "500", "503")))
             .WaitAndRetryAsync(
-                sleepDurations: delay,
-                onRetry: (outcome, timespan, retryAttempt, context) =>
+                delay,
+                (outcome, timespan, retryAttempt, context) =>
                 {
-                    Logger.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.", timespan.TotalMilliseconds, retryAttempt);
+                    Logger.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.",
+                        timespan.TotalMilliseconds, retryAttempt);
                 })
             .ExecuteAndCaptureAsync(() => api.ChatCompletion
                 .CreateCompletion(request));
 
-        return base.HandleResponse(policyResult);
+        return HandleResponse(policyResult);
     }
 
     /// <summary>

@@ -1,13 +1,13 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Chaining.TemplateDialog.Templates;
 using Ouroboros.Endpoints;
+using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
 using Polly;
-using System;
-using System.Threading.Tasks;
-using Z.Core.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.Templates;
 
@@ -28,22 +28,26 @@ internal class TemplateRequestHandler : RequestHandlerBase<OuroResponseBase>
         // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
 
         Logger.LogInformation(
-            "Sending template {template} to endpoint {endpoint} with UseExponentialBackoff = {useBackoff}", template.PromptName, endpoint.GetType().Name, endpoint.UseExponentialBackOff);
+            "Sending template {template} to endpoint {endpoint} with UseExponentialBackoff = {useBackoff}",
+            template.PromptName, endpoint.GetType().Name, endpoint.UseExponentialBackOff);
 
         var policyResult = await Policy
             .Handle<Exception>()
-            .OrResult<OuroResponseBase>(response => 
-                    (response is OuroResponseOpenAiError error && error.ErrorCode.In("", "429", "500", "503")) // "" means nothing was given to us... Might as well retry.
-                ) 
+            .OrResult<OuroResponseBase>(response =>
+                    response is OuroResponseOpenAiError error &&
+                    error.ErrorCode.In("", "429", "500",
+                        "503") // "" means nothing was given to us... Might as well retry.
+            )
             .WaitAndRetryAsync(
-                sleepDurations: delay,
-                onRetry: (outcome, timespan, retryAttempt, context) =>
+                delay,
+                (outcome, timespan, retryAttempt, context) =>
                 {
-                    Logger.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.", timespan.TotalMilliseconds, retryAttempt);
+                    Logger.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.",
+                        timespan.TotalMilliseconds, retryAttempt);
                 })
             .ExecuteAndCaptureAsync(() => endpoint.SendTemplateAsync(template));
 
-        return base.HandleResponse(policyResult);
+        return HandleResponse(policyResult);
     }
 
     /// <summary>
@@ -58,8 +62,9 @@ internal class TemplateRequestHandler : RequestHandlerBase<OuroResponseBase>
     {
         return policyResult switch
         {
-            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseInternalError("Exception calling endpoint: " + policyResult.FinalException!.Message),
-            { FaultType: FaultType.ResultHandledByThisPolicy } => (OuroResponseFailure) policyResult.Result,
+            { FaultType: FaultType.ExceptionHandledByThisPolicy } => new OuroResponseInternalError(
+                "Exception calling endpoint: " + policyResult.FinalException!.Message),
+            { FaultType: FaultType.ResultHandledByThisPolicy } => (OuroResponseFailure)policyResult.Result,
             _ => throw new InvalidOperationException("Unhandled FaultType: " + policyResult.FaultType)
         };
     }
