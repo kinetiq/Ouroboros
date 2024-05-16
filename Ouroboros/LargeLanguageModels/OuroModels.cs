@@ -18,6 +18,8 @@ public enum OuroModels
     [MaxTokens(4096)]  [Chat]     Gpt3_5_Turbo,
     [MaxTokens(4096)]  [Chat]     Gpt3_5_Turbo_16k,
     [MaxTokens(8192)]  [Chat]     Gpt_4,
+    [MaxTokens(128000)] [Chat]    Gpt_4_turbo,
+    [MaxTokens(128000)] [Chat]    Gpt_4_turbo_2024_04_09,
     [MaxTokens(32768)] [Chat]     Gpt_4_32k
 }
 
