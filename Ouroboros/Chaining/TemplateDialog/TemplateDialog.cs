@@ -9,7 +9,6 @@ using Ouroboros.Enums;
 using Ouroboros.Extensions;
 using Ouroboros.Responses;
 using Ouroboros.TextProcessing;
-using Z.Core.Extensions;
 
 namespace Ouroboros.Chaining.TemplateDialog;
 
@@ -24,13 +23,13 @@ public class TemplateDialog
     #endregion
 
     /// <summary>
-    ///     The last response we've received from our Endpoint.
+    /// The last response we've received from our Endpoint.
     /// </summary>
     private OuroResponseBase? LastResponse;
 
     /// <summary>
-    ///     Internal list of chained commands. These are executed sequentially,
-    ///     allowing us to chain together multiple commands and their output.
+    /// Internal list of chained commands. These are executed sequentially,
+    /// allowing us to chain together multiple commands and their output.
     /// </summary>
     private List<ITemplateCommand> Commands { get; } = new();
 
@@ -42,14 +41,14 @@ public class TemplateDialog
     #region Error Handling
 
     /// <summary>
-    ///     Returns true if there are errors. Because TemplateDialog does not always return
-    ///     a response object, this gives us a way to be sure the entire chained operation
-    ///     succeeded.
+    /// Returns true if there are errors. Because TemplateDialog does not always return
+    /// a response object, this gives us a way to be sure the entire chained operation
+    /// succeeded.
     /// </summary>
     public bool HasErrors { get; private set; }
 
     /// <summary>
-    ///     If there was an error, this provides a way to at least see the most recent one.
+    /// If there was an error, this provides a way to at least see the most recent one.
     /// </summary>
     public string LastError { get; private set; } = "";
 
@@ -89,8 +88,8 @@ public class TemplateDialog
     }
 
     /// <summary>
-    ///     Extracts to an arbitrary enum. The enum must have a member called "NoMatch", or there will be exceptions at
-    ///     runtime.
+    /// Extracts to an arbitrary enum. The enum must have a member called "NoMatch", or there will be exceptions at
+    /// runtime.
     /// </summary>
     /// <typeparam name="TEnum">An enum that has a member called NoMatch.</typeparam>
     public async Task<TEnum> ExtractEnum<TEnum>() where TEnum : struct, Enum
@@ -104,16 +103,16 @@ public class TemplateDialog
         if (enumResult.IsNoMatch() && HasErrors == false)
         {
             HasErrors = true;
-            LastError =
-                $"After executing the chain with no errors, tried to extract to {typeof(TEnum).Name} from the response text, but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
+            LastError = $"After executing the chain with no errors, tried to extract to {typeof(TEnum).Name} from the " + 
+                        "response text, but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
         }
 
         return enumResult;
     }
 
     /// <summary>
-    ///     Sends the chat payload for completion, then senses the list type and splits the text into a list.
-    ///     Works with numbered lists and lists separated by any type of newline.
+    /// Sends the chat payload for completion, then senses the list type and splits the text into a list.
+    /// Works with numbered lists and lists separated by any type of newline.
     /// </summary>
     public async Task<List<ListItem>> ExecuteAndExtractList()
     {
@@ -123,10 +122,10 @@ public class TemplateDialog
     }
 
     /// <summary>
-    ///     Sends the chat payload for completion, then splits the result into a numbered list.
-    ///     Any item that doesn't start with a number is discarded. Note that this is different from SendAndExtractList
-    ///     in a few ways, including the result type, which in this case is able to include the item number (since these
-    ///     items are numbered).
+    /// Sends the chat payload for completion, then splits the result into a numbered list.
+    /// Any item that doesn't start with a number is discarded. Note that this is different from SendAndExtractList
+    /// in a few ways, including the result type, which in this case is able to include the item number (since these
+    /// items are numbered).
     /// </summary>
     public async Task<List<NumberedListItem>> ExecuteAndExtractNumberedList()
     {
@@ -136,19 +135,28 @@ public class TemplateDialog
     }
 
     /// <summary>
-    ///     Returns an enum containing Yes, No, or NoMatch if we are unable to parse the response.
+    /// Returns an enum containing Yes, No, or NoMatch if we are unable to parse the response.
+    /// NoMatch results in the dialog being marked as having errors.
     /// </summary>
     public async Task<YesNo> ExecuteToYesNo()
     {
-        var result = await ExecuteChainableCommands();
+        var response = await ExecuteChainableCommands();
 
-        return result.ExtractYesNo();
+        var result = response.ExtractYesNo();
+
+        if (result == YesNo.NoMatch && HasErrors == false)
+        {
+            HasErrors = true;
+            LastError = $"After executing the chain with no errors, tried to extract to {nameof(YesNo)} from the response text, " + 
+                        "but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
+        }
+
+        return result;
     }
 
     /// <summary>
+    /// Extracts the results to an arbitrary model. If the model cannot be fully bound, an error is set on the dialog.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
     public async Task<T> ExtractModel<T>() where T : CodexModel
     {
         var response = await Execute();
@@ -158,11 +166,11 @@ public class TemplateDialog
         var result = codex.Bind(response.ResponseText);
 
         // If there is a problem binding the model, set the error. But if there was an error deeper in the chain, don't overwrite it.
-        if (!result.IsComplete())
+        if (!result.IsComplete() && HasErrors == false)
         {
-            LastError ??=
-                "HermeticCodex > Generation appears to be successful, however the model could not be fully bound. Check the model for more details.";
             HasErrors = true;
+            LastError = "HermeticCodex > Generation appears to be successful, however the model could not be fully bound. " + 
+                        "Check the model for more details.";
         }
 
         return result;
@@ -219,9 +227,9 @@ public class TemplateDialog
     #region Template Properties
 
     /// <summary>
-    ///     Update template properties with stored values. This allows us to use [[x]] to manually insert variables into the
-    ///     template,
-    ///     which is how Storage.GetByName works.
+    /// Update template properties with stored values. This allows us to use [[x]] to manually insert variables into the
+    /// template,
+    /// which is how Storage.GetByName works.
     /// </summary>
     private void UpdateTemplateProperties(Send<IOuroTemplateBase> send)
     {
@@ -235,8 +243,7 @@ public class TemplateDialog
 
             // If the current value is a string, and contains [[x]], the user wants to manually put a variable in
             // Find that variable and set the property value to it.
-            if (currentValue == null ||
-                !currentValue.IsValidString() ||
+            if (currentValue is not string ||
                 !currentValue.ToString()!.Contains("[[x]]")) continue;
 
             //Get all the matching patterns
@@ -255,7 +262,7 @@ public class TemplateDialog
     }
 
     /// <summary>
-    ///     For each [[x]], replace the [[x]] with our stored variable.
+    /// For each [[x]], replace the [[x]] with our stored variable.
     /// </summary>
     /// <returns>The updated property value after substitutions.</returns>
     /// <exception cref="InvalidOperationException">If a variable is referenced in an [[x]] but doesn't exist, we throw.</exception>
@@ -285,9 +292,9 @@ public class TemplateDialog
     }
 
     /// <summary>
-    ///     Gets the last response. Useful in cases where we try to extract a specific type of result and there is no match,
-    ///     and then
-    ///     we want find ourselves wanting the actual message.
+    /// Gets the last response. Useful in cases where we try to extract a specific type of result and there is no match,
+    /// and then
+    /// we want find ourselves wanting the actual message.
     /// </summary>
     public OuroResponseBase? GetLastResponse()
     {

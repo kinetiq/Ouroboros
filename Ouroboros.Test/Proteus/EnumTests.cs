@@ -19,6 +19,7 @@ public class EnumTests
         Assert.Equal(EnumWithEverything.Value1, ProteusConvert.ToEnum<EnumWithEverything>("Value1")); // basic case
         Assert.Equal(EnumWithEverything.Value2, ProteusConvert.ToEnum<EnumWithEverything>("Cow")); // alias
         Assert.Equal(EnumWithEverything.Value2, ProteusConvert.ToEnum<EnumWithEverything>("COW")); // alias, case insensitive
+        Assert.Equal(EnumWithEverything.Value2, ProteusConvert.ToEnum<EnumWithEverything>("CO!W...")); // alias with cleanup, insensitive
     }
 
     [Fact]
@@ -40,8 +41,15 @@ public class EnumTests
         // For certain cases where the type is not known at compile time, the type can be passed in as a parameter.
         Assert.Equal(BasicTestEnum.Value1, ProteusConvert.ToEnum(typeof(BasicTestEnum), "Value1"));
     }
-}
 
+    [Fact]
+    public void Dynamic_Cleanup_Works()
+    {
+        // When converting, we first make an attempt to match using the raw value, and if that fails
+        // we run cleanup and try again.
+        Assert.Equal(BasicTestEnum.Value1, ProteusConvert.ToEnum(typeof(BasicTestEnum), "  val@@#ue1..."));
+    }
+}
 
 public enum BasicTestEnum
 {

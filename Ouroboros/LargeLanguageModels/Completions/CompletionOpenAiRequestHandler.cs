@@ -1,16 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAI.Managers;
 using OpenAI.ObjectModels.ResponseModels;
+using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
 using Polly;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Z.Core.Extensions;
 
 namespace Ouroboros.LargeLanguageModels.Completions;
+
 internal class CompletionRequestHandler : OpenAiRequestHandlerBase<CompletionCreateResponse>
 {
     private readonly ILogger<CompletionRequestHandler> Logger;
@@ -26,7 +27,8 @@ internal class CompletionRequestHandler : OpenAiRequestHandlerBase<CompletionCre
         // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
 
         Logger.LogInformation(
-            "Sending complete message (length {size}) to OpenAI with UseExponentialBackoff = {useBackoff}", prompt.Length, options.UseExponentialBackOff);
+            "Sending complete message (length {size}) to OpenAI with UseExponentialBackoff = {useBackoff}",
+            prompt.Length, options.UseExponentialBackOff);
 
         var policyResult = await Policy
             .Handle<Exception>()
@@ -34,15 +36,16 @@ internal class CompletionRequestHandler : OpenAiRequestHandlerBase<CompletionCre
                 !response.Successful &&
                 (response.Error == null || response.Error.Code.In("429", "500", "503")))
             .WaitAndRetryAsync(
-                sleepDurations: delay,
-                onRetry: (outcome, timespan, retryAttempt, context) =>
+                delay,
+                (outcome, timespan, retryAttempt, context) =>
                 {
-                    Logger.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.", timespan.TotalMilliseconds, retryAttempt);
+                    Logger.LogWarning("Delaying for {delay}ms, then attempting retry {retry}.",
+                        timespan.TotalMilliseconds, retryAttempt);
                 })
             .ExecuteAndCaptureAsync(() => api.Completions
                 .CreateCompletion(request));
 
-        return base.HandleResponse(policyResult);
+        return HandleResponse(policyResult);
     }
 
     /// <summary>

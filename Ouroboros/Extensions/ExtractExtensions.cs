@@ -1,9 +1,8 @@
-﻿using Ouroboros.Responses;
-using Ouroboros.TextProcessing;
+﻿using System;
 using System.Collections.Generic;
 using Ouroboros.Enums;
-using Z.Core.Extensions;
-using System;
+using Ouroboros.Responses;
+using Ouroboros.TextProcessing;
 
 namespace Ouroboros.Extensions;
 
@@ -39,7 +38,7 @@ public static class ExtractExtensions
 
     /// <summary>
     /// Sends the chat payload for completion, then senses the list type and splits the text into a list.
-    /// Works with numbered lists and lists separated by any type of newline. 
+    /// Works with numbered lists and lists separated by any type of newline.
     /// </summary>
     public static List<ListItem> ExtractList(this OuroResponseBase @this)
     {
