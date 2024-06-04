@@ -103,8 +103,8 @@ public class TemplateDialog
         if (enumResult.IsNoMatch() && HasErrors == false)
         {
             HasErrors = true;
-            LastError =
-                $"After executing the chain with no errors, tried to extract to {typeof(TEnum).Name} from the response text, but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
+            LastError = $"After executing the chain with no errors, tried to extract to {typeof(TEnum).Name} from the " + 
+                        "response text, but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
         }
 
         return enumResult;
@@ -136,18 +136,27 @@ public class TemplateDialog
 
     /// <summary>
     /// Returns an enum containing Yes, No, or NoMatch if we are unable to parse the response.
+    /// NoMatch results in the dialog being marked as having errors.
     /// </summary>
     public async Task<YesNo> ExecuteToYesNo()
     {
-        var result = await ExecuteChainableCommands();
+        var response = await ExecuteChainableCommands();
 
-        return result.ExtractYesNo();
+        var result = response.ExtractYesNo();
+
+        if (result == YesNo.NoMatch && HasErrors == false)
+        {
+            HasErrors = true;
+            LastError = $"After executing the chain with no errors, tried to extract to {nameof(YesNo)} from the response text, " + 
+                        "but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
+        }
+
+        return result;
     }
 
     /// <summary>
+    /// Extracts the results to an arbitrary model. If the model cannot be fully bound, an error is set on the dialog.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
     public async Task<T> ExtractModel<T>() where T : CodexModel
     {
         var response = await Execute();
@@ -157,11 +166,11 @@ public class TemplateDialog
         var result = codex.Bind(response.ResponseText);
 
         // If there is a problem binding the model, set the error. But if there was an error deeper in the chain, don't overwrite it.
-        if (!result.IsComplete())
+        if (!result.IsComplete() && HasErrors == false)
         {
-            LastError ??=
-                "HermeticCodex > Generation appears to be successful, however the model could not be fully bound. Check the model for more details.";
             HasErrors = true;
+            LastError = "HermeticCodex > Generation appears to be successful, however the model could not be fully bound. " + 
+                        "Check the model for more details.";
         }
 
         return result;
