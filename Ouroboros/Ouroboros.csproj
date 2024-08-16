@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>2.9.2</Version>
+		<Version>2.9.3</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -12,7 +12,7 @@
 
 		<!-- Legal -->
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Copyright>Brian MacKay 2022-2024</Copyright> 
+		<Copyright>Brian MacKay 2022-2025</Copyright> 
 
 		<!-- Location -->
 		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
@@ -21,11 +21,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.9.2</PackageVersion>
+		<PackageVersion>2.9.3</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Updated Betalgo so we can use GPT_4o and improved resiliency in ProteusConvert enum calls.</PackageReleaseNotes>
+		<PackageReleaseNotes>Updated packages and added more template capability to the standard dialog.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
@@ -36,9 +36,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Betalgo.OpenAI" Version="8.3.0" />
+		<PackageReference Include="Betalgo.OpenAI" Version="8.6.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
-		<PackageReference Include="Polly" Version="8.4.0" />
+		<PackageReference Include="Polly" Version="8.4.1" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
 		<PackageReference Include="Scriban" Version="5.10.0" />
 		<PackageReference Include="TypeMerger" Version="2.1.4" />
