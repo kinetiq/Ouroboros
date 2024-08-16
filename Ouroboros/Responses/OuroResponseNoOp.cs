@@ -1,13 +1,14 @@
 ﻿namespace Ouroboros.Responses;
 
 /// <summary>
-/// Indicates that the API call was cancelled because there was nothing to do.
+/// Indicates that nothing was sent to the API, which could mean call was cancelled or, in the case of a dialog,
+/// that the dialog was called without any sendable commands.
 /// </summary>
 public class OuroResponseNoOp : OuroResponseBase
 {
     public override string ToString()
     {
-        return $"(NoOp) API call was cancelled: {ResponseText}";
+        return $"(NoOp) Nothing was sent to the API: {ResponseText}";
     }
 
     public OuroResponseNoOp()
