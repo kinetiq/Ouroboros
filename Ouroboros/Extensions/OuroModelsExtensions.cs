@@ -36,6 +36,8 @@ public static class OuroModelsExtensions
             OuroModels.Gpt3_5_Turbo_16k => Models.Model.Gpt_3_5_Turbo_16k,
             OuroModels.Gpt_4_turbo => Models.Model.Gpt_4_turbo,
             OuroModels.Gpt_4_turbo_2024_04_09 => Models.Model.Gpt_4_turbo_2024_04_09,
+            OuroModels.Gpt_4o => Models.Model.Gpt_4o,
+            OuroModels.Gpt_4o_mini => Models.Model.Gpt_4o_mini,
             _ => throw new ArgumentOutOfRangeException(nameof(@this), @this, null)
         };
     }
