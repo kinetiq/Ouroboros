@@ -29,7 +29,7 @@ public class OuroClient
     private readonly TemplateRequestHandler TemplateHandler;
 
     private OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
-    private OuroModels DefaultChatModel = OuroModels.Gpt_4_turbo_2024_04_09;
+    private OuroModels DefaultChatModel = OuroModels.Gpt_4o;
     private ITemplateEndpoint? DefaultTemplateEndpoint;
     
     /// <summary>
