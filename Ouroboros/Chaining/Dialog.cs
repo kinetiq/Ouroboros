@@ -9,10 +9,14 @@ using Ouroboros.Chaining.Commands;
 using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
+using Ouroboros.Templates;
 using Ouroboros.TextProcessing;
 
 namespace Ouroboros.Chaining;
 
+/// <summary>
+/// Allows chaining of prompts using text or Ouro's templates.
+/// </summary>
 public class Dialog
 {
     private readonly OuroClient Client;
@@ -134,11 +138,37 @@ public class Dialog
     /// Sets the system prompt. There can only be a single system prompt,
     /// so if you run this twice, it will replace the first one.
     /// </summary>
-    /// <param name="prompt"></param>
-    /// <returns></returns>
     public Dialog SystemMessage(string prompt)
     {
         Commands.Add(new SetSystemMessage(prompt));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the system prompt. There can only be a single system prompt,
+    /// so if you run this twice, it will replace the first one.
+    /// </summary>
+    public Dialog SystemMessage(ChatMessage message)
+    {
+        if (message.Role != StaticValues.ChatMessageRoles.System)
+            throw new InvalidOperationException("Message must be a system message.");
+
+        if (message.Content == null)
+            throw new InvalidOperationException("Message content cannot be null.");
+
+        Commands.Add(new SetSystemMessage(message.Content));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the system prompt. There can only be a single system prompt,
+    /// so if you run this twice, it will replace the first one.
+    /// </summary>
+    public Dialog SystemMessage(TemplateBase template)
+    {
+        Commands.Add(new SetSystemTemplateMessage(template));
 
         return this;
     }
@@ -154,11 +184,63 @@ public class Dialog
     }
 
     /// <summary>
+    /// Adds an assistant message as the next message.
+    /// </summary>
+    public Dialog AssistantMessage(ChatMessage message, string elementName = "")
+    {
+        if (message.Role != StaticValues.ChatMessageRoles.Assistant)
+            throw new InvalidOperationException("Message must be an assistant message.");
+
+        if (message.Content == null)
+            throw new InvalidOperationException("Message content cannot be null.");
+
+        Commands.Add(new AddAssistantMessage(message.Content, elementName));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an assistant message as the next message.
+    /// </summary>
+    public Dialog AssistantMessage(TemplateBase template, string elementName = "")
+    {
+        Commands.Add(new AddAssistantTemplateMessage(template, elementName));
+
+        return this;
+    }
+
+    /// <summary>
     /// Adds a user message as the next message.
     /// </summary>
     public Dialog UserMessage(string prompt, string elementName = "")
     {
         Commands.Add(new AddUserMessage(prompt, elementName));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a user message as the next message.
+    /// </summary>
+    public Dialog UserMessage(ChatMessage message, string elementName = "")
+    {
+        if (message.Role != StaticValues.ChatMessageRoles.User)
+            throw new InvalidOperationException("Message must be a user message.");
+
+        if (message.Content == null)
+            throw new InvalidOperationException("Message content cannot be null.");
+
+        Commands.Add(new AddUserMessage(message.Content, elementName));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a user message as the next message.
+    /// </summary>
+    public Dialog UserMessage(TemplateBase template, string elementName = "")
+    {
+        Commands.Add(new AddUserTemplateMessage(template, elementName));
 
         return this;
     }
@@ -283,14 +365,23 @@ public class Dialog
                         return response;
 
                     break;
-                case SetSystemMessage systemMessage:
-                    HandleSetSystemMessage(systemMessage);
+                case SetSystemMessage message:
+                    HandleSetSystemMessage(message);
                     break;
-                case AddAssistantMessage assistantMessage:
-                    HandleAssistantMessage(assistantMessage);
+                case SetSystemTemplateMessage template:
+                    await HandleSetSystemTemplateMessage(template);
                     break;
-                case AddUserMessage userMessage:
-                    HandleUserMessage(userMessage);
+                case AddAssistantMessage message:
+                    HandleAssistantMessage(message);
+                    break;
+                case AddAssistantTemplateMessage template:
+                    await HandleAssistantTemplateMessage(template);
+                    break;
+                case AddUserMessage message:
+                    HandleUserMessage(message);
+                    break;
+                case AddUserTemplateMessage template:
+                    await HandleUserTemplateMessage(template);
                     break;
                 case RemoveLast removeLast:
                     HandleRemoveLast(removeLast);
@@ -347,11 +438,25 @@ public class Dialog
         InnerMessages.Add(userMessage.ToOuroMessage());
     }
 
+    private async Task HandleUserTemplateMessage(AddUserTemplateMessage template)
+    {
+        IsAllMessagesSent = false;
+
+        InnerMessages.Add(await template.ToOuroMessage());
+    }
+
     private void HandleAssistantMessage(AddAssistantMessage assistantMessage)
     {
         IsAllMessagesSent = false;
 
         InnerMessages.Add(assistantMessage.ToOuroMessage());
+    }
+
+    private async Task HandleAssistantTemplateMessage(AddAssistantTemplateMessage template)
+    {
+        IsAllMessagesSent = false;
+
+        InnerMessages.Add(await template.ToOuroMessage());
     }
 
     private void HandleSetSystemMessage(SetSystemMessage systemMessage)
@@ -363,6 +468,17 @@ public class Dialog
             InnerMessages.RemoveAt(0);
 
         InnerMessages.Insert(0, systemMessage.ToOuroMessage());
+    }
+
+    private async Task HandleSetSystemTemplateMessage(SetSystemTemplateMessage template)
+    {
+        IsAllMessagesSent = false;
+
+        // Remove any existing system message and drop this at position 0.
+        if (InnerMessages.Any() && InnerMessages[0].Role == StaticValues.ChatMessageRoles.System)
+            InnerMessages.RemoveAt(0);
+
+        InnerMessages.Insert(0, await template.ToOuroMessage());
     }
 
     private async Task<OuroResponseBase> HandleSendAndAppend(SendAndAppend sendAndAppend)

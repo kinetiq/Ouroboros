@@ -18,38 +18,3 @@ internal class AddAssistantMessage : IChatCommand
         ElementName = elementName;
     }
 }
-
-internal class SendAndAppend : IChatCommand
-{
-    public string ElementName { get; set; }
-
-    public SendAndAppend(string elementName = "")
-    {
-        ElementName = elementName;
-    }
-}
-
-internal class RemoveLast : IChatCommand
-{
-
-}
-
-internal class RemoveStartingAtIndex : IChatCommand
-{
-    public int Index { get; set; }
-
-    public RemoveStartingAtIndex(int index)
-    {
-        Index = index;
-    }
-}
-
-internal class RemoveStartingAtElement : IChatCommand
-{
-    public string ElementName { get; set; }
-
-    public RemoveStartingAtElement(string elementName)
-    {
-        ElementName = elementName;
-    }
-}

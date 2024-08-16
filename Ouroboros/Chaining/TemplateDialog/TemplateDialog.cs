@@ -12,6 +12,10 @@ using Ouroboros.TextProcessing;
 
 namespace Ouroboros.Chaining.TemplateDialog;
 
+/// <summary>
+/// Allows chaining of prompts.
+/// This version is used when working with templates managed by a third party service such as PromptLayer.
+/// </summary>
 public class TemplateDialog
 {
     private readonly OuroClient Client;
