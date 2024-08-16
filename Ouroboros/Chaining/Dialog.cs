@@ -45,6 +45,8 @@ public class Dialog
     /// </summary>
     private List<IChatCommand> Commands { get; } = new();
 
+    private int CommandIndex = 0;
+
     /// <summary>
     /// Returns true if there are errors. Because Dialog does not always return
     /// a response object, this gives us a way to be sure the entire chained operation
@@ -354,7 +356,9 @@ public class Dialog
     {
         LastResponse = null;
 
-        foreach (var command in Commands)
+        for (; CommandIndex < Commands.Count; CommandIndex++)
+        {
+            var command = Commands[CommandIndex];
             switch (command)
             {
                 case SendAndAppend sendAndAppend:
@@ -395,10 +399,16 @@ public class Dialog
                 default:
                     throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
             }
+        }
 
         // If we've already sent all messages, just return the last response.
         if (IsAllMessagesSent)
-            return LastResponse!;
+        {
+            if (LastResponse == null)
+                return new OuroResponseNoOp();
+
+            return LastResponse;
+        }
 
         // Otherwise, execute.
         return await SendMessages();
