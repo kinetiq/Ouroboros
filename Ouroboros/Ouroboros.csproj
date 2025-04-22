@@ -37,8 +37,7 @@
 
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="..\README.md" />
-
-		<PackageReference Include="Betalgo.OpenAI" Version="8.7.2" />
+		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
 		<PackageReference Include="Polly" Version="8.5.2" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />

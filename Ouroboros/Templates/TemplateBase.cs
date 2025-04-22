@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Dynamic;
 using System.Threading.Tasks;
-using OpenAI.ObjectModels.RequestModels;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Core;
 using Ouroboros.Templates.Engine;
 
