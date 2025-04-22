@@ -1,6 +1,6 @@
 ﻿using System;
-using OpenAI.ObjectModels;
-using OpenAI.ObjectModels.RequestModels;
+using Betalgo.Ranul.OpenAI.ObjectModels;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 
 namespace Ouroboros.LargeLanguageModels.Completions;
 
@@ -52,10 +52,10 @@ internal class Mappings
             OuroModels.TextDavinciV1 => Models.Model.TextDavinciV1,
             OuroModels.TextDavinciV2 => Models.Model.TextDavinciV2,
             OuroModels.TextDavinciV3 => Models.Model.TextDavinciV3,
-            // OuroModels.TextEmbeddingAdaV2 => Models.Model.TextEmbeddingAdaV2,
             OuroModels.Gpt3_5_Turbo => Models.Model.Gpt_3_5_Turbo,
             OuroModels.Gpt3_5_Turbo_16k => Models.Model.Gpt_3_5_Turbo_16k,
             OuroModels.Gpt_4 => Models.Model.Gpt_4,
+            OuroModels.Gpt_4_1 => Models.Model.Gpt_4o, // TODO: THIS IS WRONG 4_1 does not exist yet in Betalgo!!
             OuroModels.Gpt_4o => Models.Model.Gpt_4o,
             OuroModels.Gpt_4_32k => Models.Model.Gpt_4_32k,
             
