@@ -17,7 +17,7 @@
 		<!-- Location -->
 		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/kinetiq/Ouroboros</RepositoryUrl>
-		<PackageReadmeFile>..\README.md</PackageReadmeFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
