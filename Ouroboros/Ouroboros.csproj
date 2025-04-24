@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>2.9.5</Version>
+		<Version>2.9.6</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -17,15 +17,15 @@
 		<!-- Location -->
 		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/kinetiq/Ouroboros</RepositoryUrl>
-		<!--<PackageReadmeFile>..\README.md</PackageReadmeFile>-->
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.9.5</PackageVersion>
+		<PackageVersion>2.9.6</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Added support for a few newer models.</PackageReleaseNotes>
+		<PackageReleaseNotes>Moved to .NET 9, added support for gpt 4.1, adding missing terminators to Dialog, added some modeling helpers.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
@@ -36,11 +36,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Betalgo.OpenAI" Version="8.6.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
-		<PackageReference Include="Polly" Version="8.4.1" />
+		<None Include="..\README.md" Pack="true" PackagePath="" />
+		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
+		<PackageReference Include="Polly" Version="8.5.2" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
-		<PackageReference Include="Scriban" Version="5.10.0" />
+		<PackageReference Include="Scriban" Version="6.2.1" />
 		<PackageReference Include="TypeMerger" Version="2.1.4" />
 	</ItemGroup>
 </Project>

@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using OpenAI.ObjectModels;
-using OpenAI.ObjectModels.RequestModels;
+using Betalgo.Ranul.OpenAI.ObjectModels;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Chaining.Commands;
+using Ouroboros.Enums;
 using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
@@ -326,6 +327,77 @@ public class Dialog
         var response = await ExecuteChainableCommands();
 
         return response.ExtractNumberedList();
+    }
+
+    /// <summary>
+    /// Extracts to an arbitrary enum. The enum must have a member called "NoMatch", or there will be exceptions at
+    /// runtime.
+    /// </summary>
+    /// <typeparam name="TEnum">An enum that has a member called NoMatch.</typeparam>
+    public async Task<TEnum> ExtractEnum<TEnum>() where TEnum : struct, Enum
+    {
+        var response = await ExecuteChainableCommands();
+
+        var enumResult = response.ExtractEnum<TEnum>();
+
+        // If we didn't get a match, and we don't already have an error, set the error. 
+        // If we do have an error, that will be the more specific problem, so we don't want to overwrite it.
+        if (enumResult.IsNoMatch() && HasErrors == false)
+        {
+            HasErrors = true;
+            LastError = $"After executing the chain with no errors, tried to extract to {typeof(TEnum).Name} from the " +
+                        "response text, but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
+        }
+
+        return enumResult;
+    }
+
+    public async Task<string> ExecuteToString()
+    {
+        var result = await ExecuteChainableCommands();
+        return result.ResponseText;
+    }
+
+    /// <summary>
+    /// Returns an enum containing Yes, No, or NoMatch if we are unable to parse the response.
+    /// NoMatch results in the dialog being marked as having errors.
+    /// </summary>
+    public async Task<YesNo> ExecuteToYesNo()
+    {
+        var response = await ExecuteChainableCommands();
+
+        var result = response.ExtractYesNo();
+
+        if (result == YesNo.NoMatch && HasErrors == false)
+        {
+            HasErrors = true;
+            LastError = $"After executing the chain with no errors, tried to extract to {nameof(YesNo)} from the response text, " +
+                        "but no match was found. Check LastResponse for more details or use ExecuteToString instead.";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Extracts the results to an arbitrary model. If the model cannot be fully bound, an error is set on the dialog.
+    /// </summary>
+    public async Task<T> ExtractModel<T>() where T : CodexModel
+    {
+        var response = await Execute();
+
+        var codex = new HermeticCodex<T>();
+
+        var result = codex.Bind(response.ResponseText);
+
+        // If there is a problem binding the model, set the error. But if there was an error deeper in the chain, don't overwrite it.
+        if (!result.IsComplete() && HasErrors == false)
+        {
+            HasErrors = true;
+            LastError = "HermeticCodex > Generation appears to be successful, however the model could not be fully bound. " +
+                        "Check the model for more details.";
+        }
+
+        return result;
     }
 
     /// <summary>

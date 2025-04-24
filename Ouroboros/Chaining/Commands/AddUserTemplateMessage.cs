@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using OpenAI.ObjectModels.RequestModels;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Templates;
 
 namespace Ouroboros.Chaining.Commands;

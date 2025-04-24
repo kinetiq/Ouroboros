@@ -1,5 +1,5 @@
 ﻿using System;
-using OpenAI.ObjectModels;
+using Betalgo.Ranul.OpenAI.ObjectModels;
 using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros.Extensions;

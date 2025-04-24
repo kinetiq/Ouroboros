@@ -1,7 +1,7 @@
-using OpenAI;
-using OpenAI.Managers;
-using OpenAI.ObjectModels.RequestModels;
-using OpenAI.Tokenizer.GPT3;
+using Betalgo.Ranul.OpenAI;
+using Betalgo.Ranul.OpenAI.Managers;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+using Betalgo.Ranul.OpenAI.Tokenizer.GPT3;
 using Ouroboros.Chaining;
 using Ouroboros.Chaining.TemplateDialog;
 using Ouroboros.Chaining.TemplateDialog.Templates;
@@ -9,13 +9,13 @@ using Ouroboros.Endpoints;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Completions;
+using Ouroboros.LargeLanguageModels.Templates;
 using Ouroboros.Responses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Ouroboros.LargeLanguageModels.Templates;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -159,7 +159,7 @@ public class OuroClient
 
     internal OpenAIService GetClient()
     {
-        return new OpenAIService(new OpenAiOptions
+        return new OpenAIService(new OpenAIOptions()
         {
             ApiKey = ApiKey
         });

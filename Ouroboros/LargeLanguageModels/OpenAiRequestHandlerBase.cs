@@ -1,7 +1,7 @@
-﻿using System;
-using OpenAI.ObjectModels.ResponseModels;
+﻿using Betalgo.Ranul.OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.Responses;
 using Polly;
+using System;
 
 namespace Ouroboros.LargeLanguageModels;
 

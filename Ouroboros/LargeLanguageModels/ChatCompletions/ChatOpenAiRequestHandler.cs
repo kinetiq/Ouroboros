@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Betalgo.Ranul.OpenAI.Managers;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+using Betalgo.Ranul.OpenAI.ObjectModels.ResponseModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using OpenAI.Managers;
-using OpenAI.ObjectModels.RequestModels;
-using OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
