@@ -28,8 +28,8 @@ public class OuroClient
     private readonly ChatRequestHandler ChatHandler;
     private readonly TemplateRequestHandler TemplateHandler;
 
-    private OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
-    private OuroModels DefaultChatModel = OuroModels.Gpt_4o;
+    private OuroModels DefaultCompletionModel = CompletionMappings.DefaultModel;
+    private OuroModels DefaultChatModel = ChatMappings.DefaultModel; 
     private ITemplateEndpoint? DefaultTemplateEndpoint;
     
     /// <summary>

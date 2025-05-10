@@ -1,22 +1,23 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels;
+﻿using System;
+using Betalgo.Ranul.OpenAI.ObjectModels;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Extensions;
-using System.Collections.Generic;
 
-namespace Ouroboros.LargeLanguageModels.ChatCompletions;
+namespace Ouroboros.LargeLanguageModels.Completions;
 
-internal class ChatMappings
+internal class CompletionMappings
 {
-    internal const OuroModels DefaultModel = OuroModels.Gpt_4o;
+    internal const OuroModels DefaultModel = OuroModels.TextDavinciV3;
 
     /// <summary>
     /// Maps our generic options to OpenAI options.
     /// </summary>
-    internal static ChatCompletionCreateRequest MapOptions(List<ChatMessage> messages, ChatOptions options)
+    internal static CompletionCreateRequest MapOptions(string prompt, CompleteOptions options)
     {
-        return new ChatCompletionCreateRequest
+        return new CompletionCreateRequest
         {
-            Messages = messages,
+            Prompt = prompt,
+            BestOf = options.BestOf,
             Temperature = options.Temperature,
             TopP = options.TopP,
             FrequencyPenalty = options.FrequencyPenalty,
@@ -26,8 +27,10 @@ internal class ChatMappings
             N = 1,
             Stop = options.Stop,
             StopAsList = options.StopAsList,
-            User = options.User ?? string.Empty,
-            Model = options.Model.GetModelNameAsString(DefaultModel),
+            User = options.User,
+            Echo = false,
+            Suffix = options.Suffix,
+            Model = options.Model.GetModelNameAsString(DefaultModel) 
         };
     }
 }

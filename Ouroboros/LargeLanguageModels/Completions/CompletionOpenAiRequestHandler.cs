@@ -21,7 +21,7 @@ internal class CompletionRequestHandler : OpenAiRequestHandlerBase<CompletionCre
         options ??= new CompleteOptions();
 
         // Map our generic options to OpenAI options.
-        var request = Mappings.MapOptions(prompt, options);
+        var request = CompletionMappings.MapOptions(prompt, options);
         var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
 
         // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
