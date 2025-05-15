@@ -21,11 +21,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.9.6</PackageVersion>
+		<PackageVersion>2.9.7</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>Moved to .NET 9, added support for gpt 4.1, adding missing terminators to Dialog, added some modeling helpers.</PackageReleaseNotes>
+		<PackageReleaseNotes>Consolidated mappings.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 	</PropertyGroup>
 
@@ -37,7 +37,7 @@
 
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="" />
-		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.0.2" />
+		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.0.3" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
 		<PackageReference Include="Polly" Version="8.5.2" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
