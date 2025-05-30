@@ -28,8 +28,8 @@ public class OuroClient
     private readonly ChatRequestHandler ChatHandler;
     private readonly TemplateRequestHandler TemplateHandler;
 
-    private OuroModels DefaultCompletionModel = CompletionMappings.DefaultModel;
-    private OuroModels DefaultChatModel = ChatMappings.DefaultModel; 
+    private OuroModels DefaultCompletionModel = Constants.DefaultCompletionModel;
+    private OuroModels DefaultChatModel = Constants.DefaultChatModel; 
     private ITemplateEndpoint? DefaultTemplateEndpoint;
     
     /// <summary>

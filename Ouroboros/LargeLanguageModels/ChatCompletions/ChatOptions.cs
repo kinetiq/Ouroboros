@@ -1,5 +1,8 @@
 ﻿#nullable enable
+using System;
 using System.Collections.Generic;
+using Betalgo.Ranul.OpenAI.ObjectModels;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 public class ChatOptions
@@ -91,6 +94,13 @@ public class ChatOptions
     /// </summary>
     public string? User { get; set; }
 
+    /// <summary>
+    /// If present, used automatically for structured outputs.
+    /// </summary>
+    public Type ResponseType { get; set; }
+
+    public ResponseFormat? ResponseFormat { get; set; }
+
     public bool UseExponentialBackOff { get; set; }
 
     public ChatOptions()
@@ -98,5 +108,14 @@ public class ChatOptions
         // Defaults
         MaxTokens = 1000;
         UseExponentialBackOff = true;
+        ResponseFormat = null;
+        ResponseType = typeof(NoType); // NoType indicates no specific type is desired.
     }
+}
+
+/// <summary>
+/// Used in ResponseType to indicate that no specific type is desired.
+/// </summary>
+public class NoType
+{
 }

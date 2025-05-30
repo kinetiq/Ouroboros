@@ -1,14 +1,9 @@
-﻿using System;
-using Betalgo.Ranul.OpenAI.ObjectModels;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
-using Ouroboros.Extensions;
+﻿using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 
 namespace Ouroboros.LargeLanguageModels.Completions;
 
 internal class CompletionMappings
 {
-    internal const OuroModels DefaultModel = OuroModels.TextDavinciV3;
-
     /// <summary>
     /// Maps our generic options to OpenAI options.
     /// </summary>
@@ -30,7 +25,7 @@ internal class CompletionMappings
             User = options.User,
             Echo = false,
             Suffix = options.Suffix,
-            Model = options.Model.GetModelNameAsString(DefaultModel) 
+            Model = options.Model.GetModelNameAsString(Constants.DefaultCompletionModel) 
         };
     }
 }

@@ -6,15 +6,18 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Betalgo.Ranul.OpenAI.Managers;
 using Betalgo.Ranul.OpenAI.ObjectModels.ResponseModels;
 using Ouroboros.Extensions;
+using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
+using Ouroboros.StructuredOutput;
 using Polly;
 
 namespace Ouroboros.LargeLanguageModels.Completions;
 
-internal class CompletionRequestHandler : OpenAiRequestHandlerBase<CompletionCreateResponse>
+internal class CompletionRequestHandler(ILogger<CompletionRequestHandler>? logger)
+    : OpenAiRequestHandlerBase<CompletionCreateResponse>
 {
-    private readonly ILogger<CompletionRequestHandler> Logger;
+    private readonly ILogger<CompletionRequestHandler> Logger = logger ?? NullLogger<CompletionRequestHandler>.Instance;
 
     public async Task<OuroResponseBase> CompleteAsync(string prompt, OpenAIService api, CompleteOptions? options)
     {
@@ -45,13 +48,14 @@ internal class CompletionRequestHandler : OpenAiRequestHandlerBase<CompletionCre
             .ExecuteAndCaptureAsync(() => api.Completions
                 .CreateCompletion(request));
 
-        return HandleResponse(policyResult);
+        return HandleResponse(policyResult, typeof(NoType));
     }
 
     /// <summary>
-    /// Extracts details from a successful completion response.
+    /// Extracts details from a successful completion response. Note that Completion does not use responseType,
+    /// that's for Chat.
     /// </summary>
-    protected override OuroResponseBase HandlePolicySatisfied(CompletionCreateResponse response)
+    protected override OuroResponseBase HandlePolicySatisfied(CompletionCreateResponse response, Type responseType)
     {
         // This happens when we hit an error that we don't want to bother retrying. Polly considers this
         // a success, but our OpenAI response will still show an error.
@@ -67,14 +71,10 @@ internal class CompletionRequestHandler : OpenAiRequestHandlerBase<CompletionCre
         return new OuroResponseSuccess(responseText)
         {
             Model = response.Model,
+            ResponseObject = null,
             PromptTokens = response.Usage.PromptTokens,
             CompletionTokens = response.Usage.CompletionTokens,
             TotalTokenUsage = response.Usage.TotalTokens
         };
-    }
-
-    public CompletionRequestHandler(ILogger<CompletionRequestHandler>? logger)
-    {
-        Logger = logger ?? NullLogger<CompletionRequestHandler>.Instance;
     }
 }

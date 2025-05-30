@@ -1,14 +1,10 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
-using Ouroboros.Extensions;
+﻿using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using System.Collections.Generic;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 
 internal class ChatMappings
 {
-    internal const OuroModels DefaultModel = OuroModels.Gpt_4o;
-
     /// <summary>
     /// Maps our generic options to OpenAI options.
     /// </summary>
@@ -27,7 +23,8 @@ internal class ChatMappings
             Stop = options.Stop,
             StopAsList = options.StopAsList,
             User = options.User ?? string.Empty,
-            Model = options.Model.GetModelNameAsString(DefaultModel),
+            ResponseFormat = options.ResponseFormat,
+            Model = options.Model.GetModelNameAsString(Constants.DefaultChatModel)
         };
     }
 }

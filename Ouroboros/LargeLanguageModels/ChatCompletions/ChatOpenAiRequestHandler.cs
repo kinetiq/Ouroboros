@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
+using Ouroboros.StructuredOutput;
 using Polly;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -26,8 +27,13 @@ internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreat
     {
         options ??= new ChatOptions();
 
+        // If a ResponseType is specified, we will use it to generate a schema for structured output.
+        if (options.ResponseType != typeof(NoType))
+            options.ResponseFormat = Json.GetSchema(options.ResponseType);
+
         // Map our generic options to OpenAI options.
         var request = ChatMappings.MapOptions(messages, options);
+
         var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
 
         // OpenAI errors: https://platform.openai.com/docs/guides/error-codes/api-errors
@@ -49,15 +55,16 @@ internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreat
                         timespan.TotalMilliseconds, retryAttempt);
                 })
             .ExecuteAndCaptureAsync(() => api.ChatCompletion
-                .CreateCompletion(request));
+                .CreateCompletion(request)
+            );
 
-        return HandleResponse(policyResult);
+        return HandleResponse(policyResult, options.ResponseType);
     }
 
     /// <summary>
     /// Extracts details from a successful chat response.
     /// </summary>
-    protected override OuroResponseBase HandlePolicySatisfied(ChatCompletionCreateResponse response)
+    protected override OuroResponseBase HandlePolicySatisfied(ChatCompletionCreateResponse response, Type responseType)
     {
         // This happens when we hit an error that we don't want to bother retrying. Polly considers this
         // a success, but our OpenAI response will still show an error.
@@ -73,10 +80,22 @@ internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreat
         return new OuroResponseSuccess(responseText)
         {
             Model = response.Model,
+            ResponseObject = ResultObject(responseType, responseText),
             PromptTokens = response.Usage.PromptTokens,
             CompletionTokens = response.Usage.CompletionTokens,
             TotalTokenUsage = response.Usage.TotalTokens
         };
+    }
+
+    /// <summary>
+    /// Get the ResultObject, if any. Otherwise, null.
+    /// </summary>
+    private static object? ResultObject(Type responseType, string responseText)
+    {
+        if(responseType == typeof(NoType)) 
+            return null;
+        
+        return Json.ParseJson(responseText, responseType);
     }
 
     public ChatRequestHandler(ILogger<ChatRequestHandler>? logger)
