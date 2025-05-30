@@ -27,6 +27,8 @@
 		</Description>
 		<PackageReleaseNotes>End-to-end Structured Output.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
+		<Title>Ouroboros</Title>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<ItemGroup>
