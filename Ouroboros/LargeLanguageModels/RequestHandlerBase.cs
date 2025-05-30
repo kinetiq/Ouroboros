@@ -1,4 +1,6 @@
-﻿using Ouroboros.Responses;
+﻿using System;
+using Ouroboros.LargeLanguageModels.ChatCompletions;
+using Ouroboros.Responses;
 using Polly;
 
 namespace Ouroboros.LargeLanguageModels;
@@ -8,7 +10,7 @@ namespace Ouroboros.LargeLanguageModels;
 /// </summary>
 internal abstract class RequestHandlerBase<T>
 {
-    protected OuroResponseBase HandleResponse(PolicyResult<T> policyResult)
+    protected OuroResponseBase HandleResponse(PolicyResult<T> policyResult, Type responseType)
     {
         if (policyResult.Outcome == OutcomeType.Successful)
         {
@@ -17,13 +19,13 @@ internal abstract class RequestHandlerBase<T>
             if (response == null)
                 return new OuroResponseInternalError("PolicyResult was successful, however the inner result was null. This should never happen.");
 
-            return HandlePolicySatisfied(response);
+            return HandlePolicySatisfied(response, responseType);
         }
 
         return HandlePolicyExhausted(policyResult);
     }
 
-    protected abstract OuroResponseBase HandlePolicySatisfied(T response);
+    protected abstract OuroResponseBase HandlePolicySatisfied(T response, Type responseType);
 
     protected abstract OuroResponseFailure HandlePolicyExhausted(PolicyResult<T> policyResult);
 }

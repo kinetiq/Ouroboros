@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Chaining.TemplateDialog.Templates;
 using Ouroboros.Endpoints;
 using Ouroboros.Extensions;
+using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
 using Polly;
@@ -47,13 +48,13 @@ internal class TemplateRequestHandler : RequestHandlerBase<OuroResponseBase>
                 })
             .ExecuteAndCaptureAsync(() => endpoint.SendTemplateAsync(template));
 
-        return HandleResponse(policyResult);
+        return HandleResponse(policyResult, typeof(NoType));
     }
 
     /// <summary>
     /// Because endpoints return an OuroResponse, when a template policy is satisfied, we can just return.
     /// </summary>
-    protected override OuroResponseBase HandlePolicySatisfied(OuroResponseBase response)
+    protected override OuroResponseBase HandlePolicySatisfied(OuroResponseBase response, Type responseType)
     {
         return response;
     }

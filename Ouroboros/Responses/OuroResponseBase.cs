@@ -1,4 +1,6 @@
-﻿namespace Ouroboros.Responses;
+﻿using Ouroboros.LargeLanguageModels;
+
+namespace Ouroboros.Responses;
 
 public abstract class OuroResponseBase
 {
