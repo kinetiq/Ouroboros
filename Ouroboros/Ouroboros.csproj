@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net9.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>2.9.8</Version>
+		<Version>3.0.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,11 +21,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>2.9.8</PackageVersion>
+		<PackageVersion>3.0.0</PackageVersion>
 		<Description>
-			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early an .NET 7 only; Docs and broader support to follow.
+			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early and .NET 9 only; Docs and broader support to follow.
 		</Description>
-		<PackageReleaseNotes>End-to-end Structured Output.</PackageReleaseNotes>
+		<PackageReleaseNotes>End-to-end Structured Output, also added some models. This really isn't a breaking change, we just ran out of numbers.</PackageReleaseNotes>
 		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
 		<Title>Ouroboros</Title>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
