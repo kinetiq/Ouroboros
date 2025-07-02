@@ -23,6 +23,18 @@ internal static class ModelMappings
     /// </summary>
     internal static string GetModelNameAsString(OuroModels ouroModel)
     {
+        // Handle models that are not in Betalgo yet.
+        switch (ouroModel)
+        {
+            case OuroModels.Gpt_o3:
+                return "gpt-o3";
+            case OuroModels.Gpt_o3_mini:
+                return "gpt-o3-mini";
+            case OuroModels.Gpt_o4_mini:
+                return "gpt-o4-mini";
+        }
+
+        // This is a mapping from Ouroboros models to Betalgo models.
         var betalgoModel = ouroModel switch
         {
             OuroModels.Ada => Models.Model.Ada,
@@ -44,7 +56,6 @@ internal static class ModelMappings
             OuroModels.Gpt_4_1 => Models.Model.Gpt_4_1,
             OuroModels.Gpt_4o => Models.Model.Gpt_4o,
             OuroModels.Gpt_4o_mini => Models.Model.Gpt_4o_mini,
-
             _ => throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null)
         };
 
