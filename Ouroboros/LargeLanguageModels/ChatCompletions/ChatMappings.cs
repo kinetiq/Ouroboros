@@ -24,6 +24,7 @@ internal class ChatMappings
             StopAsList = options.StopAsList,
             User = options.User ?? string.Empty,
             ResponseFormat = options.ResponseFormat,
+            ChatReasoningEffort = options.ReasoningEffort,
             Model = options.Model.GetModelNameAsString(Constants.DefaultChatModel)
         };
     }
