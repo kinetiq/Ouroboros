@@ -17,7 +17,7 @@ internal class ChatMappings
             TopP = options.TopP,
             FrequencyPenalty = options.FrequencyPenalty,
             PresencePenalty = options.PresencePenalty,
-            MaxTokens = options.MaxTokens,
+            MaxCompletionTokens = options.MaxCompletionTokens,
             LogitBias = options.LogitBias,
             N = 1,
             Stop = options.Stop,

@@ -26,12 +26,12 @@ internal static class ModelMappings
         // Handle models that are not in Betalgo yet.
         switch (ouroModel)
         {
-            case OuroModels.Gpt_o3:
-                return "gpt-o3";
-            case OuroModels.Gpt_o3_mini:
-                return "gpt-o3-mini";
-            case OuroModels.Gpt_o4_mini:
-                return "gpt-o4-mini";
+            case OuroModels.o3:
+                return "o3";
+            case OuroModels.o3_mini:
+                return "o3-mini";
+            case OuroModels.o4_mini:
+                return "o4-mini";
         }
 
         // This is a mapping from Ouroboros models to Betalgo models.

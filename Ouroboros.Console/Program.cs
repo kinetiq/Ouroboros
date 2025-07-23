@@ -18,25 +18,21 @@ var messages = new List<ChatMessage>()
 
 var options = new ChatOptions
 {
-    Model = OuroModels.Gpt_4o,
-    ResponseType = typeof(TestType)
+    MaxCompletionTokens = 200,
+    Model = OuroModels.o4_mini,
 };
 
 var response = await client.ChatAsync(messages, options);
 
-Console.WriteLine("Success: " + response.Success);
-Console.WriteLine(response.ResponseText);
-
 if (response is OuroResponseSuccess success)
 {
-    var r = (TestType)success.ResponseObject!;
-
-    Console.WriteLine("Response Object:");
-    Console.WriteLine("Name: " + r.Name);
-    Console.WriteLine("Description: " + r.Description);
+    Console.WriteLine(success.ResponseText);
 }
 
-
+if (response is OuroResponseFailure failure)
+{
+    Console.WriteLine($"Failure: {failure.ErrorOrigin} | {failure.ResponseText} {failure.ErrorCode} ");
+}
 
 public class TestType
 {
