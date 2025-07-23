@@ -12,12 +12,11 @@ public class ChatOptions
     public string? Suffix { get; set; }
 
     /// <summary>
-    ///     The maximum number of <a href="https://beta.openai.com/tokenizer">tokens</a> to generate in the completion.
-    ///     The token count of your prompt plus max_tokens cannot exceed the model's context length. Most models have a context
-    ///     length of 2048 tokens (except davinci-codex and davinci-003, which support 4096, and newer models like GPT-4).
+    ///     An upper bound for the number of tokens that can be generated for a completion,
+    ///     including visible output tokens and reasoning tokens.
     /// </summary>
-    /// <see cref="!:https://beta.openai.com/docs/api-reference/completions/create#completions/create-max_tokens" />
-    public int? MaxTokens { get; set; }
+    /// <see href="https://platform.openai.com/docs/api-reference/chat/create#chat-create-max_completion_tokens" />
+    public int? MaxCompletionTokens { get; set; }
 
     /// <summary>
     ///     An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the
@@ -111,7 +110,7 @@ public class ChatOptions
     public ChatOptions()
     {
         // Defaults
-        MaxTokens = 1000;
+        MaxCompletionTokens = null;
         UseExponentialBackOff = true;
         ResponseFormat = null;
         ReasoningEffort = null;
