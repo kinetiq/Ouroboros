@@ -43,10 +43,9 @@ public class OuroResponseFailure : OuroResponseBase
 /// </summary>
 public class OuroResponseInternalError : OuroResponseFailure
 {
-    public OuroResponseInternalError(string errorDetails) : base("Ouroboros Internal Error")
+    public OuroResponseInternalError(string errorDetails) : base(errorDetails)
     {
         ErrorOrigin = "Ouroboros";
-        ErrorDetails = errorDetails;
     }
 }
 
