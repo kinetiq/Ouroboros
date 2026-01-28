@@ -10,18 +10,16 @@ namespace Ouroboros.Chaining.Commands;
 internal class AddUserTemplateMessage : IChatCommand
 {
     public TemplateBase Template { get; set; }
-    public string ElementName { get; set; }
 
     public async Task<OuroMessage> ToOuroMessage()
     {
         var message = await Template.AsUser();
 
-        return new OuroMessage(message, ElementName);
+        return new OuroMessage(message);
     }
 
-    public AddUserTemplateMessage(TemplateBase template, string elementName = "")
+    public AddUserTemplateMessage(TemplateBase template)
     {
         Template = template;
-        ElementName = elementName;
     }
 }

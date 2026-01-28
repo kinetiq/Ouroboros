@@ -6,14 +6,6 @@ namespace Ouroboros.Extensions;
 
 public static class DialogExtensions
 {
-    public static string GetByName(this Dialog @this, string elementName)
-    {
-        return @this
-            .InnerMessages
-            .Last(x => x.ElementName.EqualsIgnoreCase(elementName))
-            .Content;
-    }
-
     public static string GetLast(this Dialog @this)
     {
         return @this

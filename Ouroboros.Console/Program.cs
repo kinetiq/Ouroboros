@@ -8,7 +8,7 @@ using Spectre.Console;
 // See https://aka.ms/new-console-template for more information
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new OuroClient("[secret]]");
+var client = new OuroClient("[secret]");
 
 var messages = new List<ChatMessage>()
 {
