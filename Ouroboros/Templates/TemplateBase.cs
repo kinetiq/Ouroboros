@@ -8,7 +8,7 @@ using Ouroboros.Templates.Engine;
 namespace Ouroboros.Templates;
 
 /// <summary>
-/// Foundational template for all other template base. Not intended to be inherited directly, except by other template bases.
+/// Foundational template for all other template bases. Not intended to be inherited directly, except by other template bases.
 /// </summary>
 public abstract class TemplateBase
 {
