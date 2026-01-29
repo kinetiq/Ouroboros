@@ -1,4 +1,5 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+﻿using Betalgo.Ranul.OpenAI.Contracts.Enums;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -19,7 +20,7 @@ var messages = new List<ChatMessage>()
 var options = new ChatOptions
 {
     MaxCompletionTokens = 20,
-    ReasoningEffort = ChatCompletionCreateRequest.ReasoningEfforts.High,
+    ReasoningEffort = ReasoningEffort.High,
     Model = OuroModels.o4_mini,
 };
 

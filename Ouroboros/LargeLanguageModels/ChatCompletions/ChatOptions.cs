@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using Betalgo.Ranul.OpenAI.Contracts.Enums;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -97,13 +98,13 @@ public class ChatOptions
     /// </summary>
     public Type ResponseType { get; set; }
 
-    public ResponseFormat? ResponseFormat { get; set; }
+    public Betalgo.Ranul.OpenAI.ObjectModels.RequestModels.ResponseFormat? ResponseFormat { get; set; }
 
     /// <summary>
     ///     Constrains effort on reasoning for reasoning models. Currently supported values are low, medium, and high.
     ///     Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response.
     /// </summary>
-    public ChatCompletionCreateRequest.ReasoningEfforts? ReasoningEffort { get; set; }
+    public ReasoningEffort? ReasoningEffort { get; set; }
 
     public bool UseExponentialBackOff { get; set; }
 

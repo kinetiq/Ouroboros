@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.ObjectModels;
+using Betalgo.Ranul.OpenAI.Contracts.Enums;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Chaining.Commands;
 using Ouroboros.Enums;
@@ -158,7 +158,7 @@ public class Dialog
     /// </summary>
     public Dialog SystemMessage(ChatMessage message)
     {
-        if (message.Role != StaticValues.ChatMessageRoles.System)
+        if (message.Role != ChatCompletionRole.System)
             throw new InvalidOperationException("Message must be a system message.");
 
         if (message.Content == null)
@@ -195,7 +195,7 @@ public class Dialog
     /// </summary>
     public Dialog AssistantMessage(ChatMessage message)
     {
-        if (message.Role != StaticValues.ChatMessageRoles.Assistant)
+        if (message.Role != ChatCompletionRole.Assistant)
             throw new InvalidOperationException("Message must be an assistant message.");
 
         if (message.Content == null)
@@ -231,7 +231,7 @@ public class Dialog
     /// </summary>
     public Dialog UserMessage(ChatMessage message)
     {
-        if (message.Role != StaticValues.ChatMessageRoles.User)
+        if (message.Role != ChatCompletionRole.User)
             throw new InvalidOperationException("Message must be a user message.");
 
         if (message.Content == null)
@@ -549,7 +549,7 @@ public class Dialog
         IsAllMessagesSent = false;
 
         // Remove any existing system message and drop this at position 0.
-        if (InnerMessages.Any() && InnerMessages[0].Role == StaticValues.ChatMessageRoles.System)
+        if (InnerMessages.Any() && InnerMessages[0].Role == ChatCompletionRole.System)
             InnerMessages.RemoveAt(0);
 
         InnerMessages.Insert(0, systemMessage.ToOuroMessage());
@@ -560,7 +560,7 @@ public class Dialog
         IsAllMessagesSent = false;
 
         // Remove any existing system message and drop this at position 0.
-        if (InnerMessages.Any() && InnerMessages[0].Role == StaticValues.ChatMessageRoles.System)
+        if (InnerMessages.Any() && InnerMessages[0].Role == ChatCompletionRole.System)
             InnerMessages.RemoveAt(0);
 
         InnerMessages.Insert(0, await template.ToOuroMessage());
