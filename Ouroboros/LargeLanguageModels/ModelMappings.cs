@@ -32,6 +32,14 @@ internal static class ModelMappings
                 return "o4-mini";
             case OuroModels.Gpt_5:
                 return "gpt-5";
+            case OuroModels.Gpt_5_1:
+                return "gpt-5.1";
+            case OuroModels.Gpt_5_2:
+                return "gpt-5.2";
+            case OuroModels.Gpt_5_mini:
+                return "gpt-5-mini";
+            case OuroModels.Gpt_5_nano:
+                return "gpt-5-nano";
         }
 
         // This is a mapping from Ouroboros models to Betalgo models.
