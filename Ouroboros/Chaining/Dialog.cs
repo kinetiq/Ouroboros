@@ -30,9 +30,9 @@ public class Dialog
     public Dictionary<string, string> Variables { get; } = new();
 
     /// <summary>
-    /// Chain tracker for this dialog. Auto-generated if not provided.
+    /// Thread tracker for this dialog. Auto-generated if not provided.
     /// </summary>
-    public ChainTracker Chain { get; }
+    public ThreadTracker Thread { get; }
 
     /// <summary>
     /// Session tracker for grouping related dialogs. Null if not part of a session.
@@ -45,9 +45,9 @@ public class Dialog
     public string? PromptName { get; set; }
 
     /// <summary>
-    /// Convenience property for ChainId.
+    /// Convenience property for ThreadId.
     /// </summary>
-    public Guid ChainId => Chain.ChainId;
+    public Guid ThreadId => Thread.ThreadId;
 
     /// <summary>
     /// Convenience property for SessionId.
@@ -119,7 +119,7 @@ public class Dialog
         var options = DefaultOptions ?? new ChatOptions();
         options.PromptName ??= PromptName;
         options.SessionId ??= SessionId;
-        options.ChainId ??= ChainId;
+        options.ThreadId ??= ThreadId;
 
         var response = await Client.ChatAsync(messages, options);
 
@@ -169,7 +169,7 @@ public class Dialog
     public Dialog(OuroClient client)
     {
         Client = client;
-        Chain = Tracker.CreateChain();
+        Thread = Tracker.CreateThread();
     }
 
     public Dialog(OuroClient client, string promptName) : this(client)
@@ -181,8 +181,8 @@ public class Dialog
     {
         PromptName = options.PromptName;
         Session = options.Session;
-        if (options.Chain != null)
-            Chain = options.Chain;
+        if (options.Thread != null)
+            Thread = options.Thread;
     }
 
     #region Builder Pattern Commands

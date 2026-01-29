@@ -102,7 +102,7 @@ public class OuroClient
             var args = new ChatCompletedArgs(
                 options.PromptName,
                 options.SessionId,
-                options.ChainId,
+                options.ThreadId,
                 messages,
                 response
             );

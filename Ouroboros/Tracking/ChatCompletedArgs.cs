@@ -11,7 +11,7 @@ namespace Ouroboros.Tracking;
 public record ChatCompletedArgs(
     string? PromptName,
     Guid? SessionId,
-    Guid? ChainId,
+    Guid? ThreadId,
     List<ChatMessage> Messages,
     OuroResponseBase Response
 );

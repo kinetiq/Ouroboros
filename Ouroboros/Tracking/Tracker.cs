@@ -11,7 +11,7 @@ public static class Tracker
     public static SessionTracker CreateSession() => new();
 
     /// <summary>
-    /// Creates a new ChainTracker for tracking prompts within a dialog.
+    /// Creates a new ThreadTracker for tracking prompts within a dialog.
     /// </summary>
-    public static ChainTracker CreateChain() => new();
+    public static ThreadTracker CreateThread() => new();
 }

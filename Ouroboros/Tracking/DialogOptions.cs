@@ -18,9 +18,9 @@ public class DialogOptions
     public SessionTracker? Session { get; set; }
 
     /// <summary>
-    /// Chain tracker for grouping prompts within this dialog. Auto-generated if not provided.
+    /// Thread tracker for grouping prompts within this dialog. Auto-generated if not provided.
     /// </summary>
-    public ChainTracker? Chain { get; set; }
+    public ThreadTracker? Thread { get; set; }
 
     /// <summary>
     /// Convenience property to get the SessionId from the Session tracker.
@@ -28,7 +28,7 @@ public class DialogOptions
     public Guid? SessionId => Session?.SessionId;
 
     /// <summary>
-    /// Convenience property to get the ChainId from the Chain tracker.
+    /// Convenience property to get the ThreadId from the Thread tracker.
     /// </summary>
-    public Guid? ChainId => Chain?.ChainId;
+    public Guid? ThreadId => Thread?.ThreadId;
 }
