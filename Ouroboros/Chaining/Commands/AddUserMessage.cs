@@ -8,13 +8,11 @@ namespace Ouroboros.Chaining.Commands;
 internal class AddUserMessage : IChatCommand
 {
     public string Text { get; set; }
-    public string ElementName { get; set; }
 
-    public OuroMessage ToOuroMessage() => new(ChatMessage.FromUser(Text), ElementName);
+    public OuroMessage ToOuroMessage() => new(ChatMessage.FromUser(Text));
 
-    public AddUserMessage(string text, string elementName = "")
+    public AddUserMessage(string text)
     {
         Text = text;
-        ElementName = elementName;
     }
 }

@@ -28,10 +28,18 @@ internal static class ModelMappings
         {
             case OuroModels.o3:
                 return "o3";
-            case OuroModels.o3_mini:
-                return "o3-mini";
             case OuroModels.o4_mini:
                 return "o4-mini";
+            case OuroModels.Gpt_5:
+                return "gpt-5";
+            case OuroModels.Gpt_5_1:
+                return "gpt-5.1";
+            case OuroModels.Gpt_5_2:
+                return "gpt-5.2";
+            case OuroModels.Gpt_5_mini:
+                return "gpt-5-mini";
+            case OuroModels.Gpt_5_nano:
+                return "gpt-5-nano";
         }
 
         // This is a mapping from Ouroboros models to Betalgo models.
@@ -47,6 +55,7 @@ internal static class ModelMappings
             OuroModels.TextDavinciV1 => Models.Model.TextDavinciV1,
             OuroModels.TextDavinciV2 => Models.Model.TextDavinciV2,
             OuroModels.TextDavinciV3 => Models.Model.TextDavinciV3,
+            OuroModels.o3_mini => Models.Model.O3_mini,
             OuroModels.Gpt3_5_Turbo => Models.Model.Gpt_3_5_Turbo,
             OuroModels.Gpt3_5_Turbo_16k => Models.Model.Gpt_3_5_Turbo_16k,
             OuroModels.Gpt_4 => Models.Model.Gpt_4,

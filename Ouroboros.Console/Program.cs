@@ -1,4 +1,5 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+﻿using Betalgo.Ranul.OpenAI.Contracts.Enums;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -8,7 +9,7 @@ using Spectre.Console;
 // See https://aka.ms/new-console-template for more information
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new OuroClient("[SECRET]");
+var client = new OuroClient("[secret]");
 
 var messages = new List<ChatMessage>()
 {
@@ -18,7 +19,8 @@ var messages = new List<ChatMessage>()
 
 var options = new ChatOptions
 {
-    MaxCompletionTokens = 200,
+    MaxCompletionTokens = 20,
+    ReasoningEffort = ReasoningEffort.High,
     Model = OuroModels.o4_mini,
 };
 

@@ -8,8 +8,8 @@ public class TokenizerTests
     [Fact]
     public void GetMaxTokens_Returns_Correct_Value()
     {
-        var maxTokens = OuroModels.TextDavinciV2.GetMaxTokens();
+        var maxTokens = OuroModels.Gpt_5_2.GetMaxOutputTokens();
 
-        Assert.Equal(2048, maxTokens);
+        Assert.Equal(128000, maxTokens);
     }
 }

@@ -3,14 +3,11 @@ using Betalgo.Ranul.OpenAI.Managers;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Betalgo.Ranul.OpenAI.Tokenizer.GPT3;
 using Ouroboros.Chaining;
-using Ouroboros.Chaining.TemplateDialog;
-using Ouroboros.Chaining.TemplateDialog.Templates;
-using Ouroboros.Endpoints;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Completions;
-using Ouroboros.LargeLanguageModels.Templates;
 using Ouroboros.Responses;
+using Ouroboros.Tracking;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,58 +23,35 @@ public class OuroClient
     private readonly string ApiKey;
     private readonly CompletionRequestHandler CompletionHandler;
     private readonly ChatRequestHandler ChatHandler;
-    private readonly TemplateRequestHandler TemplateHandler;
 
     private OuroModels DefaultCompletionModel = Constants.DefaultCompletionModel;
     private OuroModels DefaultChatModel = Constants.DefaultChatModel; 
-    private ITemplateEndpoint? DefaultTemplateEndpoint;
     
     /// <summary>
     /// For gaining direct access to a Betalgo client, without going through the OuroClient.
     /// </summary>
     public OpenAIService GetInnerClient => GetClient();
 
+    /// <summary>
+    /// Event fired after every ChatAsync call completes. Use for centralized logging.
+    /// </summary>
+    public Func<ChatCompletedArgs, Task>? OnChatCompleted { get; set; }
+
     public Dialog CreateDialog()
     {
         return new Dialog(this);
     }
 
-    #region TemplateDialog & TemplateEndpoints
-	public TemplateDialog CreateTemplateDialog()
-	{
-		return new TemplateDialog(this);
-	}
-
-	/// <summary>
-	/// Set the TemplateEndpoint for this Ouro Client. All template-based requests will use this endpoint
-	/// unless overriden by passing in an endpoint via SendTemplateAsync.
-	/// </summary>
-	public void SetTemplateEndpoint(ITemplateEndpoint endpoint)
-	{
-		DefaultTemplateEndpoint = endpoint;
-	}
-
-    public async Task<OuroResponseBase> SendTemplateAsync(IOuroTemplateBase templateBase, ITemplateEndpoint? templateEndpoint = null)
-	{
-        var endpoint = DetermineEndpoint(templateEndpoint);
-
-        return await TemplateHandler.SendTemplateAsync(templateBase, endpoint);
-	}
-
-    private ITemplateEndpoint DetermineEndpoint(ITemplateEndpoint? endpoint)
+    public Dialog CreateDialog(string promptName)
     {
-        if (endpoint != null)
-            return endpoint;
-
-        if (DefaultTemplateEndpoint == null)
-            throw new NotImplementedException("Called SendTemplateAsync without an endpoint parameter, and OuroClient does not have a DefaultTemplateEndpoint set. " +
-                                              "You must either set an endpoint on OuroClient using SetTemplateEndpoint, or use the override that takes an endpoint.");
-
-        return DefaultTemplateEndpoint;
+        return new Dialog(this, promptName);
     }
-    #endregion
-    
 
+    public Dialog CreateDialog(DialogOptions options)
+    {
+        return new Dialog(this, options);
+    }
+    
     /// <summary>
     /// Coverts text into tokens. Uses GPT3Tokenizer.
     /// </summary>
@@ -120,7 +94,23 @@ public class OuroClient
 
         var api = GetClient();
 
-        return await ChatHandler.CompleteAsync(messages, api, options);
+        var response = await ChatHandler.CompleteAsync(messages, api, options);
+
+        // Fire the OnChatCompleted hook for logging
+        if (OnChatCompleted != null)
+        {
+            var args = new ChatCompletedArgs(
+                options.PromptName,
+                options.SessionId,
+                options.ThreadId,
+                messages,
+                response
+            );
+
+            await OnChatCompleted(args);
+        }
+
+        return response;
     }
 
     /// <summary>
@@ -169,15 +159,13 @@ public class OuroClient
     {
         CompletionHandler = new CompletionRequestHandler(null);
         ChatHandler = new ChatRequestHandler(null);
-        TemplateHandler = new TemplateRequestHandler(null);
         ApiKey = apiKey;
     }
 
-    internal OuroClient(string apiKey, CompletionRequestHandler completionHandler, ChatRequestHandler chatHandler, TemplateRequestHandler templateHandler)
+    internal OuroClient(string apiKey, CompletionRequestHandler completionHandler, ChatRequestHandler chatHandler)
     {
         ApiKey = apiKey;
         CompletionHandler = completionHandler;
         ChatHandler = chatHandler;
-        TemplateHandler = templateHandler;
     }
 }

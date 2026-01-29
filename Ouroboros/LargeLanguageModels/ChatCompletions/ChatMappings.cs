@@ -1,4 +1,6 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+﻿using Betalgo.Ranul.OpenAI.Contracts.Enums;
+using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+using Ouroboros.Extensions;
 using System.Collections.Generic;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -10,6 +12,14 @@ internal class ChatMappings
     /// </summary>
     internal static ChatCompletionCreateRequest MapOptions(List<ChatMessage> messages, ChatOptions options)
     {
+        var reasoningEffort = options.ReasoningEffort;
+
+        // For reasoning models, default to Low since this is required.
+        if (reasoningEffort == null && options.Model.HasValue && options.Model.Value.IsReasoningModel())
+        {
+            reasoningEffort = ReasoningEffort.Low;
+        }
+
         return new ChatCompletionCreateRequest
         {
             Messages = messages,
@@ -24,7 +34,7 @@ internal class ChatMappings
             StopAsList = options.StopAsList,
             User = options.User ?? string.Empty,
             ResponseFormat = options.ResponseFormat,
-            ChatReasoningEffort = options.ReasoningEffort,
+            ReasoningEffort = reasoningEffort,
             Model = options.Model.GetModelNameAsString(Constants.DefaultChatModel)
         };
     }

@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>3.1.0</Version>
+		<Version>4.0.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -12,7 +12,7 @@
 
 		<!-- Legal -->
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Copyright>Brian MacKay 2022-2025</Copyright> 
+		<Copyright>Brian MacKay 2022-2026</Copyright> 
 
 		<!-- Location -->
 		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
@@ -21,14 +21,14 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>3.1.0</PackageVersion>
+		<PackageVersion>4.0.0</PackageVersion>
 		<Description>
-			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early and .NET 9 only; Docs and broader support to follow.
+			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early and .NET 10 only; Docs and broader support to follow.
 		</Description>
 		<PackageReleaseNotes>
-			Finished support for o4-mini, retired Max_Tokens in favor of Max_Completion_Tokens.
+			Support for new models, removed unused functionality, added session and thread tracking, logging, packages and .NET 10 support.
 		</PackageReleaseNotes>
-		<PackageTags>gpt4 llm openai chatgpt c#</PackageTags>
+		<PackageTags>gpt llm openai chatgpt c#</PackageTags>
 		<Title>Ouroboros</Title>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
@@ -41,11 +41,11 @@
 
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="" />
-		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.1.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
-		<PackageReference Include="Polly" Version="8.6.2" />
+		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.2.6" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+		<PackageReference Include="Polly" Version="8.6.5" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
-		<PackageReference Include="Scriban" Version="6.2.1" />
+		<PackageReference Include="Scriban" Version="6.5.2" />
 		<PackageReference Include="TypeMerger" Version="2.1.4" />
 	</ItemGroup>
 </Project>

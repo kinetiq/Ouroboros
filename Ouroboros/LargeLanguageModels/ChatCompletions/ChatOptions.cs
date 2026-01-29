@@ -1,11 +1,28 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using Betalgo.Ranul.OpenAI.Contracts.Enums;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 public class ChatOptions
 {
+    /// <summary>
+    /// Name of the prompt for logging purposes. If not specified, will be inferred from the system message.
+    /// </summary>
+    public string? PromptName { get; set; }
+
+    /// <summary>
+    /// Session ID for grouping related prompts across multiple dialogs/calls. If you want to group all the prompts that to get a single end result, use SessionId.
+    /// This is for when a lot is happening at once. A Session could have multiple threads.
+    /// </summary>
+    public Guid? SessionId { get; set; }
+
+    /// <summary>
+    /// Thread ID for grouping prompts that have a single purpose. These can be within a session, but session is not required. Intended to be more fine-grained than Session.
+    /// </summary>
+    public Guid? ThreadId { get; set; }
+
     /// <summary>
     ///     The suffix that comes after a completion of inserted text.
     /// </summary>
@@ -97,13 +114,13 @@ public class ChatOptions
     /// </summary>
     public Type ResponseType { get; set; }
 
-    public ResponseFormat? ResponseFormat { get; set; }
+    public Betalgo.Ranul.OpenAI.ObjectModels.RequestModels.ResponseFormat? ResponseFormat { get; set; }
 
     /// <summary>
     ///     Constrains effort on reasoning for reasoning models. Currently supported values are low, medium, and high.
     ///     Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response.
     /// </summary>
-    public ChatCompletionCreateRequest.ReasoningEfforts? ReasoningEffort { get; set; }
+    public ReasoningEffort? ReasoningEffort { get; set; }
 
     public bool UseExponentialBackOff { get; set; }
 

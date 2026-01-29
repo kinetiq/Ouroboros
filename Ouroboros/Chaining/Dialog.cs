@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.ObjectModels;
+using Betalgo.Ranul.OpenAI.Contracts.Enums;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Chaining.Commands;
 using Ouroboros.Enums;
@@ -12,6 +12,7 @@ using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
 using Ouroboros.Templates;
 using Ouroboros.TextProcessing;
+using Ouroboros.Tracking;
 
 namespace Ouroboros.Chaining;
 
@@ -22,6 +23,36 @@ public class Dialog
 {
     private readonly OuroClient Client;
     internal readonly List<OuroMessage> InnerMessages = new();
+
+    /// <summary>
+    /// Variable storage for named outputs. Use StoreOutputAs() to store and access via Variables["name"].
+    /// </summary>
+    public Dictionary<string, string> Variables { get; } = new();
+
+    /// <summary>
+    /// Thread tracker for this dialog. Auto-generated if not provided.
+    /// </summary>
+    public ThreadTracker Thread { get; }
+
+    /// <summary>
+    /// Session tracker for grouping related dialogs. Null if not part of a session.
+    /// </summary>
+    public SessionTracker? Session { get; }
+
+    /// <summary>
+    /// Name of the prompt for logging purposes.
+    /// </summary>
+    public string? PromptName { get; set; }
+
+    /// <summary>
+    /// Convenience property for ThreadId.
+    /// </summary>
+    public Guid ThreadId => Thread.ThreadId;
+
+    /// <summary>
+    /// Convenience property for SessionId.
+    /// </summary>
+    public Guid? SessionId => Session?.SessionId;
 
     /// <summary>
     /// Allows setting options. This will be used for all operations in the chain.
@@ -84,7 +115,13 @@ public class Dialog
         var messages = InnerMessages.Select(x => x.Message)
             .ToList();
 
-        var response = await Client.ChatAsync(messages, DefaultOptions);
+        // Ensure tracking info is passed to ChatAsync
+        var options = DefaultOptions ?? new ChatOptions();
+        options.PromptName ??= PromptName;
+        options.SessionId ??= SessionId;
+        options.ThreadId ??= ThreadId;
+
+        var response = await Client.ChatAsync(messages, options);
 
         IsAllMessagesSent = true;
 
@@ -111,8 +148,7 @@ public class Dialog
 
         foreach (var message in InnerMessages)
         {
-            builder.AppendLine(
-                $"**{message.Role.ToTitleCase()} Message**{(message.ElementName.IsNullOrWhiteSpace() ? "" : " (" + message.ElementName + ")")}");
+            builder.AppendLine($"**{message.Role.ToTitleCase()} Message**");
             builder.AppendLine(message.Content);
             builder.AppendLine("---");
         }
@@ -133,6 +169,20 @@ public class Dialog
     public Dialog(OuroClient client)
     {
         Client = client;
+        Thread = Tracker.CreateThread();
+    }
+
+    public Dialog(OuroClient client, string promptName) : this(client)
+    {
+        PromptName = promptName;
+    }
+
+    public Dialog(OuroClient client, DialogOptions options) : this(client)
+    {
+        PromptName = options.PromptName;
+        Session = options.Session;
+        if (options.Thread != null)
+            Thread = options.Thread;
     }
 
     #region Builder Pattern Commands
@@ -154,7 +204,7 @@ public class Dialog
     /// </summary>
     public Dialog SystemMessage(ChatMessage message)
     {
-        if (message.Role != StaticValues.ChatMessageRoles.System)
+        if (message.Role != ChatCompletionRole.System)
             throw new InvalidOperationException("Message must be a system message.");
 
         if (message.Content == null)
@@ -179,9 +229,9 @@ public class Dialog
     /// <summary>
     /// Adds an assistant message as the next message.
     /// </summary>
-    public Dialog AssistantMessage(string prompt, string elementName = "")
+    public Dialog AssistantMessage(string prompt)
     {
-        Commands.Add(new AddAssistantMessage(prompt, elementName));
+        Commands.Add(new AddAssistantMessage(prompt));
 
         return this;
     }
@@ -189,15 +239,15 @@ public class Dialog
     /// <summary>
     /// Adds an assistant message as the next message.
     /// </summary>
-    public Dialog AssistantMessage(ChatMessage message, string elementName = "")
+    public Dialog AssistantMessage(ChatMessage message)
     {
-        if (message.Role != StaticValues.ChatMessageRoles.Assistant)
+        if (message.Role != ChatCompletionRole.Assistant)
             throw new InvalidOperationException("Message must be an assistant message.");
 
         if (message.Content == null)
             throw new InvalidOperationException("Message content cannot be null.");
 
-        Commands.Add(new AddAssistantMessage(message.Content, elementName));
+        Commands.Add(new AddAssistantMessage(message.Content));
 
         return this;
     }
@@ -205,9 +255,9 @@ public class Dialog
     /// <summary>
     /// Adds an assistant message as the next message.
     /// </summary>
-    public Dialog AssistantMessage(TemplateBase template, string elementName = "")
+    public Dialog AssistantMessage(TemplateBase template)
     {
-        Commands.Add(new AddAssistantTemplateMessage(template, elementName));
+        Commands.Add(new AddAssistantTemplateMessage(template));
 
         return this;
     }
@@ -215,9 +265,9 @@ public class Dialog
     /// <summary>
     /// Adds a user message as the next message.
     /// </summary>
-    public Dialog UserMessage(string prompt, string elementName = "")
+    public Dialog UserMessage(string prompt)
     {
-        Commands.Add(new AddUserMessage(prompt, elementName));
+        Commands.Add(new AddUserMessage(prompt));
 
         return this;
     }
@@ -225,15 +275,15 @@ public class Dialog
     /// <summary>
     /// Adds a user message as the next message.
     /// </summary>
-    public Dialog UserMessage(ChatMessage message, string elementName = "")
+    public Dialog UserMessage(ChatMessage message)
     {
-        if (message.Role != StaticValues.ChatMessageRoles.User)
+        if (message.Role != ChatCompletionRole.User)
             throw new InvalidOperationException("Message must be a user message.");
 
         if (message.Content == null)
             throw new InvalidOperationException("Message content cannot be null.");
 
-        Commands.Add(new AddUserMessage(message.Content, elementName));
+        Commands.Add(new AddUserMessage(message.Content));
 
         return this;
     }
@@ -241,9 +291,9 @@ public class Dialog
     /// <summary>
     /// Adds a user message as the next message.
     /// </summary>
-    public Dialog UserMessage(TemplateBase template, string elementName = "")
+    public Dialog UserMessage(TemplateBase template)
     {
-        Commands.Add(new AddUserTemplateMessage(template, elementName));
+        Commands.Add(new AddUserTemplateMessage(template));
 
         return this;
     }
@@ -251,9 +301,19 @@ public class Dialog
     /// <summary>
     /// Sends the chat payload for completion and adds the result as an Assistant message.
     /// </summary>
-    public Dialog SendAndAppend(string elementName = "")
+    public Dialog SendAndAppend()
     {
-        Commands.Add(new SendAndAppend(elementName));
+        Commands.Add(new SendAndAppend());
+
+        return this;
+    }
+
+    /// <summary>
+    /// Stores the last response in a variable. Access via Variables["name"].
+    /// </summary>
+    public Dialog StoreOutputAs(string variableName)
+    {
+        Commands.Add(new StoreOutputAs(variableName));
 
         return this;
     }
@@ -278,15 +338,7 @@ public class Dialog
         return this;
     }
 
-    /// <summary>
-    /// Removes the message named elementName and all messages after it.
-    /// </summary>
-    public Dialog RemoveStartingAt(string elementName)
-    {
-        Commands.Add(new RemoveStartingAtElement(elementName));
 
-        return this;
-    }
 
     #endregion
 
@@ -465,8 +517,8 @@ public class Dialog
                 case RemoveStartingAtIndex removeStartingAtIndex:
                     HandleRemoveStartingAtIndex(removeStartingAtIndex);
                     break;
-                case RemoveStartingAtElement removeStartingAtElement:
-                    HandleRemoveStartingAtElement(removeStartingAtElement);
+                case StoreOutputAs storeOutputAs:
+                    HandleStoreOutputAs(storeOutputAs);
                     break;
                 default:
                     throw new InvalidOperationException($"Unhandled command: {nameof(command)}");
@@ -486,15 +538,12 @@ public class Dialog
         return await SendMessages();
     }
 
-    private void HandleRemoveStartingAtElement(RemoveStartingAtElement removeStartingAtElement)
+    private void HandleStoreOutputAs(StoreOutputAs storeOutputAs)
     {
-        if (!InnerMessages.Any())
-            return;
+        if (LastResponse == null)
+            throw new InvalidOperationException("A response is required. Use SendAndAppend() before calling StoreOutputAs().");
 
-        var index = InnerMessages.FindIndex(x => x.ElementName == removeStartingAtElement.ElementName);
-
-        if (index != -1)
-            InnerMessages.RemoveRange(index, InnerMessages.Count - index);
+        Variables[storeOutputAs.VariableName] = LastResponse.ResponseText;
     }
 
     private void HandleRemoveStartingAtIndex(RemoveStartingAtIndex removeStartingAtIndex)
@@ -546,7 +595,7 @@ public class Dialog
         IsAllMessagesSent = false;
 
         // Remove any existing system message and drop this at position 0.
-        if (InnerMessages.Any() && InnerMessages[0].Role == StaticValues.ChatMessageRoles.System)
+        if (InnerMessages.Any() && InnerMessages[0].Role == ChatCompletionRole.System)
             InnerMessages.RemoveAt(0);
 
         InnerMessages.Insert(0, systemMessage.ToOuroMessage());
@@ -557,7 +606,7 @@ public class Dialog
         IsAllMessagesSent = false;
 
         // Remove any existing system message and drop this at position 0.
-        if (InnerMessages.Any() && InnerMessages[0].Role == StaticValues.ChatMessageRoles.System)
+        if (InnerMessages.Any() && InnerMessages[0].Role == ChatCompletionRole.System)
             InnerMessages.RemoveAt(0);
 
         InnerMessages.Insert(0, await template.ToOuroMessage());
@@ -571,7 +620,7 @@ public class Dialog
         if (response.Success)
         {
             var message = ChatMessage.FromAssistant(response.ResponseText);
-            InnerMessages.Add(new OuroMessage(message, sendAndAppend.ElementName));
+            InnerMessages.Add(new OuroMessage(message));
         }
 
         return response;
