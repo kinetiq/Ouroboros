@@ -7,6 +7,7 @@ using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Completions;
 using Ouroboros.Responses;
+using Ouroboros.Tracking;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,9 +32,24 @@ public class OuroClient
     /// </summary>
     public OpenAIService GetInnerClient => GetClient();
 
+    /// <summary>
+    /// Event fired after every ChatAsync call completes. Use for centralized logging.
+    /// </summary>
+    public Func<ChatCompletedArgs, Task>? OnChatCompleted { get; set; }
+
     public Dialog CreateDialog()
     {
         return new Dialog(this);
+    }
+
+    public Dialog CreateDialog(string promptName)
+    {
+        return new Dialog(this, promptName);
+    }
+
+    public Dialog CreateDialog(DialogOptions options)
+    {
+        return new Dialog(this, options);
     }
     
     /// <summary>
@@ -78,7 +94,23 @@ public class OuroClient
 
         var api = GetClient();
 
-        return await ChatHandler.CompleteAsync(messages, api, options);
+        var response = await ChatHandler.CompleteAsync(messages, api, options);
+
+        // Fire the OnChatCompleted hook for logging
+        if (OnChatCompleted != null)
+        {
+            var args = new ChatCompletedArgs(
+                options.PromptName,
+                options.SessionId,
+                options.ChainId,
+                messages,
+                response
+            );
+
+            await OnChatCompleted(args);
+        }
+
+        return response;
     }
 
     /// <summary>

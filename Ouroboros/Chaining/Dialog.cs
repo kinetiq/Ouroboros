@@ -12,6 +12,7 @@ using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
 using Ouroboros.Templates;
 using Ouroboros.TextProcessing;
+using Ouroboros.Tracking;
 
 namespace Ouroboros.Chaining;
 
@@ -27,6 +28,31 @@ public class Dialog
     /// Variable storage for named outputs. Use StoreOutputAs() to store and access via Variables["name"].
     /// </summary>
     public Dictionary<string, string> Variables { get; } = new();
+
+    /// <summary>
+    /// Chain tracker for this dialog. Auto-generated if not provided.
+    /// </summary>
+    public ChainTracker Chain { get; }
+
+    /// <summary>
+    /// Session tracker for grouping related dialogs. Null if not part of a session.
+    /// </summary>
+    public SessionTracker? Session { get; }
+
+    /// <summary>
+    /// Name of the prompt for logging purposes.
+    /// </summary>
+    public string? PromptName { get; set; }
+
+    /// <summary>
+    /// Convenience property for ChainId.
+    /// </summary>
+    public Guid ChainId => Chain.ChainId;
+
+    /// <summary>
+    /// Convenience property for SessionId.
+    /// </summary>
+    public Guid? SessionId => Session?.SessionId;
 
     /// <summary>
     /// Allows setting options. This will be used for all operations in the chain.
@@ -89,7 +115,13 @@ public class Dialog
         var messages = InnerMessages.Select(x => x.Message)
             .ToList();
 
-        var response = await Client.ChatAsync(messages, DefaultOptions);
+        // Ensure tracking info is passed to ChatAsync
+        var options = DefaultOptions ?? new ChatOptions();
+        options.PromptName ??= PromptName;
+        options.SessionId ??= SessionId;
+        options.ChainId ??= ChainId;
+
+        var response = await Client.ChatAsync(messages, options);
 
         IsAllMessagesSent = true;
 
@@ -137,6 +169,20 @@ public class Dialog
     public Dialog(OuroClient client)
     {
         Client = client;
+        Chain = Tracker.CreateChain();
+    }
+
+    public Dialog(OuroClient client, string promptName) : this(client)
+    {
+        PromptName = promptName;
+    }
+
+    public Dialog(OuroClient client, DialogOptions options) : this(client)
+    {
+        PromptName = options.PromptName;
+        Session = options.Session;
+        if (options.Chain != null)
+            Chain = options.Chain;
     }
 
     #region Builder Pattern Commands
