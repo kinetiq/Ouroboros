@@ -17,7 +17,13 @@ internal class ChatMappings
         // For reasoning models, default to Low since this is required.
         if (reasoningEffort == null && options.Model.HasValue && options.Model.Value.IsReasoningModel())
         {
-            reasoningEffort = ReasoningEffort.Low;
+            reasoningEffort = ReasoningEffort.Medium;
+        }
+
+        // Ignore ReasoningEffort for non-reasoning models.
+        if (reasoningEffort != null && options.Model.HasValue && !options.Model.Value.IsReasoningModel())
+        {
+            reasoningEffort = null;
         }
 
         return new ChatCompletionCreateRequest
