@@ -10,6 +10,7 @@ using Ouroboros.Responses;
 using Ouroboros.Tracking;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -94,7 +95,9 @@ public class OuroClient
 
         var api = GetClient();
 
+        var stopwatch = Stopwatch.StartNew();
         var response = await ChatHandler.CompleteAsync(messages, api, options);
+        stopwatch.Stop();
 
         // Fire the OnChatCompleted hook for logging
         if (OnChatCompleted != null)
@@ -104,7 +107,9 @@ public class OuroClient
                 options.SessionId,
                 options.ThreadId,
                 messages,
-                response
+                response,
+                options.ReasoningEffort,
+                (int)stopwatch.ElapsedMilliseconds
             );
 
             await OnChatCompleted(args);
