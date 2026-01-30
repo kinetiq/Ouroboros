@@ -32,7 +32,7 @@ internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreat
             options.ResponseFormat = Json.GetSchema(options.ResponseType);
 
         // Map our generic options to OpenAI options.
-        var request = ChatMappings.MapOptions(messages, options);
+        var request = ChatMappings.MapOptions(messages, options, Logger);
 
         var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
 
