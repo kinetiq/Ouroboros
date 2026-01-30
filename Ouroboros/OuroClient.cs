@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Betalgo.Ranul.OpenAI.Contracts.Enums;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -26,8 +27,14 @@ public class OuroClient
     private readonly ChatRequestHandler ChatHandler;
 
     private OuroModels DefaultCompletionModel = Constants.DefaultCompletionModel;
-    private OuroModels DefaultChatModel = Constants.DefaultChatModel; 
-    
+    private OuroModels DefaultChatModel = Constants.DefaultChatModel;
+
+    /// <summary>
+    /// Note that this only gets applied if DefaultChatModel is used. These defaults
+    /// are intended to be a set; wouldn't want to overwrite an intentionally null reasoning effort.
+    /// </summary>
+    private ReasoningEffort? DefaultReasoningEffort = Constants.DefaultReasoningEffort;
+
     /// <summary>
     /// For gaining direct access to a Betalgo client, without going through the OuroClient.
     /// </summary>
@@ -91,7 +98,12 @@ public class OuroClient
     public async Task<OuroResponseBase> ChatAsync(List<ChatMessage> messages, ChatOptions? options = null)
     {
         options ??= new ChatOptions();
-        options.Model ??= DefaultChatModel;
+
+        if (options.Model == null)
+        {
+            options.Model = DefaultChatModel;
+            options.ReasoningEffort = DefaultReasoningEffort;
+        }
 
         var api = GetClient();
 
@@ -134,7 +146,7 @@ public class OuroClient
     /// Configures a default model that will be used for all completions initiated from this client,
     /// unless overriden by passing in a model via CompleteOptions.
     /// </summary>
-    public void SetDefaultChatModel(OuroModels model)
+    public void SetDefaultChatModel(OuroModels model, ReasoningEffort? reasoningEffort)
     {
         DefaultChatModel = model;
     }
