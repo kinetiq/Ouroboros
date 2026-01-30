@@ -99,6 +99,9 @@ public class OuroClient
         var response = await ChatHandler.CompleteAsync(messages, api, options);
         stopwatch.Stop();
 
+        var durationMs = (int)stopwatch.ElapsedMilliseconds;
+        response.DurationMs = durationMs;
+
         // Fire the OnChatCompleted hook for logging
         if (OnChatCompleted != null)
         {
@@ -109,7 +112,7 @@ public class OuroClient
                 messages,
                 response,
                 options.ReasoningEffort,
-                (int)stopwatch.ElapsedMilliseconds
+                durationMs
             );
 
             await OnChatCompleted(args);
