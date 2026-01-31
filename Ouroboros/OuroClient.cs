@@ -119,8 +119,8 @@ public class OuroClient
         {
             var args = new ChatCompletedArgs(
                 options.PromptName,
-                options.SessionId,
-                options.ThreadId,
+                options.Session?.SessionId,
+                options.Thread?.ThreadId,
                 messages,
                 response,
                 options.ReasoningEffort,

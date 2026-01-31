@@ -45,16 +45,6 @@ public class Dialog
     public string? PromptName { get; set; }
 
     /// <summary>
-    /// Convenience property for ThreadId.
-    /// </summary>
-    public Guid ThreadId => Thread.ThreadId;
-
-    /// <summary>
-    /// Convenience property for SessionId.
-    /// </summary>
-    public Guid? SessionId => Session?.SessionId;
-
-    /// <summary>
     /// Allows setting options. This will be used for all operations in the chain.
     /// </summary>
     private ChatOptions? DefaultOptions;
@@ -118,8 +108,8 @@ public class Dialog
         // Ensure tracking info is passed to ChatAsync
         var options = DefaultOptions ?? new ChatOptions();
         options.PromptName ??= PromptName;
-        options.SessionId ??= SessionId;
-        options.ThreadId ??= ThreadId;
+        options.Session ??= Session;
+        options.Thread ??= Thread;
 
         var response = await Client.ChatAsync(messages, options);
 
