@@ -16,5 +16,7 @@ public record ChatCompletedArgs(
     List<ChatMessage> Messages,
     OuroResponseBase Response,
     ReasoningEffort? ReasoningEffort,
-    int DurationMs
+    int DurationMs,
+    List<EntityTag> ThreadTags,
+    List<EntityTag> SessionTags
 );

@@ -124,7 +124,9 @@ public class OuroClient
                 messages,
                 response,
                 options.ReasoningEffort,
-                durationMs
+                durationMs,
+                options.Thread?.Tags ?? [],
+                options.Session?.Tags ?? []
             );
 
             await OnChatCompleted(args);
