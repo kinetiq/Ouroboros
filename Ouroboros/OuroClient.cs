@@ -10,9 +10,11 @@ using Ouroboros.Responses;
 using Ouroboros.Tracking;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Betalgo.Ranul.OpenAI.Contracts.Enums;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
@@ -25,8 +27,14 @@ public class OuroClient
     private readonly ChatRequestHandler ChatHandler;
 
     private OuroModels DefaultCompletionModel = Constants.DefaultCompletionModel;
-    private OuroModels DefaultChatModel = Constants.DefaultChatModel; 
-    
+    private OuroModels DefaultChatModel = Constants.DefaultChatModel;
+
+    /// <summary>
+    /// Note that this only gets applied if DefaultChatModel is used. These defaults
+    /// are intended to be a set; wouldn't want to overwrite an intentionally null reasoning effort.
+    /// </summary>
+    private ReasoningEffort? DefaultReasoningEffort = Constants.DefaultReasoningEffort;
+
     /// <summary>
     /// For gaining direct access to a Betalgo client, without going through the OuroClient.
     /// </summary>
@@ -90,21 +98,35 @@ public class OuroClient
     public async Task<OuroResponseBase> ChatAsync(List<ChatMessage> messages, ChatOptions? options = null)
     {
         options ??= new ChatOptions();
-        options.Model ??= DefaultChatModel;
+
+        if (options.Model == null)
+        {
+            options.Model = DefaultChatModel;
+            options.ReasoningEffort = DefaultReasoningEffort;
+        }
 
         var api = GetClient();
 
+        var stopwatch = Stopwatch.StartNew();
         var response = await ChatHandler.CompleteAsync(messages, api, options);
+        stopwatch.Stop();
+
+        var durationMs = (int)stopwatch.ElapsedMilliseconds;
+        response.DurationMs = durationMs;
 
         // Fire the OnChatCompleted hook for logging
         if (OnChatCompleted != null)
         {
             var args = new ChatCompletedArgs(
                 options.PromptName,
-                options.SessionId,
-                options.ThreadId,
+                options.Session?.SessionId,
+                options.Thread?.ThreadId,
                 messages,
-                response
+                response,
+                options.ReasoningEffort,
+                durationMs,
+                options.Thread?.Tags ?? [],
+                options.Session?.Tags ?? []
             );
 
             await OnChatCompleted(args);
@@ -126,7 +148,7 @@ public class OuroClient
     /// Configures a default model that will be used for all completions initiated from this client,
     /// unless overriden by passing in a model via CompleteOptions.
     /// </summary>
-    public void SetDefaultChatModel(OuroModels model)
+    public void SetDefaultChatModel(OuroModels model, ReasoningEffort? reasoningEffort)
     {
         DefaultChatModel = model;
     }

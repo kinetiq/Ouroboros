@@ -26,8 +26,8 @@ public enum OuroModels
 	[MaxTokens(200000, 100000)]		[Chat]	[Reasoning]		Gpt_5,
 	[MaxTokens(200000, 100000)]		[Chat]	[Reasoning]		Gpt_5_1,
 	[MaxTokens(400000, 128000)]		[Chat]	[Reasoning]		Gpt_5_2,
-	[MaxTokens(200000, 100000)]		[Chat]					Gpt_5_mini,
-	[MaxTokens(200000, 100000)]		[Chat]					Gpt_5_nano,
+	[MaxTokens(200000, 100000)]		[Chat]	[Reasoning]		Gpt_5_mini,
+	[MaxTokens(200000, 100000)]		[Chat]	[Reasoning]		Gpt_5_nano,
 	[MaxTokens(200000, 100000)]		[Chat]	[Reasoning]		o3,
 	[MaxTokens(200000, 65536)]		[Chat]	[Reasoning]		o3_mini,
 	[MaxTokens(200000, 100000)]		[Chat]	[Reasoning]		o4_mini

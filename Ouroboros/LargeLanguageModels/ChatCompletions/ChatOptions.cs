@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Betalgo.Ranul.OpenAI.Contracts.Enums;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+using Ouroboros.Tracking;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 public class ChatOptions
@@ -13,15 +14,14 @@ public class ChatOptions
     public string? PromptName { get; set; }
 
     /// <summary>
-    /// Session ID for grouping related prompts across multiple dialogs/calls. If you want to group all the prompts that to get a single end result, use SessionId.
-    /// This is for when a lot is happening at once. A Session could have multiple threads.
+    /// Session tracker for grouping related prompts across multiple dialogs/calls.
     /// </summary>
-    public Guid? SessionId { get; set; }
+    public SessionTracker? Session { get; set; }
 
     /// <summary>
-    /// Thread ID for grouping prompts that have a single purpose. These can be within a session, but session is not required. Intended to be more fine-grained than Session.
+    /// Thread tracker for grouping prompts within a single conversation.
     /// </summary>
-    public Guid? ThreadId { get; set; }
+    public ThreadTracker? Thread { get; set; }
 
     /// <summary>
     ///     The suffix that comes after a completion of inserted text.

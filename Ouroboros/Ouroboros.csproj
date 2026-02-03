@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>4.0.0</Version>
+		<Version>4.1.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,12 +21,12 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>4.0.0</PackageVersion>
+		<PackageVersion>4.1.0</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early and .NET 10 only; Docs and broader support to follow.
 		</Description>
 		<PackageReleaseNotes>
-			Support for new models, removed unused functionality, added session and thread tracking, logging, packages and .NET 10 support.
+			Extensive support for various kinds of tracking, including time but also tags, sessions, and threads. Added support for reasoning effort in default models.
 		</PackageReleaseNotes>
 		<PackageTags>gpt llm openai chatgpt c#</PackageTags>
 		<Title>Ouroboros</Title>

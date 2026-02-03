@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Betalgo.Ranul.OpenAI.Contracts.Enums;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Responses;
 
@@ -13,5 +14,9 @@ public record ChatCompletedArgs(
     Guid? SessionId,
     Guid? ThreadId,
     List<ChatMessage> Messages,
-    OuroResponseBase Response
+    OuroResponseBase Response,
+    ReasoningEffort? ReasoningEffort,
+    int DurationMs,
+    List<EntityTag> ThreadTags,
+    List<EntityTag> SessionTags
 );
