@@ -9,7 +9,7 @@ using Betalgo.Ranul.OpenAI.Contracts.Enums;
 namespace Ouroboros;
 public class Constants
 {
-    public const OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
+    public const OuroModels DefaultCompletionModel = OuroModels.Gpt_3_5_Turbo_Instruct;
     public const OuroModels DefaultChatModel = OuroModels.Gpt_5_4_mini;
 
 
