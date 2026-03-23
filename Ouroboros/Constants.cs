@@ -10,7 +10,7 @@ namespace Ouroboros;
 public class Constants
 {
     public const OuroModels DefaultCompletionModel = OuroModels.TextDavinciV3;
-    public const OuroModels DefaultChatModel = OuroModels.Gpt_5_mini;
+    public const OuroModels DefaultChatModel = OuroModels.Gpt_5_4_mini;
 
 
     /// <summary>
