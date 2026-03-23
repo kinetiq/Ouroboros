@@ -23,13 +23,11 @@ internal static class ModelMappings
     /// </summary>
     internal static string GetModelNameAsString(OuroModels ouroModel)
     {
-        // Handle models that are not in Betalgo yet.
+        // Map supported Ouroboros models to API model names.
         switch (ouroModel)
         {
-            case OuroModels.o3:
-                return "o3";
-            case OuroModels.o4_mini:
-                return "o4-mini";
+            case OuroModels.Gpt_3_5_Turbo_Instruct:
+                return "gpt-3.5-turbo-instruct";
             case OuroModels.Gpt_5:
                 return "gpt-5";
             case OuroModels.Gpt_5_1:
@@ -40,34 +38,14 @@ internal static class ModelMappings
                 return "gpt-5-mini";
             case OuroModels.Gpt_5_nano:
                 return "gpt-5-nano";
+            case OuroModels.Gpt_5_4:
+                return "gpt-5.4";
+            case OuroModels.Gpt_5_4_mini:
+                return "gpt-5.4-mini";
+            case OuroModels.Gpt_5_4_nano:
+                return "gpt-5.4-nano";
         }
 
-        // This is a mapping from Ouroboros models to Betalgo models.
-        var betalgoModel = ouroModel switch
-        {
-            OuroModels.Ada => Models.Model.Ada,
-            OuroModels.Babbage => Models.Model.Babbage,
-            OuroModels.Curie => Models.Model.Curie,
-            OuroModels.Davinci => Models.Model.Davinci,
-            OuroModels.TextAdaV1 => Models.Model.TextAdaV1,
-            OuroModels.TextBabbageV1 => Models.Model.TextBabbageV1,
-            OuroModels.TextCurieV1 => Models.Model.TextCurieV1,
-            OuroModels.TextDavinciV1 => Models.Model.TextDavinciV1,
-            OuroModels.TextDavinciV2 => Models.Model.TextDavinciV2,
-            OuroModels.TextDavinciV3 => Models.Model.TextDavinciV3,
-            OuroModels.o3_mini => Models.Model.O3_mini,
-            OuroModels.Gpt3_5_Turbo => Models.Model.Gpt_3_5_Turbo,
-            OuroModels.Gpt3_5_Turbo_16k => Models.Model.Gpt_3_5_Turbo_16k,
-            OuroModels.Gpt_4 => Models.Model.Gpt_4,
-            OuroModels.Gpt_4_32k => Models.Model.Gpt_4_32k,
-            OuroModels.Gpt_4_turbo => Models.Model.Gpt_4_turbo,
-            OuroModels.Gpt_4_turbo_2024_04_09 => Models.Model.Gpt_4_turbo_2024_04_09,
-            OuroModels.Gpt_4_1 => Models.Model.Gpt_4_1,
-            OuroModels.Gpt_4o => Models.Model.Gpt_4o,
-            OuroModels.Gpt_4o_mini => Models.Model.Gpt_4o_mini,
-            _ => throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null)
-        };
-
-        return betalgoModel.EnumToString();
+        throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null);
     }
 }

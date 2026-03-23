@@ -14,14 +14,14 @@ var client = new OuroClient("[secret]");
 var messages = new List<ChatMessage>()
 {
     ChatMessage.FromSystem("# Character creator\nCome up with a character name and description based on the Story Seed."),
-    ChatMessage.FromUser("Story Seed: A magical giant returns from the cloud to ravage Ireland. Give me a Name and Description for the giant.")
+    ChatMessage.FromUser("Story Seed: A magical giant returns from the cloud to ravage Ireland. Give me a Name and Description for the giant")
 };
 
 var options = new ChatOptions
 {
     MaxCompletionTokens = 20,
     ReasoningEffort = ReasoningEffort.High,
-    Model = OuroModels.o4_mini,
+    Model = OuroModels.Gpt_5_4_mini,
 };
 
 var response = await client.ChatAsync(messages, options);

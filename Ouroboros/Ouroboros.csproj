@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>4.1.0</Version>
+		<Version>4.2.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,12 +21,12 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>4.1.0</PackageVersion>
+		<PackageVersion>4.2.0</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early and .NET 10 only; Docs and broader support to follow.
 		</Description>
 		<PackageReleaseNotes>
-			Extensive support for various kinds of tracking, including time but also tags, sessions, and threads. Added support for reasoning effort in default models.
+			Removed ancient models. Added the latest 5-series.
 		</PackageReleaseNotes>
 		<PackageTags>gpt llm openai chatgpt c#</PackageTags>
 		<Title>Ouroboros</Title>
@@ -42,10 +42,10 @@
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="" />
 		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.2.6" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-		<PackageReference Include="Polly" Version="8.6.5" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
+		<PackageReference Include="Polly" Version="8.6.6" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
-		<PackageReference Include="Scriban" Version="6.5.2" />
+		<PackageReference Include="Scriban" Version="7.0.0" />
 		<PackageReference Include="TypeMerger" Version="2.1.4" />
 	</ItemGroup>
 </Project>
