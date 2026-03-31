@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Betalgo.Ranul.OpenAI.Managers;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
@@ -89,13 +90,31 @@ internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreat
 
     /// <summary>
     /// Get the ResultObject, if any. Otherwise, null.
+    /// Handles reasoning models that concatenate reasoning output + structured JSON.
     /// </summary>
     private static object? ResultObject(Type responseType, string responseText)
     {
-        if(responseType == typeof(NoType)) 
+        if (responseType == typeof(NoType))
             return null;
-        
-        return Json.ParseJson(responseText, responseType);
+
+        try
+        {
+            return Json.ParseJson(responseText, responseType);
+        }
+        catch (JsonException)
+        {
+            // Reasoning models may return multiple JSON blocks separated by newlines.
+            // The structured output is typically the last block.
+            var lastIndex = responseText.LastIndexOf("\n{");
+            if (lastIndex >= 0)
+            {
+                var lastBlock = responseText[(lastIndex + 1)..];
+                try { return Json.ParseJson(lastBlock, responseType); }
+                catch { /* fall through */ }
+            }
+
+            return null;
+        }
     }
 
     public ChatRequestHandler(ILogger<ChatRequestHandler>? logger)
