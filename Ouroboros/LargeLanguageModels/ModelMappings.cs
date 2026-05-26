@@ -44,6 +44,8 @@ internal static class ModelMappings
                 return "gpt-5.4-mini";
             case OuroModels.Gpt_5_4_nano:
                 return "gpt-5.4-nano";
+            case OuroModels.Gpt_5_5:
+                return "gpt-5.5";
         }
 
         throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null);
