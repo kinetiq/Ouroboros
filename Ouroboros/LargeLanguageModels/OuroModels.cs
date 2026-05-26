@@ -5,14 +5,15 @@ namespace Ouroboros.LargeLanguageModels;
 public enum OuroModels
 {
 	[MaxTokens(4096,    4096)]			[Complete]				Gpt_3_5_Turbo_Instruct,
-	[MaxTokens(200000,  100000)]		[Chat]	[Reasoning]		Gpt_5,
-	[MaxTokens(200000,  100000)]		[Chat]	[Reasoning]		Gpt_5_1,
+	[MaxTokens(400000,  128000)]		[Chat]	[Reasoning]		Gpt_5,
+	[MaxTokens(400000,  128000)]		[Chat]	[Reasoning]		Gpt_5_1,
 	[MaxTokens(400000,  128000)]		[Chat]	[Reasoning]		Gpt_5_2,
-	[MaxTokens(200000,  100000)]		[Chat]	[Reasoning]		Gpt_5_mini,
-	[MaxTokens(200000,  100000)]		[Chat]	[Reasoning]		Gpt_5_nano,
+	[MaxTokens(400000,  128000)]		[Chat]	[Reasoning]		Gpt_5_mini,
+	[MaxTokens(400000,  128000)]		[Chat]	[Reasoning]		Gpt_5_nano,
 	[MaxTokens(1050000, 128000)]	    [Chat]	[Reasoning]		Gpt_5_4,
 	[MaxTokens(400000,  128000)]		[Chat]	[Reasoning]		Gpt_5_4_mini,
-	[MaxTokens(400000,  128000)]		[Chat]	[Reasoning]		Gpt_5_4_nano
+	[MaxTokens(400000,  128000)]		[Chat]	[Reasoning]		Gpt_5_4_nano,
+	[MaxTokens(1050000, 128000)]	    [Chat]	[Reasoning]		Gpt_5_5
 }
 
 class MaxTokensAttribute(int contextWindow, int maxOutput) : Attribute
