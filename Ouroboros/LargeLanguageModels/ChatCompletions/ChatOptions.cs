@@ -24,6 +24,12 @@ public class ChatOptions
     public ThreadTracker? Thread { get; set; }
 
     /// <summary>
+    /// Template variables that were used to render the prompt, if any. Flows through to
+    /// ChatCompletedArgs so the OnChatCompleted hook can persist inputs alongside the chat.
+    /// </summary>
+    public Dictionary<string, string>? Variables { get; set; }
+
+    /// <summary>
     ///     The suffix that comes after a completion of inserted text.
     /// </summary>
     public string? Suffix { get; set; }
