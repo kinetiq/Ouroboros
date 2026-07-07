@@ -18,5 +18,6 @@ public record ChatCompletedArgs(
     ReasoningEffort? ReasoningEffort,
     int DurationMs,
     List<EntityTag> ThreadTags,
-    List<EntityTag> SessionTags
+    List<EntityTag> SessionTags,
+    Dictionary<string, string>? Variables = null
 );
