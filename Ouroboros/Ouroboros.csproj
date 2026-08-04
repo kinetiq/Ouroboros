@@ -2,7 +2,15 @@
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>5.0.0</Version>
+
+		<!-- Split so the suffix can be cleared without editing this file:
+		       prerelease   dotnet pack
+		       stable       dotnet pack -p:VersionSuffix=
+		     Anything in VersionSuffix makes NuGet treat the package as prerelease.
+		     AssemblyVersion stays 5.0.0.0 across all of them, so moving beta.1 -> beta.2 -> 5.0.0
+		     does not churn assembly binding. -->
+		<VersionPrefix>5.0.0</VersionPrefix>
+		<VersionSuffix>beta.1</VersionSuffix>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,12 +29,11 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>5.0.0</PackageVersion>
 		<Description>
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, structured output, and text processing. .NET 10 only.
 		</Description>
 		<PackageReleaseNotes>
-			5.0.0 is a breaking release that removes the provider SDK from the public API. Chat messages are now Ouroboros' own OuroMessage/OuroRole instead of Betalgo's ChatMessage, and reasoning effort is OuroReasoningEffort. Adds IOuroClient as a mocking seam. Removes the legacy text-completions API (CompleteAsync, CompleteOptions, gpt-3.5-turbo-instruct), GetInnerClient, and the sampling parameters current reasoning models reject. TokenCount now requires a model and uses the correct encoding. See MIGRATION_4.4_to_5.0.md.
+			Prerelease. 5.0.0 is a breaking release that removes the provider SDK from the public API. Chat messages are now Ouroboros' own OuroMessage/OuroRole instead of Betalgo's ChatMessage, and reasoning effort is OuroReasoningEffort. Adds IOuroClient as a mocking seam. Removes the legacy text-completions API (CompleteAsync, CompleteOptions, gpt-3.5-turbo-instruct), GetInnerClient, and the sampling parameters current reasoning models reject. TokenCount now requires a model and uses the correct encoding. See MIGRATION_4.4_to_5.0.md.
 		</PackageReleaseNotes>
 		<PackageTags>gpt llm openai chatgpt c#</PackageTags>
 		<Title>Ouroboros</Title>
