@@ -1,4 +1,4 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+﻿using Ouroboros.Core;
 
 namespace Ouroboros.Chaining.Commands;
 
@@ -9,7 +9,7 @@ internal class AddAssistantMessage : IChatCommand
 {
     public string Text { get; set; }
 
-    public OuroMessage ToOuroMessage() => new(ChatMessage.FromAssistant(Text));
+    public OuroMessage ToOuroMessage() => OuroMessage.FromAssistant(Text);
 
     public AddAssistantMessage(string text)
     {

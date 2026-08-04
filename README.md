@@ -23,7 +23,7 @@ First, <a href="http://docs.nuget.org/docs/start-here/installing-nuget">install 
 
 # Limits and Possible Contributions
 Ouroboros is production-ready, but it does have limits. If you would like those limits to go away, get involved!
- - Only supports OpenAI API calls. We built this on top of Betalgo, so it should also be possible to support OpenAI on Azure.
- - Chaining only supports the Chat Completions API, meaning GPT 4.1, GPT 4o, etc.
+ - Only supports OpenAI API calls. The provider SDK is an internal detail as of 5.0, so adding other providers no longer means a breaking change.
+ - Only supports the Chat Completions API, and the GPT-5 model family. The legacy text-completions endpoint was removed in 5.0.
  - You can't modify our retry policy, although you _can_ turn it off.
- - We could use some help implementing Logging, support for other providers, and the new Responses API.
+ - We could use some help implementing Logging, support for other providers, and the Responses API.

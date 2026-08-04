@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Version>4.4.0</Version>
+		<Version>5.0.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,12 +21,12 @@
 		<RepositoryType>git</RepositoryType>
 		
 		<!-- Release -->
-		<PackageVersion>4.4.0</PackageVersion>
+		<PackageVersion>5.0.0</PackageVersion>
 		<Description>
-			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, and text processing. Still very early and .NET 10 only; Docs and broader support to follow.
+			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, structured output, and text processing. .NET 10 only.
 		</Description>
 		<PackageReleaseNotes>
-			Added ChatOptions.Variables, which flows through to ChatCompletedArgs so the OnChatCompleted hook can persist prompt template inputs.
+			5.0.0 is a breaking release that removes the provider SDK from the public API. Chat messages are now Ouroboros' own OuroMessage/OuroRole instead of Betalgo's ChatMessage, and reasoning effort is OuroReasoningEffort. Adds IOuroClient as a mocking seam. Removes the legacy text-completions API (CompleteAsync, CompleteOptions, gpt-3.5-turbo-instruct), GetInnerClient, and the sampling parameters current reasoning models reject. TokenCount now requires a model and uses the correct encoding. See MIGRATION_4.4_to_5.0.md.
 		</PackageReleaseNotes>
 		<PackageTags>gpt llm openai chatgpt c#</PackageTags>
 		<Title>Ouroboros</Title>
@@ -34,15 +34,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="LargeLanguageModels\OpenAI\**" />
-	  <EmbeddedResource Remove="LargeLanguageModels\OpenAI\**" />
-	  <None Remove="LargeLanguageModels\OpenAI\**" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="" />
 		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.2.6" />
+		<!-- Pinned to override the vulnerable 9.0.4 that Microsoft.ML.Tokenizers.Data.O200kBase
+		     pulls in transitively (GHSA-73j8-2gch-69rq). Safe to drop once that package ships
+		     against a patched version. -->
+		<PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+		<PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+		<PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
 		<PackageReference Include="Polly" Version="8.7.0" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
 		<PackageReference Include="Scriban" Version="7.2.5" />

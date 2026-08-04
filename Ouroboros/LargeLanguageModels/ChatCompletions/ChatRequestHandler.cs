@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Betalgo.Ranul.OpenAI.Managers;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Betalgo.Ranul.OpenAI.ObjectModels.ResponseModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Ouroboros.Core;
 using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.Resilience;
 using Ouroboros.Responses;
@@ -16,23 +16,24 @@ using Polly;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 
-internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreateResponse>
+internal class ChatRequestHandler
 {
     private readonly ILogger<ChatRequestHandler> Logger;
 
     /// <summary>
     /// Executes a call to OpenAI using the ChatGPT API.
     /// </summary>
-    public async Task<OuroResponseBase> CompleteAsync(List<ChatMessage> messages, OpenAIService api,
+    /// <remarks>
+    /// Virtual so tests can substitute a canned response and exercise OuroClient without a network
+    /// call. Nothing in the library overrides it.
+    /// </remarks>
+    public virtual async Task<OuroResponseBase> CompleteAsync(List<OuroMessage> messages, OpenAIService api,
         ChatOptions? options = null)
     {
         options ??= new ChatOptions();
 
-        // If a ResponseType is specified, we will use it to generate a schema for structured output.
-        if (options.ResponseType != typeof(NoType))
-            options.ResponseFormat = Json.GetSchema(options.ResponseType);
-
-        // Map our generic options to OpenAI options.
+        // Map our generic options to OpenAI options. The structured-output schema is built there
+        // from options.ResponseType.
         var request = ChatMappings.MapOptions(messages, options, Logger);
 
         var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
@@ -63,14 +64,32 @@ internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreat
     }
 
     /// <summary>
+    /// Unwraps the Polly result into an Ouroboros response.
+    /// </summary>
+    private OuroResponseBase HandleResponse(PolicyResult<ChatCompletionCreateResponse> policyResult, Type? responseType)
+    {
+        if (policyResult.Outcome == OutcomeType.Successful)
+        {
+            var response = policyResult.Result;
+
+            if (response == null)
+                return new OuroResponseInternalError("PolicyResult was successful, however the inner result was null. This should never happen.");
+
+            return HandlePolicySatisfied(response, responseType);
+        }
+
+        return HandlePolicyExhausted(policyResult);
+    }
+
+    /// <summary>
     /// Extracts details from a successful chat response.
     /// </summary>
-    protected override OuroResponseBase HandlePolicySatisfied(ChatCompletionCreateResponse response, Type responseType)
+    private static OuroResponseBase HandlePolicySatisfied(ChatCompletionCreateResponse response, Type? responseType)
     {
         // This happens when we hit an error that we don't want to bother retrying. Polly considers this
         // a success, but our OpenAI response will still show an error.
         if (!response.Successful)
-            return new OuroResponseOpenAiError(response.Error);
+            return new OuroResponseProviderError("OpenAI", response.Error?.Code, response.Error?.Message);
 
         var responseText = response.Choices
             .First()
@@ -89,12 +108,31 @@ internal class ChatRequestHandler : OpenAiRequestHandlerBase<ChatCompletionCreat
     }
 
     /// <summary>
+    /// Called when the retry policy gave up. Distinguishes a thrown exception from a
+    /// returned-but-unsuccessful response.
+    /// </summary>
+    private static OuroResponseFailure HandlePolicyExhausted(PolicyResult<ChatCompletionCreateResponse> policyResult)
+    {
+        return policyResult switch
+        {
+            { FaultType: FaultType.ExceptionHandledByThisPolicy } =>
+                new OuroResponseInternalError("Exception calling endpoint: " + policyResult.FinalException!.Message),
+            { FaultType: FaultType.ResultHandledByThisPolicy } =>
+                new OuroResponseProviderError(
+                    "OpenAI",
+                    policyResult.FinalHandledResult!.Error?.Code,
+                    policyResult.FinalHandledResult!.Error?.Message),
+            _ => throw new InvalidOperationException("Unhandled result type.")
+        };
+    }
+
+    /// <summary>
     /// Get the ResultObject, if any. Otherwise, null.
     /// Handles reasoning models that concatenate reasoning output + structured JSON.
     /// </summary>
-    private static object? ResultObject(Type responseType, string responseText)
+    private static object? ResultObject(Type? responseType, string responseText)
     {
-        if (responseType == typeof(NoType))
+        if (responseType is null)
             return null;
 
         try

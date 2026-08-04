@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Templates;
+using Ouroboros.Core;
 
 namespace Ouroboros.Chaining.Commands;
 
@@ -13,9 +13,7 @@ internal class AddUserTemplateMessage : IChatCommand
 
     public async Task<OuroMessage> ToOuroMessage()
     {
-        var message = await Template.AsUser();
-
-        return new OuroMessage(message);
+        return await Template.AsUser();
     }
 
     public AddUserTemplateMessage(TemplateBase template)

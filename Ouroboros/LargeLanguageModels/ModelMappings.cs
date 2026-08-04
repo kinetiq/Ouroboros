@@ -1,9 +1,4 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ouroboros.LargeLanguageModels;
 
@@ -16,18 +11,14 @@ internal static class ModelMappings
         return GetModelNameAsString(@this.Value);
     }
 
-
     /// <summary>
-    /// We need to convert our generic model to a string. Turn it into a Betalgo model and use that library's
-    /// capability.
+    /// Converts our generic model enum into the model name string the API expects.
     /// </summary>
     internal static string GetModelNameAsString(OuroModels ouroModel)
     {
         // Map supported Ouroboros models to API model names.
         switch (ouroModel)
         {
-            case OuroModels.Gpt_3_5_Turbo_Instruct:
-                return "gpt-3.5-turbo-instruct";
             case OuroModels.Gpt_5:
                 return "gpt-5";
             case OuroModels.Gpt_5_1:

@@ -1,21 +1,14 @@
-﻿using Ouroboros.LargeLanguageModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.Contracts.Enums;
+using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros;
-public class Constants
-{
-    public const OuroModels DefaultCompletionModel = OuroModels.Gpt_3_5_Turbo_Instruct;
-    public const OuroModels DefaultChatModel = OuroModels.Gpt_5_4_mini;
 
+public static class Constants
+{
+    public const OuroModels DefaultChatModel = OuroModels.Gpt_5_4_mini;
 
     /// <summary>
     /// Reasoning effort to use when running in default chat mode; this only takes effect
     /// when the default chat model is being used.
     /// </summary>
-    public static readonly ReasoningEffort? DefaultReasoningEffort = null;
+    public static readonly OuroReasoningEffort? DefaultReasoningEffort = null;
 }

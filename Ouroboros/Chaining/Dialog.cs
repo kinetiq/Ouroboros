@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.Contracts.Enums;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Chaining.Commands;
+using Ouroboros.Core;
 using Ouroboros.Enums;
 using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -21,8 +20,13 @@ namespace Ouroboros.Chaining;
 /// </summary>
 public class Dialog
 {
-    private readonly OuroClient Client;
+    private readonly IOuroClient Client;
     internal readonly List<OuroMessage> InnerMessages = new();
+
+    /// <summary>
+    /// The conversation so far, in order. Read-only: use the message builder methods to add.
+    /// </summary>
+    public IReadOnlyList<OuroMessage> Messages => InnerMessages;
 
     /// <summary>
     /// Variable storage for named outputs. Use StoreOutputAs() to store and access via Variables["name"].
@@ -102,8 +106,7 @@ public class Dialog
     /// </summary>
     private async Task<OuroResponseBase> SendMessages()
     {
-        var messages = InnerMessages.Select(x => x.Message)
-            .ToList();
+        var messages = InnerMessages.ToList();
 
         // Ensure tracking info is passed to ChatAsync
         var options = DefaultOptions ?? new ChatOptions();
@@ -138,7 +141,7 @@ public class Dialog
 
         foreach (var message in InnerMessages)
         {
-            builder.AppendLine($"**{message.Role.ToTitleCase()} Message**");
+            builder.AppendLine($"**{message.Role} Message**");
             builder.AppendLine(message.Content);
             builder.AppendLine("---");
         }
@@ -156,18 +159,18 @@ public class Dialog
         return LastResponse;
     }
 
-    public Dialog(OuroClient client)
+    public Dialog(IOuroClient client)
     {
         Client = client;
         Thread = Tracker.CreateThread();
     }
 
-    public Dialog(OuroClient client, string promptName) : this(client)
+    public Dialog(IOuroClient client, string promptName) : this(client)
     {
         PromptName = promptName;
     }
 
-    public Dialog(OuroClient client, DialogOptions options) : this(client)
+    public Dialog(IOuroClient client, DialogOptions options) : this(client)
     {
         PromptName = options.PromptName;
         Session = options.Session;
@@ -192,13 +195,10 @@ public class Dialog
     /// Sets the system prompt. There can only be a single system prompt,
     /// so if you run this twice, it will replace the first one.
     /// </summary>
-    public Dialog SystemMessage(ChatMessage message)
+    public Dialog SystemMessage(OuroMessage message)
     {
-        if (message.Role != ChatCompletionRole.System)
+        if (message.Role != OuroRole.System)
             throw new InvalidOperationException("Message must be a system message.");
-
-        if (message.Content == null)
-            throw new InvalidOperationException("Message content cannot be null.");
 
         Commands.Add(new SetSystemMessage(message.Content));
 
@@ -229,13 +229,10 @@ public class Dialog
     /// <summary>
     /// Adds an assistant message as the next message.
     /// </summary>
-    public Dialog AssistantMessage(ChatMessage message)
+    public Dialog AssistantMessage(OuroMessage message)
     {
-        if (message.Role != ChatCompletionRole.Assistant)
+        if (message.Role != OuroRole.Assistant)
             throw new InvalidOperationException("Message must be an assistant message.");
-
-        if (message.Content == null)
-            throw new InvalidOperationException("Message content cannot be null.");
 
         Commands.Add(new AddAssistantMessage(message.Content));
 
@@ -265,13 +262,10 @@ public class Dialog
     /// <summary>
     /// Adds a user message as the next message.
     /// </summary>
-    public Dialog UserMessage(ChatMessage message)
+    public Dialog UserMessage(OuroMessage message)
     {
-        if (message.Role != ChatCompletionRole.User)
+        if (message.Role != OuroRole.User)
             throw new InvalidOperationException("Message must be a user message.");
-
-        if (message.Content == null)
-            throw new InvalidOperationException("Message content cannot be null.");
 
         Commands.Add(new AddUserMessage(message.Content));
 
@@ -585,7 +579,7 @@ public class Dialog
         IsAllMessagesSent = false;
 
         // Remove any existing system message and drop this at position 0.
-        if (InnerMessages.Any() && InnerMessages[0].Role == ChatCompletionRole.System)
+        if (InnerMessages.Any() && InnerMessages[0].Role == OuroRole.System)
             InnerMessages.RemoveAt(0);
 
         InnerMessages.Insert(0, systemMessage.ToOuroMessage());
@@ -596,7 +590,7 @@ public class Dialog
         IsAllMessagesSent = false;
 
         // Remove any existing system message and drop this at position 0.
-        if (InnerMessages.Any() && InnerMessages[0].Role == ChatCompletionRole.System)
+        if (InnerMessages.Any() && InnerMessages[0].Role == OuroRole.System)
             InnerMessages.RemoveAt(0);
 
         InnerMessages.Insert(0, await template.ToOuroMessage());
@@ -609,8 +603,7 @@ public class Dialog
 
         if (response.Success)
         {
-            var message = ChatMessage.FromAssistant(response.ResponseText);
-            InnerMessages.Add(new OuroMessage(message));
+            InnerMessages.Add(OuroMessage.FromAssistant(response.ResponseText));
         }
 
         return response;

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Templates;
+using Ouroboros.Core;
 
 namespace Ouroboros.Chaining.Commands;
 
@@ -17,9 +17,7 @@ internal class SetSystemTemplateMessage : IChatCommand
 
     public async Task<OuroMessage> ToOuroMessage()
     {
-        var message = await Template.AsSystem();
-
-        return new OuroMessage(message);
+        return await Template.AsSystem();
     }
 
     public SetSystemTemplateMessage(TemplateBase template)
