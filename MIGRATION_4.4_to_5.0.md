@@ -7,6 +7,9 @@ release: it means adding other providers later won't be another breaking change.
 ## Prerequisites
 
 - **.NET 10** — unchanged from 4.4.0.
+- **5.0 ships as a prerelease first** (`5.0.0-beta.1`). Reference it explicitly —
+  `<PackageReference Include="OuroborosAI.Core" Version="5.0.0-beta.1" />` — and note that a
+  floating `5.*` will **not** resolve prereleases; you need `5.*-*` if you want to float.
 - Dependency changes:
   - `Microsoft.ML.Tokenizers` → **2.0.0** (new)
   - `Microsoft.ML.Tokenizers.Data.O200kBase` → **2.0.0** (new)
