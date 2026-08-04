@@ -1,5 +1,6 @@
-﻿using System.Linq;
+using System.Linq;
 using Ouroboros.Chaining;
+using Ouroboros.Core;
 using Ouroboros.Enums;
 
 namespace Ouroboros.Extensions;
@@ -14,7 +15,7 @@ public static class DialogExtensions
             .Content;
     }
 
-    public static string GetLast(this Dialog @this, string role)
+    public static string GetLast(this Dialog @this, OuroRole role)
     {
         return @this
             .InnerMessages

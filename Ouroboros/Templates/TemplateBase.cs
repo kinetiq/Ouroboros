@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Dynamic;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Ouroboros.Core;
 using Ouroboros.Templates.Engine;
 
@@ -39,31 +38,31 @@ public abstract class TemplateBase
     /// Generates as a message, inferring the role from the template name. Override to hard-code the role.
     /// </summary>
     /// <exception cref="InvalidOperationException">Throws if role cannot be determined.</exception>
-    public virtual async Task<ChatMessage> AsMessage()
+    public virtual async Task<OuroMessage> AsMessage()
     {
         var role = GetMessageRole();
 
         return role switch
         {
-            MessageRoles.System => await AsSystem(),
-            MessageRoles.User => await AsUser(),
-            MessageRoles.Assistant => await AsAssistant(),
+            OuroRole.System => await AsSystem(),
+            OuroRole.User => await AsUser(),
+            OuroRole.Assistant => await AsAssistant(),
             _ => throw new InvalidOperationException("Unexpected role: " + role)
         };
     }
 
-    protected virtual MessageRoles GetMessageRole()
+    protected virtual OuroRole GetMessageRole()
     {
         var fileName = FileName.ToLower();
 
         if (fileName.Contains("system", StringComparison.InvariantCultureIgnoreCase))
-            return MessageRoles.System;
+            return OuroRole.System;
 
         if (fileName.Contains("user", StringComparison.InvariantCultureIgnoreCase))
-            return MessageRoles.User;
+            return OuroRole.User;
 
         if (fileName.Contains("assistant", StringComparison.InvariantCultureIgnoreCase))
-            return MessageRoles.Assistant;
+            return OuroRole.Assistant;
 
         throw new InvalidOperationException($"Could not infer message role from filename: {FileName}. It must contain the words System, User, or Assistant." + 
                                             "You can also override GetMessageRole to configure the role, or call .AsSystem, .AsUser, etc.");
@@ -72,31 +71,31 @@ public abstract class TemplateBase
     /// <summary>
     /// Generates as a System message.
     /// </summary>
-    public virtual async Task<ChatMessage> AsSystem()
+    public virtual async Task<OuroMessage> AsSystem()
     {
         var text = await RenderAsync();
 
-        return ChatMessage.FromSystem(text);
+        return OuroMessage.FromSystem(text);
     }
 
     /// <summary>
     /// Generates as a User message.
     /// </summary>
-    public virtual async Task<ChatMessage> AsUser()
+    public virtual async Task<OuroMessage> AsUser()
     {
         var text = await RenderAsync();
 
-        return ChatMessage.FromUser(text);
+        return OuroMessage.FromUser(text);
     }
 
     /// <summary>
     /// Generates as an Assistant message.
     /// </summary>
-    public virtual async Task<ChatMessage> AsAssistant()
+    public virtual async Task<OuroMessage> AsAssistant()
     {
         var text = await RenderAsync();
 
-        return ChatMessage.FromAssistant(text);
+        return OuroMessage.FromAssistant(text);
     }
     #endregion
 

@@ -1,12 +1,19 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels;
+using Betalgo.Ranul.OpenAI.ObjectModels;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using System;
 
-
 namespace Ouroboros.StructuredOutput;
-public class Json
+
+/// <summary>
+/// Schema generation and JSON parsing for structured outputs.
+/// </summary>
+/// <remarks>
+/// Internal on purpose: GetSchema returns provider types, and keeping this out of the public
+/// surface is what lets us swap the provider SDK without a breaking change.
+/// </remarks>
+internal static class Json
 {
-    public static ResponseFormat GetSchema(Type type)
+    internal static ResponseFormat GetSchema(Type type)
     {
         if (type is null) throw new ArgumentNullException(nameof(type));
 
@@ -22,21 +29,10 @@ public class Json
         };
     }
 
-    // existing generic helper stays for convenience
-    public static ResponseFormat GetSchema<T>() where T : class => GetSchema(typeof(T));
-
     /// <summary>
-    /// Returns Only returns null if the string is the literal null.
+    /// Only returns null if the string is the literal null.
     /// </summary>
-    public static T? ParseJson<T>(string json) where T : class
-    {
-        return System.Text.Json.JsonSerializer.Deserialize<T>(json);
-    }
-
-    /// <summary>
-    /// Returns Only returns null if the string is the literal null.
-    /// </summary>
-    public static object? ParseJson(string json, Type type)
+    internal static object? ParseJson(string json, Type type)
     {
         return System.Text.Json.JsonSerializer.Deserialize(json, type);
     }

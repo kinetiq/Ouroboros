@@ -1,8 +1,10 @@
-﻿using Betalgo.Ranul.OpenAI.Contracts.Enums;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+﻿using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Extensions;
+using Ouroboros.Core;
+using Ouroboros.StructuredOutput;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
 
@@ -11,7 +13,7 @@ internal class ChatMappings
     /// <summary>
     /// Maps our generic options to OpenAI options.
     /// </summary>
-    internal static ChatCompletionCreateRequest MapOptions(List<ChatMessage> messages, ChatOptions options, ILogger? logger = null)
+    internal static ChatCompletionCreateRequest MapOptions(List<OuroMessage> messages, ChatOptions options, ILogger? logger = null)
     {
         var reasoningEffort = options.ReasoningEffort;
 
@@ -19,7 +21,7 @@ internal class ChatMappings
         if (reasoningEffort == null && options.Model.HasValue && options.Model.Value.IsReasoningModel())
         {
             logger?.LogWarning("ReasoningEffort was not set for {Model}. Setting to Medium.", options.Model.Value);
-            reasoningEffort = ReasoningEffort.Medium;
+            reasoningEffort = OuroReasoningEffort.Medium;
         }
 
         // Ignore ReasoningEffort for non-reasoning models.
@@ -31,19 +33,15 @@ internal class ChatMappings
 
         return new ChatCompletionCreateRequest
         {
-            Messages = messages,
-            Temperature = options.Temperature,
-            TopP = options.TopP,
-            FrequencyPenalty = options.FrequencyPenalty,
-            PresencePenalty = options.PresencePenalty,
+            Messages = messages.Select(x => x.ToBetalgo()).ToList(),
             MaxCompletionTokens = options.MaxCompletionTokens,
-            LogitBias = options.LogitBias,
             N = 1,
-            Stop = options.Stop,
-            StopAsList = options.StopAsList,
+            StopAsList = options.StopSequences,
             User = options.User ?? string.Empty,
-            ResponseFormat = options.ResponseFormat,
-            ReasoningEffort = reasoningEffort,
+            // Built here rather than on the caller's ChatOptions, so reusing one options
+            // instance across calls with different ResponseTypes can't leave a stale schema.
+            ResponseFormat = options.ResponseType is not null ? Json.GetSchema(options.ResponseType) : null,
+            ReasoningEffort = reasoningEffort.ToBetalgo(),
             Model = options.Model.GetModelNameAsString(Constants.DefaultChatModel)
         };
     }

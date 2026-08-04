@@ -39,26 +39,6 @@ internal static class Extensions
     }
 
     /// <summary>
-    /// Syntactic sugar for converting to title case.
-    /// </summary>
-    public static string ToTitleCase(this string @this)
-    {
-        return new CultureInfo("en-US")
-            .TextInfo
-            .ToTitleCase(@this);
-    }
-
-    /// <summary>
-    /// Syntactic sugar for converting to title case.
-    /// </summary>
-    public static string ToTitleCase(this string @this, CultureInfo cultureInfo)
-    {
-        return cultureInfo
-            .TextInfo
-            .ToTitleCase(@this);
-    }
-
-    /// <summary>
     /// Syntactic sugar for checking if a string is null or empty.
     /// </summary>
     public static bool IsNullOrEmpty(this string @this)

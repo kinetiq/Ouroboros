@@ -1,6 +1,6 @@
 ﻿namespace Ouroboros.Chaining.Commands;
 
-public interface IChatCommand
+internal interface IChatCommand
 {
 
 }

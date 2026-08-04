@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+using Ouroboros.Core;
 
 namespace Ouroboros.Chaining.Commands;
 
@@ -14,7 +14,7 @@ internal class SetSystemMessage : IChatCommand
 {
     public string Text { get; set; }
 
-    public OuroMessage ToOuroMessage() => new(ChatMessage.FromSystem(Text));
+    public OuroMessage ToOuroMessage() => OuroMessage.FromSystem(Text);
 
     public SetSystemMessage(string text)
     {

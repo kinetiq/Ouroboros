@@ -1,10 +1,8 @@
-﻿using Betalgo.Ranul.OpenAI.ObjectModels.ResponseModels;
-
-namespace Ouroboros.Responses;
+﻿namespace Ouroboros.Responses;
 
 /// <summary>
 /// Generic failure response. This is often extended to make it easier to work with. See OuroResponseInternalError and
-/// OuroResponseOpenAiError for examples.
+/// OuroResponseProviderError for examples.
 /// </summary>
 public class OuroResponseFailure : OuroResponseBase
 {
@@ -50,14 +48,19 @@ public class OuroResponseInternalError : OuroResponseFailure
 }
 
 /// <summary>
-/// Indicates an error occurred within OpenAI.
+/// Indicates the model provider returned an error.
 /// </summary>
-public class OuroResponseOpenAiError : OuroResponseFailure
+/// <remarks>
+/// The constructor is internal: consumers only ever receive this type and pattern-match on it,
+/// they never construct one. That keeps us free to reshape it as providers are added.
+/// </remarks>
+public class OuroResponseProviderError : OuroResponseFailure
 {
-    public OuroResponseOpenAiError(Error? error) : base($"Error Calling OpenAI")
+    internal OuroResponseProviderError(string origin, string? code, string? message)
+        : base($"Error calling {origin}")
     {
-        ErrorOrigin = "OpenAI";
-        ErrorDetails = error?.Message ?? "Unknown Error";
-        ErrorCode = error?.Code ?? "";
+        ErrorOrigin = origin;
+        ErrorDetails = message ?? "Unknown Error";
+        ErrorCode = code ?? "";
     }
 }

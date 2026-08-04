@@ -1,11 +1,9 @@
 using Betalgo.Ranul.OpenAI;
 using Betalgo.Ranul.OpenAI.Managers;
-using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
-using Betalgo.Ranul.OpenAI.Tokenizer.GPT3;
 using Ouroboros.Chaining;
+using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
-using Ouroboros.LargeLanguageModels.Completions;
 using Ouroboros.Responses;
 using Ouroboros.Tracking;
 using System;
@@ -14,31 +12,23 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.Contracts.Enums;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
 namespace Ouroboros;
 
-public class OuroClient 
+public class OuroClient : IOuroClient
 {
     private readonly string ApiKey;
-    private readonly CompletionRequestHandler CompletionHandler;
     private readonly ChatRequestHandler ChatHandler;
 
-    private OuroModels DefaultCompletionModel = Constants.DefaultCompletionModel;
     private OuroModels DefaultChatModel = Constants.DefaultChatModel;
 
     /// <summary>
     /// Note that this only gets applied if DefaultChatModel is used. These defaults
     /// are intended to be a set; wouldn't want to overwrite an intentionally null reasoning effort.
     /// </summary>
-    private ReasoningEffort? DefaultReasoningEffort = Constants.DefaultReasoningEffort;
-
-    /// <summary>
-    /// For gaining direct access to a Betalgo client, without going through the OuroClient.
-    /// </summary>
-    public OpenAIService GetInnerClient => GetClient();
+    private OuroReasoningEffort? DefaultReasoningEffort = Constants.DefaultReasoningEffort;
 
     /// <summary>
     /// Event fired after every ChatAsync call completes. Use for centralized logging.
@@ -59,43 +49,23 @@ public class OuroClient
     {
         return new Dialog(this, options);
     }
-    
-    /// <summary>
-    /// Coverts text into tokens. Uses GPT3Tokenizer.
-    /// </summary>
-    public static List<int> Tokenize(string text)
-    {
-        var tokens = TokenizerGpt3.Encode(text, cleanUpCREOL: true); // cleanup improves accuracy
-
-        return tokens.ToList();
-    }
 
     /// <summary>
-    /// Gets the number of tokens the given text would take up. Uses GPT3Tokenizer.
+    /// Gets the number of tokens the given text would take up for the given model.
     /// </summary>
-    public static int TokenCount(string text)
+    /// <remarks>
+    /// The model matters: different families tokenize the same text differently, so a count
+    /// taken against the wrong model is simply wrong.
+    /// </remarks>
+    public static int TokenCount(string text, OuroModels model)
     {
-        var tokens = Tokenize(text);
-
-        return tokens.Count;
-    }
-
-    /// <summary>
-    /// Handles a text completion request.
-    /// </summary>
-    public async Task<OuroResponseBase> CompleteAsync(string prompt, CompleteOptions? options = null)
-    {
-        options ??= new CompleteOptions();
-        options.Model ??= DefaultCompletionModel;
-        var api = GetClient();
-
-        return await CompletionHandler.CompleteAsync(prompt, api, options);
+        return Tokenization.CountTokens(text, model);
     }
 
     /// <summary>
     /// Handles a chat completion request.
     /// </summary>
-    public async Task<OuroResponseBase> ChatAsync(List<ChatMessage> messages, ChatOptions? options = null)
+    public async Task<OuroResponseBase> ChatAsync(List<OuroMessage> messages, ChatOptions? options = null)
     {
         options ??= new ChatOptions();
 
@@ -123,6 +93,7 @@ public class OuroClient
                 options.Thread?.ThreadId,
                 messages,
                 response,
+                options.Model!.Value, // always resolved above
                 options.ReasoningEffort,
                 durationMs,
                 options.Thread?.Tags ?? [],
@@ -137,37 +108,13 @@ public class OuroClient
     }
 
     /// <summary>
-    /// Configures a default model that will be used for all completions initiated from this client,
-    /// unless overriden by passing in a model via CompleteOptions.
+    /// Configures a default model that will be used for all chats initiated from this client,
+    /// unless overridden by passing in a model via ChatOptions.
     /// </summary>
-    public void SetDefaultCompletionModel(OuroModels model)
-    {
-        DefaultCompletionModel = model;
-    }
-
-    /// <summary>
-    /// Configures a default model that will be used for all completions initiated from this client,
-    /// unless overriden by passing in a model via CompleteOptions.
-    /// </summary>
-    public void SetDefaultChatModel(OuroModels model, ReasoningEffort? reasoningEffort)
+    public void SetDefaultChatModel(OuroModels model, OuroReasoningEffort? reasoningEffort = null)
     {
         DefaultChatModel = model;
-    }
-
-    private CompleteOptions ConfigureOptions(CompleteOptions? options)
-    {
-        options ??= new CompleteOptions();
-        options.Model ??= DefaultCompletionModel;
-
-        return options;
-    }
-
-    private ChatOptions ConfigureOptions(ChatOptions? options)
-    {
-        options ??= new ChatOptions();
-        options.Model ??= DefaultChatModel;
-
-        return options;
+        DefaultReasoningEffort = reasoningEffort;
     }
 
     internal OpenAIService GetClient()
@@ -180,15 +127,13 @@ public class OuroClient
 
     public OuroClient(string apiKey)
     {
-        CompletionHandler = new CompletionRequestHandler(null);
         ChatHandler = new ChatRequestHandler(null);
         ApiKey = apiKey;
     }
 
-    internal OuroClient(string apiKey, CompletionRequestHandler completionHandler, ChatRequestHandler chatHandler)
+    internal OuroClient(string apiKey, ChatRequestHandler chatHandler)
     {
         ApiKey = apiKey;
-        CompletionHandler = completionHandler;
         ChatHandler = chatHandler;
     }
 }

@@ -23,15 +23,6 @@ public static class GetMaxTokensExtensions
         return attribute.MaxOutput;
     }
 
-    /// <summary>
-    /// Legacy method - returns context window for backward compatibility.
-    /// </summary>
-    [Obsolete("Use GetContextWindow() or GetMaxOutputTokens() instead.")]
-    public static int GetMaxTokens(this OuroModels model)
-    {
-        return GetContextWindow(model);
-    }
-
     private static MaxTokensAttribute GetMaxTokensAttribute(OuroModels model)
     {
         var field = model
