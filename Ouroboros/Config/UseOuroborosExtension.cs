@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 
 namespace Ouroboros.Config;
@@ -26,7 +27,11 @@ public static class UseOuroborosExtension
         {
             var chat = serviceProvider.GetService<ChatRequestHandler>();
 
-            var client = new OuroClient(apiKey, chat!);
+            // GetService, not GetRequiredService: a host without logging configured should still
+            // get a working client. HookFailurePolicy.Log then falls back to NullLogger.
+            var logger = serviceProvider.GetService<ILogger<OuroClient>>();
+
+            var client = new OuroClient(apiKey, chat!, logger);
 
             configure?.Invoke(client, serviceProvider);
 

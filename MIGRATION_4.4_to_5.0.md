@@ -7,8 +7,8 @@ release: it means adding other providers later won't be another breaking change.
 ## Prerequisites
 
 - **.NET 10** — unchanged from 4.4.0.
-- **5.0 ships as a prerelease first** (`5.0.0-beta.1`). Reference it explicitly —
-  `<PackageReference Include="OuroborosAI.Core" Version="5.0.0-beta.1" />` — and note that a
+- **5.0 ships as a prerelease first** (currently `5.0.0-beta.2`). Reference it explicitly —
+  `<PackageReference Include="OuroborosAI.Core" Version="5.0.0-beta.2" />` — and note that a
   floating `5.*` will **not** resolve prereleases; you need `5.*-*` if you want to float.
 - Dependency changes:
   - `Microsoft.ML.Tokenizers` → **2.0.0** (new)
@@ -265,7 +265,47 @@ client.SetDefaultChatModel(OuroModels.Gpt_5_4, OuroReasoningEffort.High);       
 
 If you were passing an effort and wondering why nothing changed, this is why.
 
-### 4. Reusing a `ChatOptions` no longer leaks schema state
+### 4. A failing `OnChatCompleted` hook no longer fails the chat
+
+*(Added in `5.0.0-beta.2`.)*
+
+The hook is awaited inline inside `ChatAsync`, so previously anything it threw propagated to the
+caller — a logging bug surfaced as a failed AI call. Every consumer had to wrap their own handler
+to defend against Ouroboros' internal sequencing, and forgetting once produced an outage.
+
+Ouroboros now catches it and applies `OnChatCompletedFailure`, which takes one of four policies:
+
+| Policy | Effect |
+|---|---|
+| `HookFailurePolicy.Log` | **Default.** Writes to the client's `ILogger`, chat succeeds |
+| `HookFailurePolicy.Throw` | Rethrows, failing the chat — the pre-5.0 behaviour |
+| `HookFailurePolicy.Ignore` | Discards it |
+| `HookFailurePolicy.Handle(h)` | Calls your handler, chat succeeds |
+
+`Log` is the default because a hook failure is usually systemic — a bad migration, a DI
+misconfiguration — so `Throw` takes down every call at once rather than one. Losing a log row is
+almost always the cheaper failure. Pick `Throw` only when the hook does something the caller
+genuinely depends on, like persisting the conversation or enforcing a spend cap.
+
+`Handle` is for routing errors somewhere other than `ILogger`:
+
+```csharp
+client.OnChatCompleted = args => sp.GetRequiredService<ChatLogger>().LogFromHook(args);
+client.OnChatCompletedFailure = HookFailurePolicy.Handle(ex => tracker.TrackException(ex));
+```
+
+There is a second overload taking `Action<Exception, ChatCompletedArgs>`, which also hands you the
+args the failed hook was given so the report can name the prompt, session and model rather than
+just saying logging failed. If your handler throws, that is logged and discarded — there is
+nowhere left to report to.
+
+If you already wrap your handler in a try/catch, it is now redundant and can go.
+
+**One caveat on the default:** `Log` is only as visible as your logging setup. `AddOuroboros`
+resolves `ILogger<OuroClient>` with `GetService`, so a host with no logging configured falls back
+to `NullLogger` and the policy degrades to `Ignore`. Use `Handle` if you need certainty.
+
+### 5. Reusing a `ChatOptions` no longer leaks schema state
 
 The structured-output schema used to be written back onto the `ChatOptions` you passed in, so
 reusing one instance across calls with different `ResponseType`s could send a stale schema. The
@@ -289,5 +329,6 @@ schema is now built at request-mapping time and your options object is left alon
 - [ ] Replace `Json.GetSchema` / `Json.ParseJson` calls (use `ChatOptions.ResponseType` and `System.Text.Json`)
 - [ ] Change `GetLast(string)` calls to `GetLast(OuroRole)`
 - [ ] Drop any remaining `using Betalgo.Ranul.OpenAI.*` from your code
+- [ ] Pick an `OnChatCompletedFailure` policy, and drop any try/catch you wrapped your `OnChatCompleted` handler in
 - [ ] Consider depending on `IOuroClient` and deleting any hand-rolled test seams
 - [ ] Re-baseline stored token counts if you persist them

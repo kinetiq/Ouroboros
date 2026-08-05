@@ -17,9 +17,16 @@ namespace Ouroboros;
 public interface IOuroClient
 {
     /// <summary>
-    /// Fired after every ChatAsync call completes. Use for centralized logging.
+    /// Fired after every ChatAsync call completes. Use for centralized logging. Exceptions thrown
+    /// here do not fail the chat by default - see OnChatCompletedFailure.
     /// </summary>
     Func<ChatCompletedArgs, Task>? OnChatCompleted { get; set; }
+
+    /// <summary>
+    /// What to do when OnChatCompleted throws: HookFailurePolicy.Log (the default), .Throw,
+    /// .Ignore, or .Handle(yourHandler).
+    /// </summary>
+    HookFailurePolicy OnChatCompletedFailure { get; set; }
 
     Dialog CreateDialog();
 

@@ -1,5 +1,7 @@
 using Betalgo.Ranul.OpenAI;
 using Betalgo.Ranul.OpenAI.Managers;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Chaining;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
@@ -22,6 +24,12 @@ public class OuroClient : IOuroClient
     private readonly string ApiKey;
     private readonly ChatRequestHandler ChatHandler;
 
+    /// <summary>
+    /// Where HookFailurePolicy.Log sends hook failures. Falls back to NullLogger, which is why
+    /// that policy is only as visible as the consumer's logging setup.
+    /// </summary>
+    private readonly ILogger<OuroClient> Logger;
+
     private OuroModels DefaultChatModel = Constants.DefaultChatModel;
 
     /// <summary>
@@ -33,7 +41,16 @@ public class OuroClient : IOuroClient
     /// <summary>
     /// Event fired after every ChatAsync call completes. Use for centralized logging.
     /// </summary>
+    /// <remarks>
+    /// Exceptions thrown here do not fail the chat by default - see OnChatCompletedFailure.
+    /// </remarks>
     public Func<ChatCompletedArgs, Task>? OnChatCompleted { get; set; }
+
+    /// <summary>
+    /// What to do when OnChatCompleted throws: HookFailurePolicy.Log (the default), .Throw,
+    /// .Ignore, or .Handle(yourHandler).
+    /// </summary>
+    public HookFailurePolicy OnChatCompletedFailure { get; set; } = HookFailurePolicy.Log;
 
     public Dialog CreateDialog()
     {
@@ -101,10 +118,69 @@ public class OuroClient : IOuroClient
                 options.Variables
             );
 
-            await OnChatCompleted(args);
+            try
+            {
+                await OnChatCompleted(args);
+            }
+            catch (Exception ex)
+            {
+                // Rethrow from inside the catch rather than from the helper, so the original
+                // stack trace survives.
+                if (ReportHookFailure(ex, args))
+                    throw;
+            }
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Applies OnChatCompletedFailure to a hook that threw. Returns true if the exception should
+    /// propagate out of ChatAsync.
+    /// </summary>
+    private bool ReportHookFailure(Exception ex, ChatCompletedArgs args)
+    {
+        // Defensive: the property is non-nullable, but nothing stops a caller assigning null
+        // through a null-oblivious context, and losing the response over that would be absurd.
+        var policy = OnChatCompletedFailure ?? HookFailurePolicy.Log;
+
+        switch (policy.Behavior)
+        {
+            case HookFailureBehavior.Throw:
+                return true;
+
+            case HookFailureBehavior.Ignore:
+                return false;
+
+            case HookFailureBehavior.Handle:
+                try
+                {
+                    policy.Handler!(ex, args);
+                }
+                catch (Exception handlerEx)
+                {
+                    // The handler is the last line of reporting. Letting it escape would defeat
+                    // the guard, so fall back to the logger and give up after that.
+                    LogHookFailure(handlerEx, args, "Its OnChatCompletedFailure handler then threw as well.");
+                }
+
+                return false;
+
+            default:
+                LogHookFailure(ex, args, "");
+                return false;
+        }
+    }
+
+    private void LogHookFailure(Exception ex, ChatCompletedArgs args, string extra)
+    {
+        Logger.LogError(
+            ex,
+            "The OnChatCompleted hook threw for prompt {PromptName} on model {Model}. The chat itself " +
+            "succeeded and its response was returned to the caller. {Extra}",
+            args.PromptName ?? "(unnamed)",
+            args.Model,
+            extra);
     }
 
     /// <summary>
@@ -125,15 +201,17 @@ public class OuroClient : IOuroClient
         });
     }
 
-    public OuroClient(string apiKey)
+    public OuroClient(string apiKey, ILogger<OuroClient>? logger = null)
     {
         ChatHandler = new ChatRequestHandler(null);
         ApiKey = apiKey;
+        Logger = logger ?? NullLogger<OuroClient>.Instance;
     }
 
-    internal OuroClient(string apiKey, ChatRequestHandler chatHandler)
+    internal OuroClient(string apiKey, ChatRequestHandler chatHandler, ILogger<OuroClient>? logger = null)
     {
         ApiKey = apiKey;
         ChatHandler = chatHandler;
+        Logger = logger ?? NullLogger<OuroClient>.Instance;
     }
 }
