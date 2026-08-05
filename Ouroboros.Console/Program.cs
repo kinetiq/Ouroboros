@@ -1,4 +1,5 @@
 using Ouroboros;
+using Ouroboros.Config;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -7,7 +8,76 @@ using Spectre.Console;
 
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new OuroClient("[secret]");
+// Keys come from the environment rather than being pasted here - this file is committed, and a
+// key in it would be too. Set whichever you want to exercise:
+//   setx OPENAI_API_KEY    "..."
+//   setx ANTHROPIC_API_KEY "..."
+// setx only affects new processes, so open a fresh terminal afterwards.
+var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+var anthropicKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+
+var client = new OuroClient(new OuroborosOptions
+{
+    OpenAiApiKey = openAiKey,
+    AnthropicApiKey = anthropicKey
+});
+
+// --- Claude + provider-side code execution -------------------------------
+// Claude writes Python, Anthropic runs it, and the output comes back as its own block rather
+// than as prose the model claims it produced. Edit the prompt and re-run to poke at it.
+
+if (!string.IsNullOrWhiteSpace(anthropicKey))
+{
+    AnsiConsole.MarkupLine("\n[yellow]-- code execution --[/]");
+
+    var codeResponse = await client.ChatAsync(
+        [OuroMessage.FromUser(
+            "Using the code execution tool, generate 20 random integers between 1 and 100 with a "
+            + "fixed seed, then print their mean, median and standard deviation.")],
+        new ChatOptions
+        {
+            Model = OuroModels.Claude_Opus_5,
+            ServerTools = OuroServerTools.CodeExecution,
+            MaxCompletionTokens = 8192,
+
+            // Server-side execution runs well past a conventional HTTP default.
+            Timeout = TimeSpan.FromMinutes(5)
+        });
+
+    if (codeResponse is OuroResponseSuccess codeSuccess)
+    {
+        // Model output goes through Markup.Escape - it is arbitrary text, and Spectre reads square
+        // brackets as markup tags. A printed list like [82, 14] otherwise crashes the renderer.
+        foreach (var execution in codeSuccess.CodeExecutions)
+        {
+            AnsiConsole.MarkupLine($"[grey]code:[/]\n{Markup.Escape(execution.Code ?? "")}");
+            AnsiConsole.MarkupLine($"[grey]exit:[/] {execution.Result?.ExitCode}");
+            AnsiConsole.MarkupLine($"[grey]stdout:[/]\n{Markup.Escape(execution.Result?.Stdout ?? "")}");
+
+            if (!string.IsNullOrWhiteSpace(execution.Result?.Stderr))
+                AnsiConsole.MarkupLine($"[red]stderr:[/]\n{Markup.Escape(execution.Result.Stderr)}");
+        }
+
+        // Note what is NOT in here: stdout stays in its block, so this is only the model's prose.
+        AnsiConsole.MarkupLine($"[grey]text:[/]\n{Markup.Escape(codeSuccess.ResponseText)}");
+        AnsiConsole.MarkupLine(
+            $"[grey]stop:[/] {codeSuccess.StopReason} | complete: {codeSuccess.IsComplete} | " +
+            $"tokens: {codeSuccess.PromptTokens} in / {codeSuccess.CompletionTokens} out");
+    }
+
+    if (codeResponse is OuroResponseFailure codeFailure)
+        AnsiConsole.MarkupLine($"[red]Failure:[/] {codeFailure.ErrorOrigin} | {codeFailure.ResponseText}");
+}
+else
+{
+    AnsiConsole.MarkupLine("[grey]ANTHROPIC_API_KEY not set - skipping the code execution demo.[/]");
+}
+
+if (string.IsNullOrWhiteSpace(openAiKey))
+{
+    AnsiConsole.MarkupLine("[grey]OPENAI_API_KEY not set - stopping before the OpenAI sections.[/]");
+    return;
+}
 
 // --- Simple chat ---------------------------------------------------------
 

@@ -6,6 +6,7 @@ using Ouroboros.Responses;
 using Ouroboros.Tracking;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Ouroboros;
@@ -37,7 +38,14 @@ public interface IOuroClient
     /// <summary>
     /// Handles a chat completion request.
     /// </summary>
-    Task<OuroResponseBase> ChatAsync(List<OuroMessage> messages, ChatOptions? options = null);
+    /// <param name="cancellationToken">
+    /// Bounds the whole call, retries included. Cancelling throws OperationCanceledException rather
+    /// than returning a failure response - that is the .NET contract, and it keeps a deliberate
+    /// cancellation distinguishable from the provider failing. For a per-attempt budget instead,
+    /// see ChatOptions.Timeout.
+    /// </param>
+    Task<OuroResponseBase> ChatAsync(List<OuroMessage> messages, ChatOptions? options = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Configures a default model that will be used for all chats initiated from this client,

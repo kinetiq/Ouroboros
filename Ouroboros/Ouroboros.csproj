@@ -42,6 +42,7 @@
 
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="" />
+		<PackageReference Include="Anthropic" Version="12.39.0" />
 		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.2.6" />
 		<!-- Pinned to override the vulnerable 9.0.4 that Microsoft.ML.Tokenizers.Data.O200kBase
 		     pulls in transitively (GHSA-73j8-2gch-69rq). Safe to drop once that package ships

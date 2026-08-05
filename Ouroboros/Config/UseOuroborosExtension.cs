@@ -1,14 +1,13 @@
-﻿using System;
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Ouroboros.LargeLanguageModels.ChatCompletions;
 
 namespace Ouroboros.Config;
 
 public static class UseOuroborosExtension
 {
     /// <summary>
-    /// Registers the Ouroboros Client and its dependencies as transient services.
+    /// Registers the Ouroboros Client and its dependencies as transient services, for OpenAI only.
     /// </summary>
     public static IServiceCollection AddOuroboros(this IServiceCollection services, string apiKey)
     {
@@ -16,22 +15,45 @@ public static class UseOuroborosExtension
     }
 
     /// <summary>
-    /// Registers the Ouroboros Client and its dependencies as transient services.
+    /// Registers the Ouroboros Client and its dependencies as transient services, for OpenAI only.
     /// Allows configuration of the client (e.g., setting up OnChatCompleted hook).
     /// </summary>
-    public static IServiceCollection AddOuroboros(this IServiceCollection services, string apiKey, Action<OuroClient, IServiceProvider>? configure)
+    public static IServiceCollection AddOuroboros(this IServiceCollection services, string apiKey,
+        Action<OuroClient, IServiceProvider>? configure)
     {
-        services.AddTransient<ChatRequestHandler>();
+        return AddOuroboros(services, options => options.OpenAiApiKey = apiKey, configure);
+    }
+
+    /// <summary>
+    /// Registers the Ouroboros Client with credentials for one or more providers.
+    /// </summary>
+    /// <remarks>
+    /// Use this overload to reach Claude models. Only the providers you actually use need a key -
+    /// requesting a model whose provider has none configured fails with a message naming it.
+    /// </remarks>
+    /// <example>
+    /// services.AddOuroboros(options =>
+    /// {
+    ///     options.OpenAiApiKey = configuration["OpenAI:ApiKey"];
+    ///     options.AnthropicApiKey = configuration["Anthropic:ApiKey"];
+    /// });
+    /// </example>
+    public static IServiceCollection AddOuroboros(this IServiceCollection services,
+        Action<OuroborosOptions> configureOptions, Action<OuroClient, IServiceProvider>? configure = null)
+    {
+        if (configureOptions is null)
+            throw new ArgumentNullException(nameof(configureOptions));
+
+        var options = new OuroborosOptions();
+        configureOptions(options);
 
         services.AddTransient<OuroClient>(serviceProvider =>
         {
-            var chat = serviceProvider.GetService<ChatRequestHandler>();
-
             // GetService, not GetRequiredService: a host without logging configured should still
             // get a working client. HookFailurePolicy.Log then falls back to NullLogger.
             var logger = serviceProvider.GetService<ILogger<OuroClient>>();
 
-            var client = new OuroClient(apiKey, chat!, logger);
+            var client = new OuroClient(options, logger);
 
             configure?.Invoke(client, serviceProvider);
 

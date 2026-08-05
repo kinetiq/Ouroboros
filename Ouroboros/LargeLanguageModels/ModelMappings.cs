@@ -37,6 +37,17 @@ internal static class ModelMappings
                 return "gpt-5.4-nano";
             case OuroModels.Gpt_5_5:
                 return "gpt-5.5";
+
+            // Anthropic. These ids carry no date suffix - they are complete as written, and
+            // appending one produces a 404.
+            case OuroModels.Claude_Opus_5:
+                return "claude-opus-5";
+            case OuroModels.Claude_Opus_4_8:
+                return "claude-opus-4-8";
+            case OuroModels.Claude_Sonnet_5:
+                return "claude-sonnet-5";
+            case OuroModels.Claude_Haiku_4_5:
+                return "claude-haiku-4-5";
         }
 
         throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null);

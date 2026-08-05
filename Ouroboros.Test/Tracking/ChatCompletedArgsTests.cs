@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.Managers;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
+using Ouroboros.LargeLanguageModels.Providers;
+using Ouroboros.Config;
 using Ouroboros.Responses;
 using Ouroboros.Tracking;
 
@@ -108,7 +110,7 @@ public class ChatCompletedArgsTests
     public async Task Policy_Log_Writes_To_The_Logger_And_Returns_The_Response()
     {
         var logger = new CapturingLogger();
-        var client = new OuroClient("test-key", new StubChatRequestHandler(), logger);
+        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, new StubChatProvider(), logger);
         client.OnChatCompleted = _ => throw new InvalidOperationException("logging blew up");
 
         var response = await client.ChatAsync([OuroMessage.FromUser("hi")]);
@@ -139,7 +141,7 @@ public class ChatCompletedArgsTests
     public async Task Policy_Ignore_Does_Not_Touch_The_Logger()
     {
         var logger = new CapturingLogger();
-        var client = new OuroClient("test-key", new StubChatRequestHandler(), logger);
+        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, new StubChatProvider(), logger);
         client.OnChatCompleted = _ => throw new InvalidOperationException("logging blew up");
         client.OnChatCompletedFailure = HookFailurePolicy.Ignore;
 
@@ -181,7 +183,7 @@ public class ChatCompletedArgsTests
     public async Task Policy_Handle_Falls_Back_To_The_Logger_When_The_Handler_Throws()
     {
         var logger = new CapturingLogger();
-        var client = new OuroClient("test-key", new StubChatRequestHandler(), logger);
+        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, new StubChatProvider(), logger);
         client.OnChatCompleted = _ => throw new InvalidOperationException("logging blew up");
 
         var handlerFailure = new InvalidOperationException("reporting blew up too");
@@ -243,11 +245,11 @@ public class ChatCompletedArgsTests
         Assert.Same(thrown, reported);
     }
 
-    private static (OuroClient Client, StubChatRequestHandler Handler) BuildClient()
+    private static (OuroClient Client, StubChatProvider Provider) BuildClient()
     {
-        var handler = new StubChatRequestHandler();
+        var provider = new StubChatProvider();
 
-        return (new OuroClient("test-key", handler), handler);
+        return (new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, provider), provider);
     }
 
     /// <summary>
@@ -273,18 +275,20 @@ public class ChatCompletedArgsTests
     /// <summary>
     /// Returns a canned response so OuroClient can be exercised without a network call.
     /// </summary>
-    private class StubChatRequestHandler() : ChatRequestHandler(null)
+    private sealed class StubChatProvider : IChatProvider
     {
-        public override Task<OuroResponseBase> CompleteAsync(List<OuroMessage> messages, OpenAIService api,
-            ChatOptions? options = null)
+        public OuroProvider Kind => OuroProvider.OpenAi;
+
+        public Task<ProviderAttempt> SendAsync(List<OuroMessage> messages, ChatOptions options,
+            CancellationToken cancellationToken)
         {
-            return Task.FromResult<OuroResponseBase>(new OuroResponseSuccess("stubbed")
+            return Task.FromResult(ProviderAttempt.Final(new OuroResponseSuccess("stubbed")
             {
                 Model = "stub",
                 PromptTokens = 11,
                 CompletionTokens = 7,
                 TotalTokenUsage = 18
-            });
+            }));
         }
     }
 }

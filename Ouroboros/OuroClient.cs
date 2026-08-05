@@ -3,32 +3,63 @@ using Betalgo.Ranul.OpenAI.Managers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Chaining;
+using Ouroboros.Config;
 using Ouroboros.Core;
+using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
+using Ouroboros.LargeLanguageModels.Providers;
+using Ouroboros.LargeLanguageModels.Providers.Anthropic;
 using Ouroboros.Responses;
 using Ouroboros.Tracking;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
+using AnthropicSdk = Anthropic;
 
 [assembly: InternalsVisibleTo("Ouroboros.Test")]
 
 namespace Ouroboros;
 
-public class OuroClient : IOuroClient
+public class OuroClient : IOuroClient, IDisposable
 {
-    private readonly string ApiKey;
-    private readonly ChatRequestHandler ChatHandler;
+    private readonly OuroborosOptions Options;
+
+    /// <summary>
+    /// Applies Ouroboros' retry, timeout and cancellation policy around whichever provider runs.
+    /// </summary>
+    private readonly ChatExecutor Executor;
+
+    /// <summary>
+    /// When set, every request goes here regardless of model. Test seam only.
+    /// </summary>
+    private readonly IChatProvider? ProviderOverride;
 
     /// <summary>
     /// Where HookFailurePolicy.Log sends hook failures. Falls back to NullLogger, which is why
     /// that policy is only as visible as the consumer's logging setup.
     /// </summary>
     private readonly ILogger<OuroClient> Logger;
+
+    /// <summary>
+    /// One transport and one provider client each, built on first use.
+    /// </summary>
+    /// <remarks>
+    /// Separate HttpClients per provider on purpose - SDKs set their own auth headers on the client
+    /// they are handed, so sharing one would send an OpenAI key to Anthropic.
+    ///
+    /// Both run with no timeout of their own. HttpClient.Timeout is per-client and cannot express a
+    /// per-attempt budget; the real deadline is applied per attempt by ChatExecutor.
+    /// </remarks>
+    private readonly Lazy<HttpClient> OpenAiTransport;
+
+    private readonly Lazy<HttpClient> AnthropicTransport;
+    private readonly Lazy<IChatProvider> OpenAiProvider;
+    private readonly Lazy<IChatProvider> AnthropicProvider;
 
     private OuroModels DefaultChatModel = Constants.DefaultChatModel;
 
@@ -73,6 +104,9 @@ public class OuroClient : IOuroClient
     /// <remarks>
     /// The model matters: different families tokenize the same text differently, so a count
     /// taken against the wrong model is simply wrong.
+    ///
+    /// OpenAI models only. Anthropic publishes no tokenizer, so Claude models throw rather than
+    /// return a guess - read the provider's own usage off the response instead.
     /// </remarks>
     public static int TokenCount(string text, OuroModels model)
     {
@@ -82,7 +116,8 @@ public class OuroClient : IOuroClient
     /// <summary>
     /// Handles a chat completion request.
     /// </summary>
-    public async Task<OuroResponseBase> ChatAsync(List<OuroMessage> messages, ChatOptions? options = null)
+    public async Task<OuroResponseBase> ChatAsync(List<OuroMessage> messages, ChatOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
         options ??= new ChatOptions();
 
@@ -92,10 +127,10 @@ public class OuroClient : IOuroClient
             options.ReasoningEffort = DefaultReasoningEffort;
         }
 
-        var api = GetClient();
+        var provider = ResolveProvider(options.Model.Value);
 
         var stopwatch = Stopwatch.StartNew();
-        var response = await ChatHandler.CompleteAsync(messages, api, options);
+        var response = await Executor.ExecuteAsync(provider, messages, options, cancellationToken);
         stopwatch.Stop();
 
         var durationMs = (int)stopwatch.ElapsedMilliseconds;
@@ -132,6 +167,23 @@ public class OuroClient : IOuroClient
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Picks the provider that serves this model.
+    /// </summary>
+    private IChatProvider ResolveProvider(OuroModels model)
+    {
+        if (ProviderOverride is not null)
+            return ProviderOverride;
+
+        return model.GetProvider() switch
+        {
+            OuroProvider.OpenAi => OpenAiProvider.Value,
+            OuroProvider.Anthropic => AnthropicProvider.Value,
+            var unknown => throw new NotSupportedException(
+                $"{model} is served by {unknown}, which this version has no client for.")
+        };
     }
 
     /// <summary>
@@ -193,25 +245,76 @@ public class OuroClient : IOuroClient
         DefaultReasoningEffort = reasoningEffort;
     }
 
-    internal OpenAIService GetClient()
+    private static string RequireKey(string? key, OuroProvider provider)
     {
-        return new OpenAIService(new OpenAIOptions()
-        {
-            ApiKey = ApiKey
-        });
+        if (!string.IsNullOrWhiteSpace(key))
+            return key;
+
+        throw new InvalidOperationException(
+            $"A {provider} model was requested but no {provider} API key is configured. Supply one " +
+            "through the AddOuroboros overload that takes OuroborosOptions.");
     }
 
+    /// <summary>
+    /// Releases the HTTP transports. Only IOuroClient is on the public contract, so in practice the
+    /// DI container disposes this at the end of the scope that resolved it.
+    /// </summary>
+    public void Dispose()
+    {
+        // Lazy, so a provider that was never called has nothing to release.
+        if (OpenAiTransport.IsValueCreated)
+            OpenAiTransport.Value.Dispose();
+
+        if (AnthropicTransport.IsValueCreated)
+            AnthropicTransport.Value.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Creates a client for OpenAI only. Use the OuroborosOptions overload to reach Claude models.
+    /// </summary>
     public OuroClient(string apiKey, ILogger<OuroClient>? logger = null)
+        : this(new OuroborosOptions { OpenAiApiKey = apiKey }, logger)
     {
-        ChatHandler = new ChatRequestHandler(null);
-        ApiKey = apiKey;
-        Logger = logger ?? NullLogger<OuroClient>.Instance;
     }
 
-    internal OuroClient(string apiKey, ChatRequestHandler chatHandler, ILogger<OuroClient>? logger = null)
+    public OuroClient(OuroborosOptions options, ILogger<OuroClient>? logger = null)
+        : this(options, null, logger)
     {
-        ApiKey = apiKey;
-        ChatHandler = chatHandler;
+    }
+
+    internal OuroClient(OuroborosOptions options, IChatProvider? providerOverride,
+        ILogger<OuroClient>? logger = null)
+    {
+        Options = options ?? throw new ArgumentNullException(nameof(options));
+        ProviderOverride = providerOverride;
         Logger = logger ?? NullLogger<OuroClient>.Instance;
+        Executor = new ChatExecutor(Logger);
+
+        OpenAiTransport = new Lazy<HttpClient>(() =>
+            new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan });
+
+        AnthropicTransport = new Lazy<HttpClient>(() =>
+            new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan });
+
+        OpenAiProvider = new Lazy<IChatProvider>(() => new OpenAiChatProvider(
+            new OpenAIService(
+                new OpenAIOptions { ApiKey = RequireKey(Options.OpenAiApiKey, OuroProvider.OpenAi) },
+                OpenAiTransport.Value),
+            Logger));
+
+        AnthropicProvider = new Lazy<IChatProvider>(() => new AnthropicChatProvider(
+            new AnthropicSdk.AnthropicClient
+            {
+                ApiKey = RequireKey(Options.AnthropicApiKey, OuroProvider.Anthropic),
+                HttpClient = AnthropicTransport.Value,
+
+                // The SDK retries 429s and 5xx twice by default. Left on, that multiplies against
+                // Polly rather than replacing it - up to six attempts where the caller asked for
+                // two. ChatExecutor is the single retry authority.
+                MaxRetries = 0
+            },
+            Logger));
     }
 }

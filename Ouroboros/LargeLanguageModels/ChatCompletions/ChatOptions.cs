@@ -61,6 +61,32 @@ public class ChatOptions
 
     public bool UseExponentialBackOff { get; set; }
 
+    /// <summary>
+    /// How long a single attempt may run before it is abandoned. Null uses
+    /// <see cref="Constants.DefaultAttemptTimeout" />.
+    /// </summary>
+    /// <remarks>
+    /// This is a per-attempt budget, not a ceiling on the whole call: with UseExponentialBackOff on,
+    /// each retry gets a fresh one. To bound total latency, pass a CancellationToken to ChatAsync
+    /// instead - the two compose, and they fail differently on purpose. A blown timeout comes back
+    /// as a failure response; a cancelled token throws, per the usual .NET contract.
+    ///
+    /// The default is generous because reasoning models are slow and provider-side tools are slower
+    /// still - a code-execution turn can run for minutes.
+    /// </remarks>
+    public TimeSpan? Timeout { get; set; }
+
+    /// <summary>
+    /// Provider-side tools the model may use while answering - code execution, and so on.
+    /// </summary>
+    /// <remarks>
+    /// Off by default: these cost money and change what the model can do, so they are opt-in per
+    /// call. Requesting one from a provider that cannot serve it fails loudly rather than being
+    /// quietly dropped, which would leave you reading a response that politely explains the model
+    /// is unable to run code.
+    /// </remarks>
+    public OuroServerTools ServerTools { get; set; }
+
     public ChatOptions()
     {
         // Defaults
@@ -68,5 +94,7 @@ public class ChatOptions
         UseExponentialBackOff = true;
         ReasoningEffort = null;
         ResponseType = null;
+        Timeout = null;
+        ServerTools = OuroServerTools.None;
     }
 }
