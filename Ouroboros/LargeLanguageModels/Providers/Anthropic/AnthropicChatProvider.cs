@@ -33,6 +33,9 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     public async Task<ProviderAttempt> SendAsync(List<OuroMessage> messages, ChatOptions options,
         CancellationToken cancellationToken)
     {
+        if (Reject(options) is { } refusal)
+            return ProviderAttempt.Final(refusal);
+
         var parameters = AnthropicMappings.MapOptions(messages, options);
 
         try
@@ -55,6 +58,37 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
             // rejected parameter, an auth problem. Retrying just repeats it.
             return ProviderAttempt.Final(Error(null, ex.Message));
         }
+    }
+
+    /// <summary>
+    /// Catches request shapes the provider would accept but not honour, before spending a call.
+    /// </summary>
+    /// <remarks>
+    /// Attachments ride a container_upload block, which only means something inside a code
+    /// execution container. Sent without one they are accepted and ignored, and the model answers
+    /// as though the file were never mentioned - which reads as the model being obtuse rather than
+    /// the request being wrong.
+    /// </remarks>
+    private static OuroResponseBase? Reject(ChatOptions options)
+    {
+        if (options.Attachments is not { Count: > 0 } attachments)
+            return null;
+
+        if (!options.ServerTools.HasFlag(OuroServerTools.CodeExecution))
+            return new OuroResponseInternalError(
+                "Attachments were supplied without OuroServerTools.CodeExecution. Files are mounted "
+                + "into the execution container, so without one there is nowhere for them to go.");
+
+        foreach (var attachment in attachments)
+        {
+            if (attachment.Provider != OuroProvider.Anthropic)
+                return new OuroResponseInternalError(
+                    $"Attachment '{attachment.Id}' belongs to {attachment.Provider}, but this call "
+                    + "routes to Anthropic. File references are not portable between providers - "
+                    + "upload the file to the one serving the call.");
+        }
+
+        return null;
     }
 
     private static OuroResponseProviderError Error(string? code, string message)
@@ -234,9 +268,11 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         if (outputs is null)
             return [];
 
+        // Stamped with the provider so DownloadFileAsync knows where to go. Name and media type are
+        // absent here - the result block carries only an id - and are fetched at download time.
         return outputs
             .Where(output => !string.IsNullOrWhiteSpace(output.FileID))
-            .Select(output => new OuroFileRef(output.FileID))
+            .Select(output => new OuroFileRef(output.FileID) { Provider = OuroProvider.Anthropic })
             .ToList();
     }
 

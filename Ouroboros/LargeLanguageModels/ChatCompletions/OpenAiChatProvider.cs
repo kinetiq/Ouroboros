@@ -44,6 +44,12 @@ internal sealed class OpenAiChatProvider(OpenAIService api, ILogger? logger = nu
                 "server-side tools. Route this call to a Claude model, which serves them on the " +
                 "standard Messages API."));
 
+        if (options.Attachments is { Count: > 0 })
+            return ProviderAttempt.Final(new OuroResponseInternalError(
+                "Attachments were supplied, but OpenAI's Chat Completions API has nowhere to mount "
+                + "them - files reach a model through the code interpreter container, which lives "
+                + "on the Responses API. Route this call to a Claude model."));
+
         // Map our generic options to OpenAI options. The structured-output schema is built there
         // from options.ResponseType.
         var request = ChatMappings.MapOptions(messages, options, Logger);

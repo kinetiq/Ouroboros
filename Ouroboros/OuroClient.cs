@@ -61,6 +61,11 @@ public class OuroClient : IOuroClient, IDisposable
     private readonly Lazy<IChatProvider> OpenAiProvider;
     private readonly Lazy<IChatProvider> AnthropicProvider;
 
+    /// <summary>
+    /// Anthropic's file store, sharing the transport and credentials of the chat provider.
+    /// </summary>
+    private readonly Lazy<AnthropicFileStore> AnthropicFiles;
+
     private OuroModels DefaultChatModel = Constants.DefaultChatModel;
 
     /// <summary>
@@ -167,6 +172,67 @@ public class OuroClient : IOuroClient, IDisposable
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Uploads a file to a provider's store so the model can work with it.
+    /// </summary>
+    public async Task<OuroFileRef> UploadFileAsync(byte[] content, string fileName, string? mediaType,
+        OuroProvider provider, CancellationToken cancellationToken = default)
+    {
+        if (content is null)
+            throw new ArgumentNullException(nameof(content));
+
+        if (string.IsNullOrWhiteSpace(fileName))
+            throw new ArgumentException("A file name is required.", nameof(fileName));
+
+        return await ResolveFileStore(provider).UploadAsync(content, fileName, mediaType, cancellationToken);
+    }
+
+    /// <summary>
+    /// Fetches a file's bytes, along with the filename and media type the provider reports for it.
+    /// </summary>
+    public async Task<OuroFileContent> DownloadFileAsync(OuroFileRef file,
+        CancellationToken cancellationToken = default)
+    {
+        if (file is null)
+            throw new ArgumentNullException(nameof(file));
+
+        return await ResolveFileStore(file.Provider).DownloadAsync(file, cancellationToken);
+    }
+
+    /// <summary>
+    /// Deletes a file from the provider's store.
+    /// </summary>
+    public async Task DeleteFileAsync(OuroFileRef file, CancellationToken cancellationToken = default)
+    {
+        if (file is null)
+            throw new ArgumentNullException(nameof(file));
+
+        await ResolveFileStore(file.Provider).DeleteAsync(file, cancellationToken);
+    }
+
+    /// <summary>
+    /// Picks the file store for a provider.
+    /// </summary>
+    /// <remarks>
+    /// A file reference belongs to the store that issued it, so routing on the reference rather
+    /// than on a model is what stops an Anthropic id being sent to OpenAI and coming back as a
+    /// baffling 404.
+    /// </remarks>
+    private AnthropicFileStore ResolveFileStore(OuroProvider provider)
+    {
+        return provider switch
+        {
+            OuroProvider.Anthropic => AnthropicFiles.Value,
+
+            OuroProvider.OpenAi => throw new NotSupportedException(
+                "File upload and download are not implemented for OpenAI yet. They arrive with the "
+                + "move from Chat Completions to the Responses API, which is where OpenAI's "
+                + "server-side tools live."),
+
+            _ => throw new NotSupportedException($"No file store is wired up for {provider}.")
+        };
     }
 
     /// <summary>
@@ -304,17 +370,21 @@ public class OuroClient : IOuroClient, IDisposable
                 OpenAiTransport.Value),
             Logger));
 
-        AnthropicProvider = new Lazy<IChatProvider>(() => new AnthropicChatProvider(
-            new AnthropicSdk.AnthropicClient
-            {
-                ApiKey = RequireKey(Options.AnthropicApiKey, OuroProvider.Anthropic),
-                HttpClient = AnthropicTransport.Value,
+        // One SDK client shared by chat and files - same credentials, same transport, and the
+        // file ids only mean anything to the account that issued them.
+        var anthropic = new Lazy<AnthropicSdk.AnthropicClient>(() => new AnthropicSdk.AnthropicClient
+        {
+            ApiKey = RequireKey(Options.AnthropicApiKey, OuroProvider.Anthropic),
+            HttpClient = AnthropicTransport.Value,
 
-                // The SDK retries 429s and 5xx twice by default. Left on, that multiplies against
-                // Polly rather than replacing it - up to six attempts where the caller asked for
-                // two. ChatExecutor is the single retry authority.
-                MaxRetries = 0
-            },
-            Logger));
+            // The SDK retries 429s and 5xx twice by default. Left on, that multiplies against
+            // Polly rather than replacing it - up to six attempts where the caller asked for
+            // two. ChatExecutor is the single retry authority.
+            MaxRetries = 0
+        });
+
+        AnthropicProvider = new Lazy<IChatProvider>(() => new AnthropicChatProvider(anthropic.Value, Logger));
+
+        AnthropicFiles = new Lazy<AnthropicFileStore>(() => new AnthropicFileStore(anthropic.Value));
     }
 }

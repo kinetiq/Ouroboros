@@ -60,7 +60,7 @@ internal static class AnthropicMappings
             // answer rather than merely shortening it.
             MaxTokens = options.MaxCompletionTokens ?? model.GetMaxOutputTokens(),
 
-            Messages = MapMessages(messages),
+            Messages = MapMessages(messages, options.Attachments),
 
             System = system,
 
@@ -96,9 +96,10 @@ internal static class AnthropicMappings
         return tools.Count > 0 ? tools : null;
     }
 
-    private static List<MessageParam> MapMessages(List<OuroMessage> messages)
+    private static List<MessageParam> MapMessages(List<OuroMessage> messages,
+        IReadOnlyList<OuroFileRef>? attachments)
     {
-        return messages
+        var mapped = messages
             .Where(message => message.Role != OuroRole.System)
             .Select(message => new MessageParam
             {
@@ -106,6 +107,49 @@ internal static class AnthropicMappings
                 Content = message.Content
             })
             .ToList();
+
+        if (attachments is { Count: > 0 })
+            AttachFiles(mapped, attachments);
+
+        return mapped;
+    }
+
+    /// <summary>
+    /// Hangs the uploaded files off the last user turn.
+    /// </summary>
+    /// <remarks>
+    /// The last user turn specifically: that is the request the files are evidence for, and putting
+    /// them there keeps them adjacent to the question in the model's context. A message's content
+    /// has to become a block list to carry them, since the plain-string form has nowhere to put
+    /// anything but text.
+    /// </remarks>
+    private static void AttachFiles(List<MessageParam> messages, IReadOnlyList<OuroFileRef> attachments)
+    {
+        var index = messages.FindLastIndex(message => (string?)message.Role == "user");
+
+        var blocks = new List<ContentBlockParam>();
+
+        // Preserve whatever the turn already said - the files are extra context for the question,
+        // not a replacement for it.
+        if (index >= 0 && messages[index].Content is { } existing && existing.TryPickString(out var text)
+            && !string.IsNullOrEmpty(text))
+        {
+            blocks.Add(new TextBlockParam { Text = text });
+        }
+
+        foreach (var attachment in attachments)
+            blocks.Add(new ContainerUploadBlockParam { FileID = attachment.Id });
+
+        var withFiles = new MessageParam
+        {
+            Role = AnthropicRole.User,
+            Content = blocks
+        };
+
+        if (index >= 0)
+            messages[index] = withFiles;
+        else
+            messages.Add(withFiles);
     }
 
     /// <summary>

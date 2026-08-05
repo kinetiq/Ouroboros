@@ -1,3 +1,6 @@
+using System.Text;
+using System.IO;
+using System.Linq;
 using Ouroboros;
 using Ouroboros.Config;
 using Ouroboros.Core;
@@ -67,6 +70,58 @@ if (!string.IsNullOrWhiteSpace(anthropicKey))
 
     if (codeResponse is OuroResponseFailure codeFailure)
         AnsiConsole.MarkupLine($"[red]Failure:[/] {codeFailure.ErrorOrigin} | {codeFailure.ResponseText}");
+
+    // --- File round trip -------------------------------------------------
+    // Data in, analysis, artifact out. The sandbox has no internet, so the Files API is the only
+    // way across that boundary.
+
+    AnsiConsole.MarkupLine("\n[yellow]-- file round trip --[/]");
+
+    const string csv = "name,score\nada,37\ngrace,41\nalan,29\nedsger,53\n";
+
+    var upload = await client.UploadFileAsync(
+        Encoding.UTF8.GetBytes(csv), "scores.csv", "text/csv", OuroProvider.Anthropic);
+
+    AnsiConsole.MarkupLine($"[grey]uploaded:[/] {upload.Id}");
+
+    try
+    {
+        var fileResponse = await client.ChatAsync(
+            [OuroMessage.FromUser(
+                "Read the attached CSV with the code execution tool, print the mean score, then "
+                + "save a bar chart of it as a PNG.")],
+            new ChatOptions
+            {
+                Model = OuroModels.Claude_Opus_5,
+                ServerTools = OuroServerTools.CodeExecution,
+                Attachments = [upload],
+                MaxCompletionTokens = 8192,
+                Timeout = TimeSpan.FromMinutes(5)
+            });
+
+        if (fileResponse is OuroResponseSuccess fileSuccess)
+        {
+            foreach (var generated in fileSuccess.CodeExecutions.SelectMany(x => x.Result?.Files ?? []))
+            {
+                var content = await client.DownloadFileAsync(generated);
+                var path = Path.Combine(Path.GetTempPath(), content.FileName ?? $"{generated.Id}.bin");
+
+                await File.WriteAllBytesAsync(path, content.Content);
+
+                AnsiConsole.MarkupLine($"[green]saved:[/] {Markup.Escape(path)} ({content.SizeBytes} bytes)");
+            }
+
+            AnsiConsole.MarkupLine($"[grey]text:[/]\n{Markup.Escape(fileSuccess.ResponseText)}");
+        }
+
+        if (fileResponse is OuroResponseFailure fileFailure)
+            AnsiConsole.MarkupLine($"[red]Failure:[/] {fileFailure.ErrorOrigin} | {fileFailure.ResponseText}");
+    }
+    finally
+    {
+        // Uploads persist until deleted and count against the account's storage.
+        await client.DeleteFileAsync(upload);
+    }
 }
 else
 {

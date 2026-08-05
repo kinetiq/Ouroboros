@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Ouroboros.Core;
 using Ouroboros.Tracking;
 
 namespace Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -86,6 +87,19 @@ public class ChatOptions
     /// is unable to run code.
     /// </remarks>
     public OuroServerTools ServerTools { get; set; }
+
+    /// <summary>
+    /// Files to make available to the model, obtained from IOuroClient.UploadFileAsync.
+    /// </summary>
+    /// <remarks>
+    /// Separate from the upload so one file can be referenced across many calls - re-uploading the
+    /// same spreadsheet for every question about it would be absurd.
+    ///
+    /// Requires <see cref="ServerTools" /> to include CodeExecution: attachments are mounted into
+    /// the execution container, so without one there is nowhere for them to go. Asking for them
+    /// anyway fails rather than sending a request the model cannot act on.
+    /// </remarks>
+    public IReadOnlyList<OuroFileRef>? Attachments { get; set; }
 
     public ChatOptions()
     {

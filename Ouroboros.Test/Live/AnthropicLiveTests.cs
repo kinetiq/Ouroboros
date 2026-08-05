@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Ouroboros.Config;
 using Ouroboros.Core;
@@ -159,6 +160,87 @@ public class AnthropicLiveTests(ITestOutputHelper output)
 
         // And nothing unrecognised slipped through as an unknown block.
         Assert.DoesNotContain(success.Content, block => block.Kind == OuroBlockKind.Unknown);
+    }
+
+    /// <summary>
+    /// The full round trip: data in, analysis, artifact out.
+    /// </summary>
+    /// <remarks>
+    /// This is the half of code execution that makes it useful. The sandbox has no internet, so the
+    /// Files API is the only route across that boundary - without it the model can compute and
+    /// print, but cannot read a spreadsheet you have or hand back one it made.
+    ///
+    /// Cleans up after itself: uploads persist until deleted and count against the account's
+    /// storage, so a test that leaked one on every run would quietly accumulate forever.
+    /// </remarks>
+    [RequiresAnthropicKeyFact]
+    public async Task A_File_Round_Trips_Through_Code_Execution()
+    {
+        using var client = Build();
+
+        // Deliberately not round numbers - a mean of 30 could be arrived at without reading the
+        // file, whereas this one could not.
+        const string csv = "name,score\nada,37\ngrace,41\nalan,29\nedsger,53\n";
+        const string expectedMean = "40";
+
+        var upload = await client.UploadFileAsync(
+            Encoding.UTF8.GetBytes(csv), "scores.csv", "text/csv", OuroProvider.Anthropic);
+
+        output.WriteLine($"uploaded: {upload.Id} ({upload.FileName}, {upload.MediaType})");
+
+        Assert.Equal(OuroProvider.Anthropic, upload.Provider);
+        Assert.Equal("scores.csv", upload.FileName);
+
+        try
+        {
+            var response = await client.ChatAsync(
+                [OuroMessage.FromUser(
+                    "Read the attached CSV with the code execution tool. Print the mean of the "
+                    + "score column, then save a bar chart of it as a PNG.")],
+                new ChatOptions
+                {
+                    Model = OuroModels.Claude_Opus_5,
+                    ServerTools = OuroServerTools.CodeExecution,
+                    Attachments = [upload],
+                    MaxCompletionTokens = 8192,
+                    Timeout = TimeSpan.FromMinutes(5)
+                });
+
+            AssertSucceeded(response);
+
+            var success = Assert.IsType<OuroResponseSuccess>(response);
+            var executions = success.CodeExecutions.ToList();
+
+            foreach (var execution in executions)
+                output.WriteLine($"exit={execution.Result?.ExitCode} stdout={execution.Result?.Stdout}");
+
+            // It read the file we uploaded, not something it invented.
+            var stdout = string.Concat(executions.Select(execution => execution.Result?.Stdout));
+            Assert.Contains(expectedMean, stdout);
+
+            // And the artifact comes back out.
+            var generated = executions
+                .SelectMany(execution => execution.Result?.Files ?? [])
+                .ToList();
+
+            output.WriteLine($"{generated.Count} generated file(s)");
+
+            var png = Assert.Single(generated.Where(file =>
+                file.FileName?.EndsWith(".png", StringComparison.OrdinalIgnoreCase) != false));
+
+            var downloaded = await client.DownloadFileAsync(png);
+
+            output.WriteLine($"downloaded {downloaded.SizeBytes} bytes, name={downloaded.FileName}");
+
+            // The PNG magic number. Asserting on the bytes rather than just a non-zero length is
+            // what proves the reference round-tripped to the right file.
+            Assert.True(downloaded.SizeBytes > 1000, $"Suspiciously small: {downloaded.SizeBytes} bytes.");
+            Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, downloaded.Content.Take(4));
+        }
+        finally
+        {
+            await client.DeleteFileAsync(upload);
+        }
     }
 
     /// <summary>
