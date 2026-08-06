@@ -55,7 +55,7 @@ public class ServerToolTests
         var response = await new ChatExecutor().ExecuteAsync(
             new OpenAiChatProvider(transport.ToApi()),
             [OuroMessage.FromUser("Work out the mean.")],
-            new ChatOptions { ServerTools = OuroServerTools.CodeExecution });
+            new ChatOptions { Model = OuroModels.Gpt_5_4_mini, ServerTools = OuroServerTools.CodeExecution });
 
         Assert.IsType<OuroResponseInternalError>(response);
 

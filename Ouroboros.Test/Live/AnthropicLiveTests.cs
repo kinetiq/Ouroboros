@@ -225,8 +225,8 @@ public class AnthropicLiveTests(ITestOutputHelper output)
 
             output.WriteLine($"{generated.Count} generated file(s)");
 
-            var png = Assert.Single(generated.Where(file =>
-                file.FileName?.EndsWith(".png", StringComparison.OrdinalIgnoreCase) != false));
+            var png = Assert.Single(generated, file =>
+                file.FileName?.EndsWith(".png", StringComparison.OrdinalIgnoreCase) != false);
 
             var downloaded = await client.DownloadFileAsync(png);
 

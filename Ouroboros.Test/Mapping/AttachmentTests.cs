@@ -128,6 +128,29 @@ public class AttachmentTests
         Assert.Contains("not portable", error.ResponseText);
     }
 
+    /// <summary>
+    /// Structured output is not implemented for Anthropic yet, and ignoring the request would send
+    /// it unconstrained - the response would then fail to parse and the caller would get a null
+    /// ResponseObject on an otherwise successful call, indistinguishable from a model that simply
+    /// returned nothing useful.
+    /// </summary>
+    [Fact]
+    public async Task A_ResponseType_On_Anthropic_Is_Refused()
+    {
+        var response = await Send(new ChatOptions
+        {
+            Model = OuroModels.Claude_Opus_5,
+            ResponseType = typeof(SampleShape)
+        });
+
+        var error = Assert.IsType<OuroResponseInternalError>(response);
+
+        // Names the type, so it is obvious which call needs rerouting.
+        Assert.Contains(nameof(SampleShape), error.ResponseText);
+    }
+
+    private sealed record SampleShape(string Name);
+
     [Fact]
     public async Task Attachments_On_OpenAi_Are_Refused_And_Spend_Nothing()
     {
@@ -136,7 +159,7 @@ public class AttachmentTests
         var response = await new ChatExecutor().ExecuteAsync(
             new OpenAiChatProvider(transport.ToApi()),
             [OuroMessage.FromUser("Summarise this.")],
-            new ChatOptions { ServerTools = OuroServerTools.CodeExecution, Attachments = [Csv] });
+            new ChatOptions { Model = OuroModels.Gpt_5_4_mini, ServerTools = OuroServerTools.CodeExecution, Attachments = [Csv] });
 
         Assert.IsType<OuroResponseInternalError>(response);
         Assert.Equal(0, transport.Calls);

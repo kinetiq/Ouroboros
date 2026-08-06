@@ -101,6 +101,40 @@ public class ChatOptions
     /// </remarks>
     public IReadOnlyList<OuroFileRef>? Attachments { get; set; }
 
+    /// <summary>
+    /// A shallow copy, so the library can resolve defaults without writing into the caller's object.
+    /// </summary>
+    /// <remarks>
+    /// ChatAsync used to assign Model and ReasoningEffort straight onto whatever instance it was
+    /// handed. Reusing one ChatOptions across calls therefore baked the first call's defaults into
+    /// it permanently, and a later SetDefaultChatModel silently did not apply.
+    ///
+    /// Shallow is right: the reference members are read-only inputs, and a caller who mutates a
+    /// tracker mid-flight means it.
+    ///
+    /// Add a property, add it here - CloneCopiesEveryProperty in the test suite fails otherwise.
+    /// </remarks>
+    internal ChatOptions Clone()
+    {
+        return new ChatOptions
+        {
+            PromptName = PromptName,
+            Session = Session,
+            Thread = Thread,
+            Variables = Variables,
+            MaxCompletionTokens = MaxCompletionTokens,
+            StopSequences = StopSequences,
+            User = User,
+            Model = Model,
+            ResponseType = ResponseType,
+            ReasoningEffort = ReasoningEffort,
+            UseExponentialBackOff = UseExponentialBackOff,
+            Timeout = Timeout,
+            ServerTools = ServerTools,
+            Attachments = Attachments
+        };
+    }
+
     public ChatOptions()
     {
         // Defaults

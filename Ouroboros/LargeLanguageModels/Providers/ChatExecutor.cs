@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -105,12 +107,34 @@ internal sealed class ChatExecutor(ILogger? logger = null)
     /// </remarks>
     private static bool IsTransient(Exception ex)
     {
-        // Cancellation is never transient. Retrying it either ignores the caller outright or
-        // repeats work that has already proven too slow once.
-        if (ex is OperationCanceledException)
+        // Walk the chain rather than checking one level. SDKs wrap transport failures, sometimes
+        // more than once, and an AggregateException can hide several - a socket error two levels
+        // down is exactly as transient as one at the top.
+        var chain = Unwrap(ex).ToList();
+
+        // Cancellation anywhere in the chain wins, and is checked across the whole chain before
+        // looking for transience. Order matters: a cancelled request frequently surfaces as an
+        // HttpRequestException wrapping a TaskCanceledException, so a single pass would match the
+        // wrapper, call it transient, and retry the exact thing this guard exists to prevent.
+        if (chain.Any(inner => inner is OperationCanceledException))
             return false;
 
-        return ex is HttpRequestException or IOException or TimeoutException
-               || ex.InnerException is HttpRequestException or IOException or TimeoutException;
+        return chain.Any(inner =>
+            inner is HttpRequestException or IOException or TimeoutException or SocketException);
+    }
+
+    private static IEnumerable<Exception> Unwrap(Exception ex)
+    {
+        if (ex is AggregateException aggregate)
+        {
+            foreach (var inner in aggregate.Flatten().InnerExceptions)
+            foreach (var unwrapped in Unwrap(inner))
+                yield return unwrapped;
+
+            yield break;
+        }
+
+        for (var current = ex; current is not null; current = current.InnerException)
+            yield return current;
     }
 }

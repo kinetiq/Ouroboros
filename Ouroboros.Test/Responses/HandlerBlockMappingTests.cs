@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Ouroboros.Core;
+using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Providers;
 using Ouroboros.Responses;
@@ -75,6 +76,6 @@ public class HandlerBlockMappingTests
         return new ChatExecutor().ExecuteAsync(
             new OpenAiChatProvider(new StubTransport(responseJson).ToApi()),
             [OuroMessage.FromUser("hi")],
-            new ChatOptions());
+            new ChatOptions { Model = OuroModels.Gpt_5_4_mini });
     }
 }

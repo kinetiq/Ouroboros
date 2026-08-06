@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Ouroboros.Extensions;
 using Ouroboros.Core;
 using Ouroboros.StructuredOutput;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -42,7 +43,13 @@ internal class ChatMappings
             // instance across calls with different ResponseTypes can't leave a stale schema.
             ResponseFormat = options.ResponseType is not null ? Json.GetSchema(options.ResponseType) : null,
             ReasoningEffort = reasoningEffort.ToBetalgo(),
-            Model = options.Model.GetModelNameAsString(Constants.DefaultChatModel)
+            // Demanded, not defaulted - resolution belongs to ChatAsync and nowhere else. A second
+            // fallback here would quietly disagree with the model reported to the OnChatCompleted
+            // hook, and token counts would then be taken against the wrong tokenizer.
+            Model = ModelMappings.GetModelNameAsString(
+                options.Model ?? throw new InvalidOperationException(
+                    "ChatOptions.Model must be resolved before mapping. OuroClient.ChatAsync does "
+                    + "this; a provider reached with a null model means that step was bypassed."))
         };
     }
 }

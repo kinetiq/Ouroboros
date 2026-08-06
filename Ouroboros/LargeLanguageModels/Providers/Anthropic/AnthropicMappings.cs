@@ -21,7 +21,12 @@ internal static class AnthropicMappings
 {
     internal static MessageCreateParams MapOptions(List<OuroMessage> messages, ChatOptions options)
     {
-        var model = options.Model ?? Constants.DefaultChatModel;
+        // Demanded, not defaulted. Falling back to Constants.DefaultChatModel here was a latent
+        // 404: that default is a GPT model, so an unresolved call would have stamped "gpt-5.4-mini"
+        // onto an Anthropic request. Resolution belongs to ChatAsync and nowhere else.
+        var model = options.Model ?? throw new InvalidOperationException(
+            "ChatOptions.Model must be resolved before mapping. OuroClient.ChatAsync does this; a "
+            + "provider reached with a null model means that step was bypassed.");
 
         // Anthropic carries the system prompt in its own top-level field rather than as a message
         // with a system role, so it has to be lifted out of the list.

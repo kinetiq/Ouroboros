@@ -1,3 +1,4 @@
+using System;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -8,6 +9,18 @@ public class ChatMappingsTests
 {
     private static List<OuroMessage> OneMessage() => [OuroMessage.FromUser("hi")];
 
+    /// <summary>
+    /// Options with a model already resolved, as ChatAsync would hand them over. The mapper demands
+    /// one rather than defaulting, so tests that are not about resolution have to supply it.
+    /// </summary>
+    private static ChatOptions Resolved(Action<ChatOptions>? configure = null)
+    {
+        var options = new ChatOptions { Model = OuroModels.Gpt_5_4_mini };
+        configure?.Invoke(options);
+
+        return options;
+    }
+
     [Fact]
     public void Model_Name_Is_Mapped_To_The_Api_String()
     {
@@ -16,12 +29,19 @@ public class ChatMappingsTests
         Assert.Equal("gpt-5.4-mini", request.Model);
     }
 
+    /// <summary>
+    /// The mapper used to fall back to Constants.DefaultChatModel here. It no longer does, and that
+    /// is the point: resolution belongs to ChatAsync alone. A second fallback down here would
+    /// quietly disagree with the model reported to the OnChatCompleted hook - and, once Anthropic
+    /// models existed, would stamp a GPT id onto an Anthropic request.
+    /// </summary>
     [Fact]
-    public void Model_Falls_Back_To_The_Default_When_Unset()
+    public void An_Unresolved_Model_Is_Refused_Rather_Than_Defaulted()
     {
-        var request = ChatMappings.MapOptions(OneMessage(), new ChatOptions());
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => ChatMappings.MapOptions(OneMessage(), new ChatOptions()));
 
-        Assert.Equal("gpt-5.4-mini", request.Model);
+        Assert.Contains("must be resolved", ex.Message);
     }
 
     [Fact]
@@ -33,7 +53,7 @@ public class ChatMappingsTests
             OuroMessage.FromUser("usr")
         ];
 
-        var request = ChatMappings.MapOptions(messages, new ChatOptions());
+        var request = ChatMappings.MapOptions(messages, Resolved());
 
         Assert.Equal(2, request.Messages.Count);
         Assert.Equal("sys", request.Messages[0].Content);
@@ -63,7 +83,7 @@ public class ChatMappingsTests
     [Fact]
     public void No_Schema_Is_Attached_When_ResponseType_Is_Null()
     {
-        var request = ChatMappings.MapOptions(OneMessage(), new ChatOptions { ResponseType = null });
+        var request = ChatMappings.MapOptions(OneMessage(), Resolved(options => options.ResponseType = null));
 
         Assert.Null(request.ResponseFormat);
     }
@@ -71,7 +91,7 @@ public class ChatMappingsTests
     [Fact]
     public void Schema_Is_Attached_When_ResponseType_Is_Set()
     {
-        var options = new ChatOptions { ResponseType = typeof(SampleResult) };
+        var options = Resolved(o => o.ResponseType = typeof(SampleResult));
 
         var request = ChatMappings.MapOptions(OneMessage(), options);
 

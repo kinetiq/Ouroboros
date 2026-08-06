@@ -124,7 +124,10 @@ public class OuroClient : IOuroClient, IDisposable
     public async Task<OuroResponseBase> ChatAsync(List<OuroMessage> messages, ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        options ??= new ChatOptions();
+        // Work on our own copy. Resolving defaults onto the caller's instance meant a reused
+        // ChatOptions silently kept the first call's model forever, and a later
+        // SetDefaultChatModel never reached it.
+        options = options?.Clone() ?? new ChatOptions();
 
         if (options.Model == null)
         {

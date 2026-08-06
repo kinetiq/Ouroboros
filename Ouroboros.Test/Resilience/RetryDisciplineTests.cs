@@ -1,7 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Betalgo.Ranul.OpenAI.Managers;
 using Ouroboros.Core;
+using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Providers;
 using Ouroboros.Responses;
@@ -80,6 +82,29 @@ public class RetryDisciplineTests
         Assert.Equal("ok", response.ResponseText);
     }
 
+    /// <summary>
+    /// A timeout wrapped by the SDK still must not be retried.
+    /// </summary>
+    /// <remarks>
+    /// The predicate walks the whole exception chain rather than checking one level. SDKs wrap
+    /// transport failures, sometimes twice, so a cancellation buried two deep has to be recognised
+    /// as cancellation - otherwise the very case this guard exists for slips straight past it.
+    /// </remarks>
+    [Fact]
+    public async Task A_Wrapped_Cancellation_Is_Still_Not_Retried()
+    {
+        var transport = new ThrowingTransport(() => new InvalidOperationException(
+            "SDK wrapper", new HttpRequestException(
+                "transport", new TaskCanceledException("the real cause"))));
+
+        var response = await Execute(transport.ToApi(), new ChatOptions());
+
+        // One attempt: the HttpRequestException in the middle looks transient in isolation, so a
+        // chain walk that stopped at the first match would have retried this five more times.
+        Assert.Equal(1, transport.Calls);
+        Assert.False(response.Success);
+    }
+
     private static StubTransport Stalling()
     {
         return new StubTransport(StubTransport.ChatCompletion("ok"), TimeSpan.FromSeconds(30));
@@ -88,8 +113,19 @@ public class RetryDisciplineTests
     private static Task<OuroResponseBase> Execute(StubTransport transport, ChatOptions options,
         CancellationToken cancellationToken = default)
     {
+        return Execute(transport.ToApi(), options, cancellationToken);
+    }
+
+    private static Task<OuroResponseBase> Execute(OpenAIService api, ChatOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        // ChatExecutor sits below the layer that resolves the model, so these tests supply
+        // one. The mappers now demand a resolved model rather than defaulting to a GPT id -
+        // which is exactly the bypass that guard exists to catch.
+        options.Model ??= OuroModels.Gpt_5_4_mini;
+
         return new ChatExecutor().ExecuteAsync(
-            new OpenAiChatProvider(transport.ToApi()),
+            new OpenAiChatProvider(api),
             [OuroMessage.FromUser("hi")],
             options,
             cancellationToken);
