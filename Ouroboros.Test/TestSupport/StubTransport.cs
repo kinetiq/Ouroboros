@@ -1,12 +1,13 @@
 using System;
+using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI;
-using Betalgo.Ranul.OpenAI.Managers;
+using OpenAI.Responses;
 
 namespace Ouroboros.Test.TestSupport;
 
@@ -41,38 +42,76 @@ internal sealed class StubTransport(string responseJson, TimeSpan? delay = null)
     }
 
     /// <summary>
-    /// Wraps this transport in an OpenAIService with no client-level timeout, matching how
-    /// OuroClient builds its own - the deadline is per attempt, not per client.
+    /// Wraps this transport in a ResponsesClient configured exactly as OuroClient configures its
+    /// own: no client timeout, no network timeout, no SDK-level retries.
     /// </summary>
-    public OpenAIService ToApi()
+    /// <remarks>
+    /// The settings are not incidental. Leaving NetworkTimeout at its 100s default would cap
+    /// ChatOptions.Timeout, and leaving retries on would multiply every attempt count these tests
+    /// assert on - so a stub built differently from the real client would prove nothing about it.
+    /// </remarks>
+    public ResponsesClient ToClient()
     {
-        return new OpenAIService(
-            new OpenAIOptions { ApiKey = "test-key" },
-            new HttpClient(this) { Timeout = Timeout.InfiniteTimeSpan });
+        return ToClient(this);
+    }
+
+    internal static ResponsesClient ToClient(HttpMessageHandler handler)
+    {
+        return new ResponsesClient(
+            new ApiKeyCredential("test-key"),
+            new ResponsesClientOptions
+            {
+                Transport = new HttpClientPipelineTransport(
+                    new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan }),
+                NetworkTimeout = Timeout.InfiniteTimeSpan,
+                RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
+            });
     }
 
     /// <summary>
-    /// A minimal well-formed chat completion payload.
+    /// A minimal well-formed Responses payload carrying one assistant message.
     /// </summary>
-    public static string ChatCompletion(string content, string finishReason = "stop")
+    /// <param name="content">The assistant's text.</param>
+    /// <param name="status">Response status - "completed" or "incomplete".</param>
+    /// <param name="incompleteReason">
+    /// Populates incomplete_details when the status is "incomplete". This is where truncation is
+    /// reported on this API; there is no finish_reason field.
+    /// </param>
+    public static string Response(string content, string status = "completed",
+        string? incompleteReason = null)
     {
         // Serialized rather than interpolated so content containing quotes or newlines stays valid.
         var encoded = JsonSerializer.Serialize(content);
 
+        var incomplete = incompleteReason is null
+            ? "null"
+            : $$"""{ "reason": "{{incompleteReason}}" }""";
+
         return $$"""
             {
-              "id": "chatcmpl-test",
-              "object": "chat.completion",
-              "created": 1,
+              "id": "resp-test",
+              "object": "response",
+              "created_at": 1,
+              "status": "{{status}}",
               "model": "gpt-5.4-mini",
-              "choices": [
+              "incomplete_details": {{incomplete}},
+              "output": [
                 {
-                  "index": 0,
-                  "message": { "role": "assistant", "content": {{encoded}} },
-                  "finish_reason": "{{finishReason}}"
+                  "type": "message",
+                  "id": "msg-test",
+                  "status": "completed",
+                  "role": "assistant",
+                  "content": [ { "type": "output_text", "text": {{encoded}}, "annotations": [] } ]
                 }
               ],
-              "usage": { "prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4 }
+              "parallel_tool_calls": true,
+              "tool_choice": "auto",
+              "tools": [],
+              "usage": {
+                "input_tokens": 3,
+                "output_tokens": 1,
+                "total_tokens": 4
+              }
             }
             """;
     }

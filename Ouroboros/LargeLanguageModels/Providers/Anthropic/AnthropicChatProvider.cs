@@ -71,9 +71,9 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     /// </remarks>
     private static OuroResponseBase? Reject(ChatOptions options)
     {
-        // Structured output is not wired up on this provider yet. Anthropic supports it, but
-        // generating the schema means untangling StructuredOutput.Json from the Betalgo types it
-        // still returns - work that belongs with the move off that SDK.
+        // Structured output is not wired up on this provider yet. Anthropic supports it, and
+        // JsonSchemaGenerator now produces the provider-neutral schema it needs - what remains is
+        // mapping that onto the output config here.
         //
         // Until then this has to fail. Ignoring it would send the request unconstrained, the
         // response would parse to null, and the caller would get ResponseObject == null on an
@@ -153,7 +153,9 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         {
             if (block.TryPickText(out TextBlock? text))
             {
-                blocks.Add(new OuroTextBlock(text!.Text));
+                // Trimmed to match the joined text OuroResponseSuccess derives from these blocks,
+                // so block.Text and ResponseText cannot disagree about whitespace.
+                blocks.Add(new OuroTextBlock(text!.Text.Trim()));
                 continue;
             }
 

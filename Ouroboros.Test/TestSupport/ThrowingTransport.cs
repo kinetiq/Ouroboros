@@ -2,8 +2,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI;
-using Betalgo.Ranul.OpenAI.Managers;
+using OpenAI.Responses;
 
 namespace Ouroboros.Test.TestSupport;
 
@@ -29,10 +28,8 @@ internal sealed class ThrowingTransport(Func<Exception> exception) : HttpMessage
         throw exception();
     }
 
-    public OpenAIService ToApi()
+    public ResponsesClient ToClient()
     {
-        return new OpenAIService(
-            new OpenAIOptions { ApiKey = "test-key" },
-            new HttpClient(this) { Timeout = Timeout.InfiniteTimeSpan });
+        return StubTransport.ToClient(this);
     }
 }

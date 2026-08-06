@@ -1,8 +1,13 @@
 # Ouroboros Migration Guide: 4.4.0 → 5.0.0
 
-This release removes the provider SDK (Betalgo) from Ouroboros' public API. Nothing in your code
-should need to reference `Betalgo.Ranul.OpenAI` after migrating. That is the whole point of the
-release: it means adding other providers later won't be another breaking change.
+This release removes the provider SDK from Ouroboros' public API. Nothing in your code should
+need to reference an SDK after migrating. That is the whole point of the release: it means adding
+other providers later won't be another breaking change — and beta.2 already does, with Anthropic
+alongside OpenAI.
+
+Internally the OpenAI path also moved off `Betalgo.Ranul.OpenAI` and onto the official `OpenAI`
+package over the Responses API. That is invisible from your code, which is the test the seam was
+built to pass — but see the note on stop sequences below.
 
 ## Prerequisites
 
@@ -14,7 +19,8 @@ release: it means adding other providers later won't be another breaking change.
   - `Microsoft.ML.Tokenizers` → **2.0.0** (new)
   - `Microsoft.ML.Tokenizers.Data.O200kBase` → **2.0.0** (new)
   - `Microsoft.Extensions.DependencyInjection.Abstractions` → **10.0.9** (was transitive, now explicit)
-  - `Betalgo.Ranul.OpenAI` → 9.2.6 (unchanged, now an internal implementation detail)
+  - `OpenAI` → **2.12.0** (new — the official SDK, replacing `Betalgo.Ranul.OpenAI`, which is gone)
+  - `Anthropic` → **12.39.0** (new)
 
 ---
 
@@ -176,6 +182,14 @@ new ChatOptions { StopAsList = new List<string> { "END" } }
 ```csharp
 new ChatOptions { StopSequences = new List<string> { "END" } }
 ```
+
+**They no longer work on OpenAI models.** The Responses API, which 5.0 uses, has no `stop`
+parameter at all — this is a gap in the API, not in the SDK or in Ouroboros. Rather than drop the
+sequences silently and hand back output that runs past where you asked it to stop, a request that
+sets them fails with an `OuroResponseInternalError` naming the property.
+
+They keep working on Claude models. If you depend on them, route those calls to one, or trim the
+output yourself.
 
 ### 11. `ChatOptions.ResponseType` is nullable; `NoType` is gone
 

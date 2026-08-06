@@ -26,8 +26,9 @@ First, <a href="http://docs.nuget.org/docs/start-here/installing-nuget">install 
 
 # Limits and Possible Contributions
 Ouroboros is production-ready, but it does have limits. If you would like those limits to go away, get involved!
- - Supports OpenAI (GPT-5 family, Chat Completions) and Anthropic (Claude). Provider SDKs are internal details, so adding more providers is not a breaking change.
+ - Supports OpenAI (GPT-5 family, Responses API) and Anthropic (Claude). Provider SDKs are internal details, so adding more providers is not a breaking change.
  - Server-side code execution, file I/O, and structured output each work on one provider today: code execution and files on Claude, structured output on GPT. Requesting a capability from the wrong provider fails loudly rather than degrading silently.
  - Local token counting (`OuroClient.TokenCount`) is OpenAI-only — Anthropic publishes no tokenizer, so read the provider's own usage off the response instead.
  - You can't modify our retry policy, although you _can_ turn it off. Timeouts are per-attempt via `ChatOptions.Timeout`; whole-call cancellation via `CancellationToken`.
- - We could use some help implementing Logging, structured output on Anthropic, and the OpenAI Responses API (which is where OpenAI-side code execution will come from).
+ - `ChatOptions.StopSequences` works on Claude but not on GPT: the Responses API has no stop parameter at all, so those requests fail loudly rather than running past where you asked them to stop.
+ - We could use some help implementing Logging, structured output on Anthropic, and OpenAI-side code execution and file I/O.

@@ -1,5 +1,6 @@
-using Betalgo.Ranul.OpenAI;
-using Betalgo.Ranul.OpenAI.Managers;
+using System.ClientModel;
+using System.ClientModel.Primitives;
+using OpenAI.Responses;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Chaining;
@@ -10,6 +11,7 @@ using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Providers;
 using Ouroboros.LargeLanguageModels.Providers.Anthropic;
+using Ouroboros.LargeLanguageModels.Providers.OpenAi;
 using Ouroboros.Responses;
 using Ouroboros.Tracking;
 using System;
@@ -381,10 +383,24 @@ public class OuroClient : IOuroClient, IDisposable
         AnthropicTransport = new Lazy<HttpClient>(() =>
             new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan });
 
-        OpenAiProvider = new Lazy<IChatProvider>(() => new OpenAiChatProvider(
-            new OpenAIService(
-                new OpenAIOptions { ApiKey = RequireKey(Options.OpenAiApiKey, OuroProvider.OpenAi) },
-                OpenAiTransport.Value),
+        OpenAiProvider = new Lazy<IChatProvider>(() => new OpenAiResponsesProvider(
+            new ResponsesClient(
+                new ApiKeyCredential(RequireKey(Options.OpenAiApiKey, OuroProvider.OpenAi)),
+                new ResponsesClientOptions
+                {
+                    Transport = new HttpClientPipelineTransport(OpenAiTransport.Value),
+
+                    // Two separate timeouts, and both have to be off. HttpClient.Timeout is the
+                    // obvious one; NetworkTimeout is a further per-attempt cancellation the
+                    // pipeline applies, defaulting to 100s - left alone it would cap
+                    // ChatOptions.Timeout invisibly, which is the trap the transport alone misses.
+                    NetworkTimeout = System.Threading.Timeout.InfiniteTimeSpan,
+
+                    // The SDK retries three times by default. Left on, that multiplies against
+                    // Polly rather than replacing it. ChatExecutor is the single retry authority -
+                    // the same rule applied to the Anthropic client.
+                    RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
+                }),
             Logger));
 
         // One SDK client shared by chat and files - same credentials, same transport, and the

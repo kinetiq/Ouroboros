@@ -11,6 +11,12 @@
 		     does not churn assembly binding. -->
 		<VersionPrefix>5.0.0</VersionPrefix>
 		<VersionSuffix>beta.2</VersionSuffix>
+
+		<!-- The entire OpenAI.Responses and OpenAI.Containers surface is [Experimental("OPENAI001")].
+		     Suppressed here rather than at call sites because it is unavoidable - there is no
+		     non-experimental way to reach the Responses API - and because the SDK stays behind
+		     IChatProvider, so the diagnostic never reaches a consumer of this package. -->
+		<NoWarn>$(NoWarn);OPENAI001</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -43,7 +49,6 @@
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="" />
 		<PackageReference Include="Anthropic" Version="12.39.0" />
-		<PackageReference Include="Betalgo.Ranul.OpenAI" Version="9.2.6" />
 		<!-- Pinned to override the vulnerable 9.0.4 that Microsoft.ML.Tokenizers.Data.O200kBase
 		     pulls in transitively (GHSA-73j8-2gch-69rq). Safe to drop once that package ships
 		     against a patched version. -->
@@ -52,6 +57,7 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
 		<PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
 		<PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
+		<PackageReference Include="OpenAI" Version="2.12.0" />
 		<PackageReference Include="Polly" Version="8.7.0" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
 		<PackageReference Include="Scriban" Version="7.2.5" />

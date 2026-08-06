@@ -10,6 +10,7 @@ using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Providers;
 using Ouroboros.LargeLanguageModels.Providers.Anthropic;
+using Ouroboros.LargeLanguageModels.Providers.OpenAi;
 using Ouroboros.Responses;
 
 namespace Ouroboros.Test.Options;
@@ -132,7 +133,7 @@ public class OptionResolutionTests
     public void The_OpenAi_Mapper_Refuses_An_Unresolved_Model()
     {
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            ChatMappings.MapOptions([OuroMessage.FromUser("hi")], new ChatOptions { Model = null }));
+            OpenAiMappings.MapOptions([OuroMessage.FromUser("hi")], new ChatOptions { Model = null }));
 
         Assert.Contains("must be resolved", ex.Message);
     }

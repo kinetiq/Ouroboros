@@ -7,6 +7,7 @@ using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Providers;
+using Ouroboros.LargeLanguageModels.Providers.OpenAi;
 using Ouroboros.LargeLanguageModels.Providers.Anthropic;
 using Ouroboros.Responses;
 using Ouroboros.Test.TestSupport;
@@ -154,10 +155,10 @@ public class AttachmentTests
     [Fact]
     public async Task Attachments_On_OpenAi_Are_Refused_And_Spend_Nothing()
     {
-        var transport = new StubTransport(StubTransport.ChatCompletion("ignored"));
+        var transport = new StubTransport(StubTransport.Response("ignored"));
 
         var response = await new ChatExecutor().ExecuteAsync(
-            new OpenAiChatProvider(transport.ToApi()),
+            new OpenAiResponsesProvider(transport.ToClient()),
             [OuroMessage.FromUser("Summarise this.")],
             new ChatOptions { Model = OuroModels.Gpt_5_4_mini, ServerTools = OuroServerTools.CodeExecution, Attachments = [Csv] });
 

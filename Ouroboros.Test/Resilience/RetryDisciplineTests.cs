@@ -1,11 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Betalgo.Ranul.OpenAI.Managers;
+using OpenAI.Responses;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.LargeLanguageModels.Providers;
+using Ouroboros.LargeLanguageModels.Providers.OpenAi;
 using Ouroboros.Responses;
 using Ouroboros.Test.TestSupport;
 
@@ -73,7 +74,7 @@ public class RetryDisciplineTests
     [Fact]
     public async Task A_Slow_Call_Inside_Its_Budget_Still_Succeeds()
     {
-        var transport = new StubTransport(StubTransport.ChatCompletion("ok"), TimeSpan.FromMilliseconds(150));
+        var transport = new StubTransport(StubTransport.Response("ok"), TimeSpan.FromMilliseconds(150));
 
         var response = await Execute(transport, new ChatOptions { Timeout = TimeSpan.FromSeconds(10) });
 
@@ -97,7 +98,7 @@ public class RetryDisciplineTests
             "SDK wrapper", new HttpRequestException(
                 "transport", new TaskCanceledException("the real cause"))));
 
-        var response = await Execute(transport.ToApi(), new ChatOptions());
+        var response = await Execute(transport.ToClient(), new ChatOptions());
 
         // One attempt: the HttpRequestException in the middle looks transient in isolation, so a
         // chain walk that stopped at the first match would have retried this five more times.
@@ -107,16 +108,16 @@ public class RetryDisciplineTests
 
     private static StubTransport Stalling()
     {
-        return new StubTransport(StubTransport.ChatCompletion("ok"), TimeSpan.FromSeconds(30));
+        return new StubTransport(StubTransport.Response("ok"), TimeSpan.FromSeconds(30));
     }
 
     private static Task<OuroResponseBase> Execute(StubTransport transport, ChatOptions options,
         CancellationToken cancellationToken = default)
     {
-        return Execute(transport.ToApi(), options, cancellationToken);
+        return Execute(transport.ToClient(), options, cancellationToken);
     }
 
-    private static Task<OuroResponseBase> Execute(OpenAIService api, ChatOptions options,
+    private static Task<OuroResponseBase> Execute(ResponsesClient client, ChatOptions options,
         CancellationToken cancellationToken = default)
     {
         // ChatExecutor sits below the layer that resolves the model, so these tests supply
@@ -125,7 +126,7 @@ public class RetryDisciplineTests
         options.Model ??= OuroModels.Gpt_5_4_mini;
 
         return new ChatExecutor().ExecuteAsync(
-            new OpenAiChatProvider(api),
+            new OpenAiResponsesProvider(client),
             [OuroMessage.FromUser("hi")],
             options,
             cancellationToken);
