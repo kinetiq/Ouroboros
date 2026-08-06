@@ -28,12 +28,24 @@ internal static class Tokenization
             .CountTokens(text);
     }
 
+    /// <summary>
+    /// Whether a local token count exists for this model at all.
+    /// </summary>
+    /// <remarks>
+    /// The polite version of the throw below, for callers who count opportunistically - a logger
+    /// estimating message sizes should skip models it cannot count rather than catch per message.
+    /// </remarks>
+    internal static bool CanCount(OuroModels model)
+    {
+        return model.GetProvider() == OuroProvider.OpenAi;
+    }
+
     private static string GetEncodingName(OuroModels model)
     {
         // Anthropic publishes no tokenizer for current Claude models, so there is nothing to map.
         // Failing beats approximating: a count that is quietly some percent out is worse than one
         // that refuses, because these numbers get persisted and costed against.
-        if (model.GetProvider() == OuroProvider.Anthropic)
+        if (!CanCount(model))
             throw new NotSupportedException(
                 $"Local token counting is not available for {model}. Anthropic does not publish a " +
                 "tokenizer, so any local figure would be a guess. Read the provider's own usage off " +

@@ -228,14 +228,23 @@ public class AnthropicLiveTests(ITestOutputHelper output)
             var png = Assert.Single(generated, file =>
                 file.FileName?.EndsWith(".png", StringComparison.OrdinalIgnoreCase) != false);
 
-            var downloaded = await client.DownloadFileAsync(png);
+            try
+            {
+                var downloaded = await client.DownloadFileAsync(png);
 
-            output.WriteLine($"downloaded {downloaded.SizeBytes} bytes, name={downloaded.FileName}");
+                output.WriteLine($"downloaded {downloaded.SizeBytes} bytes, name={downloaded.FileName}");
 
-            // The PNG magic number. Asserting on the bytes rather than just a non-zero length is
-            // what proves the reference round-tripped to the right file.
-            Assert.True(downloaded.SizeBytes > 1000, $"Suspiciously small: {downloaded.SizeBytes} bytes.");
-            Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, downloaded.Content.Take(4));
+                // The PNG magic number. Asserting on the bytes rather than just a non-zero length
+                // is what proves the reference round-tripped to the right file.
+                Assert.True(downloaded.SizeBytes > 1000, $"Suspiciously small: {downloaded.SizeBytes} bytes.");
+                Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, downloaded.Content.Take(4));
+            }
+            finally
+            {
+                // Generated files persist in the account's store exactly like uploads - the first
+                // version of this test deleted only the upload and leaked a chart per run.
+                await client.DeleteFileAsync(png);
+            }
         }
         finally
         {

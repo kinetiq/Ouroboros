@@ -104,11 +104,21 @@ if (!string.IsNullOrWhiteSpace(anthropicKey))
             foreach (var generated in fileSuccess.CodeExecutions.SelectMany(x => x.Result?.Files ?? []))
             {
                 var content = await client.DownloadFileAsync(generated);
-                var path = Path.Combine(Path.GetTempPath(), content.FileName ?? $"{generated.Id}.bin");
+
+                // Path.GetFileName, because the name is model-chosen: a file called "..\evil.bat"
+                // must land in the temp directory, not wherever the traversal points.
+                var safeName = Path.GetFileName(content.FileName ?? "");
+                if (string.IsNullOrWhiteSpace(safeName))
+                    safeName = $"{generated.Id}.bin";
+
+                var path = Path.Combine(Path.GetTempPath(), safeName);
 
                 await File.WriteAllBytesAsync(path, content.Content);
-
                 AnsiConsole.MarkupLine($"[green]saved:[/] {Markup.Escape(path)} ({content.SizeBytes} bytes)");
+
+                // Generated files persist in the account's store just like uploads do - without
+                // this, every demo run leaks a chart into it forever.
+                await client.DeleteFileAsync(generated);
             }
 
             AnsiConsole.MarkupLine($"[grey]text:[/]\n{Markup.Escape(fileSuccess.ResponseText)}");

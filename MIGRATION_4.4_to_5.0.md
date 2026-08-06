@@ -311,6 +311,55 @@ The structured-output schema used to be written back onto the `ChatOptions` you 
 reusing one instance across calls with different `ResponseType`s could send a stale schema. The
 schema is now built at request-mapping time and your options object is left alone.
 
+As of beta.2 this goes further: `ChatAsync` works on a copy, so **nothing** is written back onto
+your options. Previously a reused instance had the default model resolved into it on first use,
+which meant a later `SetDefaultChatModel` never applied to it.
+
+### 6. Anthropic as a second provider (beta.2)
+
+Claude models route through the same client. Configure both keys via the new options overload —
+only the providers you use need one:
+
+```csharp
+services.AddOuroboros(options =>
+{
+    options.OpenAiApiKey = configuration["OpenAI:ApiKey"];
+    options.AnthropicApiKey = configuration["Anthropic:ApiKey"];
+});
+
+var response = await client.ChatAsync(messages, new ChatOptions { Model = OuroModels.Claude_Opus_5 });
+```
+
+Provider-specific caveats, all of which fail loudly rather than degrading:
+
+- `OuroClient.TokenCount` throws for Claude models — Anthropic publishes no tokenizer. Read
+  `PromptTokens` / `CompletionTokens` off the response instead.
+- `ChatOptions.ResponseType` (structured output) is not implemented on Anthropic yet.
+
+### 7. Server-side code execution and file I/O (beta.2, Claude only)
+
+Opt in per call with `ChatOptions.ServerTools = OuroServerTools.CodeExecution`. The model writes
+and runs Python in a provider-hosted sandbox; results arrive as `OuroCodeExecutionBlock` entries
+on `OuroResponseSuccess.Content` (or the `CodeExecutions` convenience projection), carrying the
+executed code, stdout/stderr, exit code, and references to any files it produced.
+
+Files cross the sandbox boundary through the client: `UploadFileAsync` returns an `OuroFileRef`
+you attach via `ChatOptions.Attachments`; generated files come back as refs you hand to
+`DownloadFileAsync`. Uploads persist until `DeleteFileAsync`.
+
+Code-execution turns can run for minutes — see `ChatOptions.Timeout` (per-attempt, default 10
+minutes) and the `CancellationToken` parameter on `ChatAsync` (whole-call). Timeouts are no longer
+retried.
+
+### 8. Responses carry typed content blocks and a stop reason (beta.2)
+
+`OuroResponseSuccess.Content` is the response broken into `OuroContentBlock`s; `ResponseText` is
+unchanged (the text blocks joined) so existing consumers keep working. `StopReason` /
+`IsComplete` make truncation visible — previously a response cut off at the token ceiling was
+indistinguishable from a complete one, and truncated structured output silently parsed to a null
+`ResponseObject`. **Always include a discard arm when switching over block types** — new kinds
+will arrive.
+
 ---
 
 ## Quick Migration Checklist

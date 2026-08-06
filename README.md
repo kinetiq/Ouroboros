@@ -1,5 +1,8 @@
 # What is Ouroboros?
-Ouroboros makes it easy to chain and transform API calls with OpenAI. You get:
+Ouroboros makes it easy to chain and transform LLM API calls, with support for OpenAI and Anthropic behind one provider-neutral surface. You get:
+ - **Multi-provider:** GPT and Claude models through the same client — pick a model, the request routes to the right vendor.
+ - **Server-side code execution (Claude):** The model writes and runs Python in a provider-hosted sandbox; stdout, exit codes, and generated files come back as typed blocks on the response.
+ - **File I/O (Claude):** Upload data for the model to analyze; download the artifacts (charts, spreadsheets) it produces.
  - **Clean chaining:** Fluent interface for feeding the output of one API call into the input of another.
 	- Easily capture the output of one call, save it to a variable, and then use it as input downchain.
  - **Template engine:** Store your prompts as markdown right in your project, with a corresponding class for fields.
@@ -23,7 +26,8 @@ First, <a href="http://docs.nuget.org/docs/start-here/installing-nuget">install 
 
 # Limits and Possible Contributions
 Ouroboros is production-ready, but it does have limits. If you would like those limits to go away, get involved!
- - Only supports OpenAI API calls. The provider SDK is an internal detail as of 5.0, so adding other providers no longer means a breaking change.
- - Only supports the Chat Completions API, and the GPT-5 model family. The legacy text-completions endpoint was removed in 5.0.
- - You can't modify our retry policy, although you _can_ turn it off.
- - We could use some help implementing Logging, support for other providers, and the Responses API.
+ - Supports OpenAI (GPT-5 family, Chat Completions) and Anthropic (Claude). Provider SDKs are internal details, so adding more providers is not a breaking change.
+ - Server-side code execution, file I/O, and structured output each work on one provider today: code execution and files on Claude, structured output on GPT. Requesting a capability from the wrong provider fails loudly rather than degrading silently.
+ - Local token counting (`OuroClient.TokenCount`) is OpenAI-only — Anthropic publishes no tokenizer, so read the provider's own usage off the response instead.
+ - You can't modify our retry policy, although you _can_ turn it off. Timeouts are per-attempt via `ChatOptions.Timeout`; whole-call cancellation via `CancellationToken`.
+ - We could use some help implementing Logging, structured output on Anthropic, and the OpenAI Responses API (which is where OpenAI-side code execution will come from).

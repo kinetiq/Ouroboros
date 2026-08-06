@@ -50,6 +50,22 @@ public class TokenizerTests
     }
 
     /// <summary>
+    /// CanCountTokens is the polite version of the refusal - it must agree with what TokenCount
+    /// actually does, or a caller who checks first still blows up.
+    /// </summary>
+    [Fact]
+    public void CanCountTokens_Agrees_With_TokenCount()
+    {
+        foreach (var model in Enum.GetValues<OuroModels>())
+        {
+            if (OuroClient.CanCountTokens(model))
+                Assert.True(OuroClient.TokenCount("hello", model) > 0);
+            else
+                Assert.Throws<NotSupportedException>(() => OuroClient.TokenCount("hello", model));
+        }
+    }
+
+    /// <summary>
     /// Guards the assumption both tests above rest on: that each provider actually has models in
     /// the enum, so neither is silently iterating an empty set.
     /// </summary>

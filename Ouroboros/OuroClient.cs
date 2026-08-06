@@ -119,6 +119,20 @@ public class OuroClient : IOuroClient, IDisposable
     }
 
     /// <summary>
+    /// Whether <see cref="TokenCount" /> works for this model. False for Claude models - Anthropic
+    /// publishes no tokenizer, so there is no honest local count to give.
+    /// </summary>
+    /// <remarks>
+    /// For opportunistic counters - loggers estimating message sizes, UI showing rough usage -
+    /// check this and skip rather than catching NotSupportedException per message. The provider's
+    /// own usage is always on the response (PromptTokens / CompletionTokens) regardless.
+    /// </remarks>
+    public static bool CanCountTokens(OuroModels model)
+    {
+        return Tokenization.CanCount(model);
+    }
+
+    /// <summary>
     /// Handles a chat completion request.
     /// </summary>
     public async Task<OuroResponseBase> ChatAsync(List<OuroMessage> messages, ChatOptions? options = null,

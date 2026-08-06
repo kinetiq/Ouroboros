@@ -33,9 +33,9 @@
 			Powerful layer on top of OpenAI supporting chaining and recursion scenarios. Includes fluent SDK for chaining, templates, structured output, and text processing. .NET 10 only.
 		</Description>
 		<PackageReleaseNotes>
-			Prerelease. beta.2 stops a throwing OnChatCompleted hook from failing the chat it was logging, and adds OnChatCompletedFailure to choose what happens instead: Log (default), Throw, Ignore, or Handle. 5.0.0 is a breaking release that removes the provider SDK from the public API. Chat messages are now Ouroboros' own OuroMessage/OuroRole instead of Betalgo's ChatMessage, and reasoning effort is OuroReasoningEffort. Adds IOuroClient as a mocking seam. Removes the legacy text-completions API (CompleteAsync, CompleteOptions, gpt-3.5-turbo-instruct), GetInnerClient, and the sampling parameters current reasoning models reject. TokenCount now requires a model and uses the correct encoding. See MIGRATION_4.4_to_5.0.md.
+			Prerelease. beta.2 adds Anthropic as a second provider: Claude models route through the same client via the OuroborosOptions overload of AddOuroboros. Claude requests can opt into server-side code execution (OuroServerTools.CodeExecution) - results arrive as OuroCodeExecutionBlock entries with stdout, exit code and generated-file references - and file I/O via UploadFileAsync / DownloadFileAsync / DeleteFileAsync plus ChatOptions.Attachments. Responses now carry typed content blocks and an OuroStopReason (truncation and paused tool loops are finally visible). Adds per-attempt timeouts (ChatOptions.Timeout), CancellationToken support, and a retry policy that no longer retries timeouts. A throwing OnChatCompleted hook no longer fails the chat it was logging - see OnChatCompletedFailure. ChatAsync no longer mutates the caller's ChatOptions. 5.0.0 is a breaking release that removes the provider SDK from the public API; see MIGRATION_4.4_to_5.0.md.
 		</PackageReleaseNotes>
-		<PackageTags>gpt llm openai chatgpt c#</PackageTags>
+		<PackageTags>gpt llm openai chatgpt anthropic claude code-interpreter c#</PackageTags>
 		<Title>Ouroboros</Title>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
