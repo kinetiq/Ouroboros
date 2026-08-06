@@ -191,6 +191,26 @@ sets them fails with an `OuroResponseInternalError` naming the property.
 They keep working on Claude models. If you depend on them, route those calls to one, or trim the
 output yourself.
 
+### 10b. `ChatOptions.User` moved to `ChatOptions.OpenAi.User`
+
+Provider-specific settings now live in their own blocks, so a setting meant for one provider cannot
+reach the other. `User` only ever mapped to OpenAI's `EndUserId` — on an Anthropic call it was
+accepted and then dropped, with nothing to say so.
+
+**Before (5.0.0-beta.1):**
+```csharp
+new ChatOptions { User = "end-user-42" }
+```
+
+**After (5.0.0-beta.2):**
+```csharp
+new ChatOptions { OpenAi = { User = "end-user-42" } }
+```
+
+`ChatOptions.Anthropic` exists alongside it and is empty for now. Anything both providers honour —
+model, token ceiling, reasoning effort, structured output, timeouts — stays on `ChatOptions` itself,
+so it carries over whichever provider serves the call.
+
 ### 11. `ChatOptions.ResponseType` is nullable; `NoType` is gone
 
 `null` now means "no structured output" — the `NoType` sentinel served no other purpose.
@@ -388,6 +408,7 @@ will arrive.
 - [ ] Rename `OuroResponseOpenAiError` to `OuroResponseProviderError`
 - [ ] Remove `Temperature`, `TopP`, `FrequencyPenalty`, `PresencePenalty`, `LogitBias`, `BestOf`, `Suffix`, `ResponseFormat` from `ChatOptions` initializers
 - [ ] Rename `Stop` / `StopAsList` to `StopSequences`
+- [ ] Move `ChatOptions.User` to `ChatOptions.OpenAi.User`
 - [ ] Replace `typeof(NoType)` checks with `is null`
 - [ ] Replace `Json.GetSchema` / `Json.ParseJson` calls (use `ChatOptions.ResponseType` and `System.Text.Json`)
 - [ ] Change `GetLast(string)` calls to `GetLast(OuroRole)`

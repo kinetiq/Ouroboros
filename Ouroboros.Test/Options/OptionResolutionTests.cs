@@ -87,33 +87,121 @@ public class OptionResolutionTests
             Variables = new() { ["k"] = "v" },
             MaxCompletionTokens = 42,
             StopSequences = ["END"],
-            User = "u",
             Model = OuroModels.Claude_Opus_5,
             ResponseType = typeof(string),
             ReasoningEffort = OuroReasoningEffort.High,
             UseExponentialBackOff = false,
             Timeout = TimeSpan.FromSeconds(7),
             ServerTools = OuroServerTools.CodeExecution,
-            Attachments = [new OuroFileRef("file_1") { Provider = OuroProvider.Anthropic }]
+            Attachments = [new OuroFileRef("file_1") { Provider = OuroProvider.Anthropic }],
+            OpenAi = { User = "u" }
         };
 
         var clone = original.Clone();
 
-        var properties = typeof(ChatOptions)
+        AssertEveryPropertyCopied(original, clone, typeof(ChatOptions), requireProperties: true);
+    }
+
+    /// <summary>
+    /// The provider blocks are copied, not shared.
+    /// </summary>
+    /// <remarks>
+    /// They are mutable settings objects the library may one day resolve defaults into, which is
+    /// exactly what Clone exists to keep out of the caller's instance - ChatAsync used to write
+    /// straight onto the object it was handed, so a reused ChatOptions kept the first call's model
+    /// forever. Sharing the blocks would reintroduce that on the provider surface.
+    /// </remarks>
+    [Fact]
+    public void Clone_Copies_The_Provider_Blocks_Rather_Than_Sharing_Them()
+    {
+        var original = new ChatOptions { OpenAi = { User = "u" } };
+        var clone = original.Clone();
+
+        Assert.NotSame(original.OpenAi, clone.OpenAi);
+        Assert.NotSame(original.Anthropic, clone.Anthropic);
+
+        clone.OpenAi.User = "someone-else";
+
+        Assert.Equal("u", original.OpenAi.User);
+    }
+
+    /// <summary>
+    /// Reflection over the public surface, recursing into the provider blocks so a property added
+    /// to one of them is covered by the same guard.
+    /// </summary>
+    /// <param name="requireProperties">
+    /// Guards against the reflection finding nothing and the test passing vacuously. Only applied at
+    /// the root: a provider block with no properties yet is a legitimate state, and Anthropic's is
+    /// exactly that today.
+    /// </param>
+    private static void AssertEveryPropertyCopied(object original, object clone, Type type,
+        bool requireProperties = false)
+    {
+        var properties = type
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(property => property.CanRead)
             .ToList();
 
-        Assert.NotEmpty(properties);
+        if (requireProperties)
+            Assert.NotEmpty(properties);
 
         foreach (var property in properties)
         {
             var expected = property.GetValue(original);
             var actual = property.GetValue(clone);
 
+            // The blocks are deliberately distinct instances, so compare their contents instead of
+            // the references - otherwise this guard would demand the sharing it exists to forbid.
+            if (property.PropertyType == typeof(OpenAiChatOptions)
+                || property.PropertyType == typeof(AnthropicChatOptions))
+            {
+                Assert.NotNull(expected);
+                Assert.NotNull(actual);
+                AssertEveryPropertyCopied(expected!, actual!, property.PropertyType);
+                continue;
+            }
+
             Assert.True(Equals(expected, actual),
                 $"Clone did not copy {property.Name}: expected {expected ?? "null"}, got {actual ?? "null"}.");
         }
+    }
+
+    /// <summary>
+    /// A setting in a provider's block reaches that provider's request.
+    /// </summary>
+    /// <remarks>
+    /// The converse - that Anthropic's mapper cannot see it - is deliberately not asserted here,
+    /// because it is not a runtime property to assert. AnthropicMappings has no reference to
+    /// options.OpenAi and would not compile if it grew one, which is a stronger guarantee than any
+    /// test could give. That is the point of moving User off the shared surface: it used to sit
+    /// where both mappers could read it, and Anthropic quietly dropped it with nothing in the
+    /// response to say a setting had been ignored.
+    /// </remarks>
+    [Fact]
+    public void A_Setting_In_A_Provider_Block_Reaches_That_Providers_Request()
+    {
+        var request = OpenAiMappings.MapOptions([OuroMessage.FromUser("hi")], new ChatOptions
+        {
+            Model = OuroModels.Gpt_5_4_mini,
+            OpenAi = { User = "end-user-42" }
+        });
+
+        Assert.Equal("end-user-42", request.EndUserId);
+    }
+
+    /// <summary>
+    /// The blocks are never null, so callers can set into them without a null check and mappers can
+    /// read them without one either.
+    /// </summary>
+    [Fact]
+    public void Provider_Blocks_Are_Never_Null()
+    {
+        var options = new ChatOptions();
+
+        Assert.NotNull(options.OpenAi);
+        Assert.NotNull(options.Anthropic);
+        Assert.NotNull(options.Clone().OpenAi);
+        Assert.NotNull(options.Clone().Anthropic);
     }
 
     /// <summary>

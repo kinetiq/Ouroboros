@@ -39,12 +39,14 @@ public class ChatOptions
     ///     Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the
     ///     stop sequence.
     /// </summary>
+    /// <remarks>
+    /// Honoured on Anthropic; refused on OpenAI, whose Responses API has no stop parameter at all.
+    /// Shared rather than filed under <see cref="Anthropic" /> deliberately - the concept is
+    /// universal and the gap is one API's, so relocating it would bake that gap into the public API
+    /// and make undoing it a breaking change. Refusing loudly is the honest way to carry an
+    /// asymmetry the caller cannot otherwise see.
+    /// </remarks>
     public IList<string>? StopSequences { get; set; }
-
-    /// <summary>
-    ///     A unique identifier representing your end-user, which will help OpenAI to monitor and detect abuse.
-    /// </summary>
-    public string? User { get; set; }
 
     public OuroModels? Model { get; set; }
 
@@ -102,6 +104,22 @@ public class ChatOptions
     public IReadOnlyList<OuroFileRef>? Attachments { get; set; }
 
     /// <summary>
+    /// Settings that only mean something on OpenAI.
+    /// </summary>
+    /// <remarks>
+    /// Never null, so callers can set into it without a null check. Each mapper reads only its own
+    /// block, which is what makes it structurally impossible for a setting meant for one provider
+    /// to reach the other - and lets both be populated on a single request, as a call able to run
+    /// on either provider will need.
+    /// </remarks>
+    public OpenAiChatOptions OpenAi { get; init; } = new();
+
+    /// <summary>
+    /// Settings that only mean something on Anthropic. See <see cref="OpenAi" />.
+    /// </summary>
+    public AnthropicChatOptions Anthropic { get; init; } = new();
+
+    /// <summary>
     /// A shallow copy, so the library can resolve defaults without writing into the caller's object.
     /// </summary>
     /// <remarks>
@@ -124,14 +142,19 @@ public class ChatOptions
             Variables = Variables,
             MaxCompletionTokens = MaxCompletionTokens,
             StopSequences = StopSequences,
-            User = User,
             Model = Model,
             ResponseType = ResponseType,
             ReasoningEffort = ReasoningEffort,
             UseExponentialBackOff = UseExponentialBackOff,
             Timeout = Timeout,
             ServerTools = ServerTools,
-            Attachments = Attachments
+            Attachments = Attachments,
+
+            // Copied rather than shared. The rest of the reference members are read-only inputs, but
+            // these are mutable settings the library may resolve defaults into - and writing a
+            // default into the caller's object is precisely the bug Clone was added to fix.
+            OpenAi = OpenAi.Clone(),
+            Anthropic = Anthropic.Clone()
         };
     }
 

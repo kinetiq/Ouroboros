@@ -30,7 +30,7 @@ internal static class OpenAiMappings
         {
             Model = ModelMappings.GetModelNameAsString(model),
             MaxOutputTokenCount = options.MaxCompletionTokens,
-            EndUserId = options.User
+            EndUserId = options.OpenAi.User
         };
 
         // Like Anthropic, the Responses API carries the system prompt in its own field rather than
