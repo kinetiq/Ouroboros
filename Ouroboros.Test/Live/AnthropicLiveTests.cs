@@ -268,6 +268,68 @@ public class AnthropicLiveTests(ITestOutputHelper output)
             cts.Token));
     }
 
+    /// <summary>
+    /// Structured output on Claude: the neutral schema is accepted, honoured, and deserialized back.
+    /// </summary>
+    /// <remarks>
+    /// The closing move of the parity work. Until now ResponseType was refused outright here, so
+    /// callers who wanted a typed result had to route to a GPT model regardless of which one suited
+    /// the task.
+    ///
+    /// The schema is JsonSchemaGenerator's, the same one OpenAI is sent - so this is also the test
+    /// that says the generator is genuinely provider-neutral rather than OpenAI-shaped by accident.
+    /// Values are asserted, not just the shape: a schema that is well-formed but wrongly cased
+    /// deserializes into an object with every field silently defaulted.
+    /// </remarks>
+    [RequiresAnthropicKeyFact]
+    public async Task Structured_Output_Returns_A_Typed_Object()
+    {
+        using var client = Build();
+
+        var response = await client.ChatAsync(
+            [OuroMessage.FromUser("Ada Lovelace was born in 1815 in London.")],
+            new ChatOptions
+            {
+                Model = OuroModels.Claude_Opus_5,
+                ResponseType = typeof(Person),
+                MaxCompletionTokens = 4096
+            });
+
+        AssertSucceeded(response);
+
+        var success = Assert.IsType<OuroResponseSuccess>(response);
+
+        output.WriteLine($"text: {success.ResponseText}");
+
+        var person = Assert.IsType<Person>(success.ResponseObject);
+
+        output.WriteLine($"parsed: {person.Name} / {person.BirthYear} / {person.BirthCity}");
+
+        Assert.Contains("Ada", person.Name, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1815, person.BirthYear);
+        Assert.Contains("London", person.BirthCity, StringComparison.OrdinalIgnoreCase);
+
+        // Same invariant as OpenAI: the durable record is the raw JSON, parseable on its own.
+        var reparsed = System.Text.Json.JsonSerializer.Deserialize<Person>(success.ResponseText);
+
+        Assert.NotNull(reparsed);
+        Assert.Equal(1815, reparsed!.BirthYear);
+    }
+
+    /// <summary>
+    /// Deliberately plain, and deliberately identical to the OpenAI live test's shape - the point is
+    /// that one type works on either provider.
+    /// </summary>
+    private sealed class Person
+    {
+        public string Name { get; set; } = "";
+
+        [System.ComponentModel.Description("The four-digit year of birth.")]
+        public int BirthYear { get; set; }
+
+        public string BirthCity { get; set; } = "";
+    }
+
     private static OuroClient Build()
     {
         return new OuroClient(new OuroborosOptions

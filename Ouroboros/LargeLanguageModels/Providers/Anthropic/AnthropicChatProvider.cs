@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
+using Ouroboros.StructuredOutput;
 
 namespace Ouroboros.LargeLanguageModels.Providers.Anthropic;
 
@@ -42,7 +43,7 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         {
             var message = await client.Messages.Create(parameters, cancellationToken);
 
-            return ProviderAttempt.Final(MapSuccess(message));
+            return ProviderAttempt.Final(MapSuccess(message, options.ResponseType));
         }
         catch (AnthropicSdk.Exceptions.AnthropicRateLimitException ex)
         {
@@ -71,37 +72,7 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     /// </remarks>
     private static OuroResponseBase? Reject(ChatOptions options)
     {
-        // Structured output is not wired up on this provider yet. Anthropic supports it, and
-        // JsonSchemaGenerator now produces the provider-neutral schema it needs - what remains is
-        // mapping that onto the output config here.
-        //
-        // Until then this has to fail. Ignoring it would send the request unconstrained, the
-        // response would parse to null, and the caller would get ResponseObject == null on an
-        // otherwise successful call - indistinguishable from a model that returned nothing useful.
-        if (options.ResponseType is not null)
-            return new OuroResponseInternalError(
-                $"ChatOptions.ResponseType ({options.ResponseType.Name}) is not supported on "
-                + "Anthropic yet - structured output is only implemented for OpenAI. Route calls "
-                + "that need it to a GPT model.");
-
-        if (options.Attachments is not { Count: > 0 } attachments)
-            return null;
-
-        if (!options.ServerTools.HasFlag(OuroServerTools.CodeExecution))
-            return new OuroResponseInternalError(
-                "Attachments were supplied without OuroServerTools.CodeExecution. Files are mounted "
-                + "into the execution container, so without one there is nowhere for them to go.");
-
-        foreach (var attachment in attachments)
-        {
-            if (attachment.Provider != OuroProvider.Anthropic)
-                return new OuroResponseInternalError(
-                    $"Attachment '{attachment.Id}' belongs to {attachment.Provider}, but this call "
-                    + "routes to Anthropic. File references are not portable between providers - "
-                    + "upload the file to the one serving the call.");
-        }
-
-        return null;
+        return AttachmentRules.Validate(options, OuroProvider.Anthropic);
     }
 
     private static OuroResponseProviderError Error(string? code, string message)
@@ -109,13 +80,13 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         return new OuroResponseProviderError("Anthropic", code, message);
     }
 
-    private static OuroResponseBase MapSuccess(Message message)
+    private static OuroResponseBase MapSuccess(Message message, System.Type? responseType)
     {
         var blocks = MapContent(message.Content);
 
         var usage = message.Usage;
 
-        return new OuroResponseSuccess(blocks)
+        var success = new OuroResponseSuccess(blocks)
         {
             // Cast, never ToString(). These SDK wrappers serialise themselves as JSON, so ToString()
             // yields "claude-opus-5" complete with the quotation marks - which would be stored
@@ -126,6 +97,16 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
             CompletionTokens = (int?)usage?.OutputTokens,
             TotalTokenUsage = (int)((usage?.InputTokens ?? 0) + (usage?.OutputTokens ?? 0))
         };
+
+        // Set afterwards rather than in the initializer because the text it parses is derived from
+        // the blocks by the constructor. Reading it back is what keeps the parsed object and the
+        // stored text guaranteed to be the same string.
+        //
+        // The shared parser, so a parse failure means the same thing here as on OpenAI: a null
+        // ResponseObject on an otherwise successful response, never an exception.
+        success.ResponseObject = ResponseParser.Parse(responseType, success.ResponseText);
+
+        return success;
     }
 
     /// <summary>

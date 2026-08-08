@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Anthropic.Core;
 using Anthropic.Models.Beta.Files;
 using Ouroboros.Core;
+using Ouroboros.LargeLanguageModels.Providers;
 using AnthropicSdk = Anthropic;
 
 namespace Ouroboros.LargeLanguageModels.Providers.Anthropic;
@@ -20,7 +21,7 @@ namespace Ouroboros.LargeLanguageModels.Providers.Anthropic;
 /// Separate from AnthropicChatProvider because these are not model calls - no retry policy, no
 /// attempt budget, no ProviderAttempt. They throw on failure like any other I/O.
 /// </remarks>
-internal sealed class AnthropicFileStore(AnthropicSdk.AnthropicClient client)
+internal sealed class AnthropicFileStore(AnthropicSdk.AnthropicClient client) : IProviderFileStore
 {
     public async Task<OuroFileRef> UploadAsync(byte[] content, string fileName, string? mediaType,
         CancellationToken cancellationToken)

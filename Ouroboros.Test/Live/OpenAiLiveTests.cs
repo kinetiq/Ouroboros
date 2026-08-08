@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -249,6 +251,181 @@ public class OpenAiLiveTests(ITestOutputHelper output)
             [OuroMessage.FromUser("Write a long essay about the sea.")],
             new ChatOptions { Model = Model },
             cts.Token));
+    }
+
+    /// <summary>
+    /// The model writes Python, OpenAI runs it, and the output comes back as a block rather than as
+    /// prose the model claims it produced.
+    /// </summary>
+    /// <remarks>
+    /// 2 ** 100, because the answer is exact and unambiguous. The Anthropic version of this test
+    /// originally asked for a standard deviation, which has two defensible answers - population and
+    /// sample - and duly failed against a correct result.
+    /// </remarks>
+    [RequiresOpenAiKeyFact]
+    public async Task Code_Execution_Runs_Python_And_Returns_Its_Output()
+    {
+        using var client = Build();
+
+        const string expected = "1267650600228229401496703205376";
+
+        var response = await client.ChatAsync(
+            [OuroMessage.FromUser(
+                "Using the code interpreter, compute 2**100 and print only the number.")],
+            new ChatOptions
+            {
+                Model = Model,
+                ServerTools = OuroServerTools.CodeExecution,
+                MaxCompletionTokens = 8192,
+
+                // Provider-side execution is slow enough that a conventional HTTP default would cut
+                // it off. This is what the per-attempt budget exists for.
+                Timeout = TimeSpan.FromMinutes(5)
+            });
+
+        AssertSucceeded(response);
+
+        var success = Assert.IsType<OuroResponseSuccess>(response);
+
+        foreach (var block in success.Content)
+            output.WriteLine($"block: {block.Kind}");
+
+        var executions = success.CodeExecutions.ToList();
+
+        Assert.NotEmpty(executions);
+
+        foreach (var execution in executions)
+        {
+            output.WriteLine($"code: {execution.Code}");
+            output.WriteLine($"exit={execution.Result?.ExitCode} stdout={execution.Result?.Stdout}");
+        }
+
+        // The outputs arriving at all is the assertion that matters: without the IncludedProperties
+        // opt-in on the request they come back empty and the model looks like it ran nothing.
+        var stdout = string.Concat(executions.Select(execution => execution.Result?.Stdout));
+
+        Assert.Contains(expected, stdout);
+        Assert.All(executions, execution =>
+        {
+            Assert.NotNull(execution.Result);
+            Assert.False(execution.Result!.IsToolError, "The tool itself failed.");
+            Assert.Equal(0, execution.Result.ExitCode);
+        });
+
+        // The code the model ran is worth capturing - without it a failed execution is just output
+        // with no way to see what produced it.
+        Assert.Contains(executions, execution => !string.IsNullOrWhiteSpace(execution.Code));
+    }
+
+    /// <summary>
+    /// The full round trip: data in, analysis, artifact out.
+    /// </summary>
+    /// <remarks>
+    /// This is the half of code execution that makes it useful, and on OpenAI it is also the only
+    /// exercise of the two-store split - the upload is addressed by id alone, while the chart the
+    /// interpreter writes lives inside the container and needs both ids to fetch. A reference that
+    /// lost its ContainerScope would 404 here and nowhere else.
+    ///
+    /// Cleans up after itself: uploads persist and count against the account, so a test that leaked
+    /// one per run would quietly accumulate forever.
+    /// </remarks>
+    [RequiresOpenAiKeyFact]
+    public async Task A_File_Round_Trips_Through_Code_Execution()
+    {
+        using var client = Build();
+
+        // Deliberately not round numbers - a mean of 30 could be arrived at without reading the
+        // file, whereas this one could not.
+        const string csv = """
+            name,score
+            ada,37
+            grace,41
+            alan,29
+            edsger,53
+            """;
+
+        const string expectedMean = "40";
+
+        var upload = await client.UploadFileAsync(
+            Encoding.UTF8.GetBytes(csv), "scores.csv", "text/csv", OuroProvider.OpenAi);
+
+        output.WriteLine($"uploaded: {upload.Id} ({upload.FileName})");
+
+        Assert.Equal(OuroProvider.OpenAi, upload.Provider);
+
+        try
+        {
+            var response = await client.ChatAsync(
+                [OuroMessage.FromUser(
+                    "Read the attached CSV with the code interpreter. Print the mean of the score "
+                    + "column, then save a bar chart of it as a PNG file.")],
+                new ChatOptions
+                {
+                    Model = Model,
+                    ServerTools = OuroServerTools.CodeExecution,
+                    Attachments = [upload],
+                    MaxCompletionTokens = 8192,
+                    Timeout = TimeSpan.FromMinutes(5)
+                });
+
+            AssertSucceeded(response);
+
+            var success = Assert.IsType<OuroResponseSuccess>(response);
+            var executions = success.CodeExecutions.ToList();
+
+            foreach (var execution in executions)
+                output.WriteLine($"exit={execution.Result?.ExitCode} stdout={execution.Result?.Stdout}");
+
+            // It read the file we uploaded, not something it invented.
+            var stdout = string.Concat(executions.Select(execution => execution.Result?.Stdout));
+
+            Assert.Contains(expectedMean, stdout);
+
+            var generated = executions
+                .SelectMany(execution => execution.Result?.Files ?? [])
+                .ToList();
+
+            output.WriteLine($"{generated.Count} generated file(s)");
+
+            foreach (var file in generated)
+                output.WriteLine($"  {file.Id} {file.FileName}");
+
+            // Not Single: a charting turn routinely yields more than one artifact - the interpreter
+            // emits its own rendered image alongside the file the script saved - and demanding
+            // exactly one would fail on a correct result.
+            Assert.NotEmpty(generated);
+
+            var png = generated.First(file =>
+                file.FileName?.EndsWith(".png", StringComparison.OrdinalIgnoreCase) == true);
+
+            try
+            {
+                // Every generated reference has to carry its container. Without one the id is
+                // simply not resolvable - container files are a different endpoint from the
+                // account-wide store - so a null here is a download that 404s later.
+                Assert.All(generated, file => Assert.NotNull(file.ContainerScope));
+
+                var downloaded = await client.DownloadFileAsync(png);
+
+                output.WriteLine($"downloaded {downloaded.SizeBytes} bytes, name={downloaded.FileName}");
+
+                // The PNG magic number. Asserting on the bytes rather than a non-zero length is what
+                // proves the reference round-tripped to the right file.
+                Assert.True(downloaded.SizeBytes > 1000, $"Suspiciously small: {downloaded.SizeBytes} bytes.");
+                Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, downloaded.Content.Take(4));
+            }
+            finally
+            {
+                // All of them, not just the one downloaded. The Anthropic version of this test
+                // originally cleaned up only the file it asserted on and leaked a chart per run.
+                foreach (var file in generated)
+                    await client.DeleteFileAsync(file);
+            }
+        }
+        finally
+        {
+            await client.DeleteFileAsync(upload);
+        }
     }
 
     /// <summary>

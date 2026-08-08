@@ -1,5 +1,6 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
+using OpenAI;
 using OpenAI.Responses;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -64,9 +65,11 @@ public class OuroClient : IOuroClient, IDisposable
     private readonly Lazy<IChatProvider> AnthropicProvider;
 
     /// <summary>
-    /// Anthropic's file store, sharing the transport and credentials of the chat provider.
+    /// The providers' file stores, each sharing the transport and credentials of its chat provider.
     /// </summary>
     private readonly Lazy<AnthropicFileStore> AnthropicFiles;
+
+    private readonly Lazy<OpenAiFileStore> OpenAiFiles;
 
     private OuroModels DefaultChatModel = Constants.DefaultChatModel;
 
@@ -239,16 +242,12 @@ public class OuroClient : IOuroClient, IDisposable
     /// than on a model is what stops an Anthropic id being sent to OpenAI and coming back as a
     /// baffling 404.
     /// </remarks>
-    private AnthropicFileStore ResolveFileStore(OuroProvider provider)
+    private IProviderFileStore ResolveFileStore(OuroProvider provider)
     {
         return provider switch
         {
             OuroProvider.Anthropic => AnthropicFiles.Value,
-
-            OuroProvider.OpenAi => throw new NotSupportedException(
-                "File upload and download are not implemented for OpenAI yet. They arrive with the "
-                + "move from Chat Completions to the Responses API, which is where OpenAI's "
-                + "server-side tools live."),
+            OuroProvider.OpenAi => OpenAiFiles.Value,
 
             _ => throw new NotSupportedException($"No file store is wired up for {provider}.")
         };
@@ -383,25 +382,32 @@ public class OuroClient : IOuroClient, IDisposable
         AnthropicTransport = new Lazy<HttpClient>(() =>
             new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan });
 
-        OpenAiProvider = new Lazy<IChatProvider>(() => new OpenAiResponsesProvider(
-            new ResponsesClient(
-                new ApiKeyCredential(RequireKey(Options.OpenAiApiKey, OuroProvider.OpenAi)),
-                new ResponsesClientOptions
-                {
-                    Transport = new HttpClientPipelineTransport(OpenAiTransport.Value),
+        // One configured client, three sub-clients off it: chat, the account-wide file store, and
+        // containers. Configuring each separately would work and would be a standing invitation to
+        // set the pipeline up correctly on two of them and not the third.
+        var openAi = new Lazy<OpenAIClient>(() => new OpenAIClient(
+            new ApiKeyCredential(RequireKey(Options.OpenAiApiKey, OuroProvider.OpenAi)),
+            new OpenAIClientOptions
+            {
+                Transport = new HttpClientPipelineTransport(OpenAiTransport.Value),
 
-                    // Two separate timeouts, and both have to be off. HttpClient.Timeout is the
-                    // obvious one; NetworkTimeout is a further per-attempt cancellation the
-                    // pipeline applies, defaulting to 100s - left alone it would cap
-                    // ChatOptions.Timeout invisibly, which is the trap the transport alone misses.
-                    NetworkTimeout = System.Threading.Timeout.InfiniteTimeSpan,
+                // Two separate timeouts, and both have to be off. HttpClient.Timeout is the
+                // obvious one; NetworkTimeout is a further per-attempt cancellation the pipeline
+                // applies, defaulting to 100s - left alone it would cap ChatOptions.Timeout
+                // invisibly, which is the trap the transport alone misses.
+                NetworkTimeout = System.Threading.Timeout.InfiniteTimeSpan,
 
-                    // The SDK retries three times by default. Left on, that multiplies against
-                    // Polly rather than replacing it. ChatExecutor is the single retry authority -
-                    // the same rule applied to the Anthropic client.
-                    RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
-                }),
-            Logger));
+                // The SDK retries three times by default. Left on, that multiplies against Polly
+                // rather than replacing it. ChatExecutor is the single retry authority - the same
+                // rule applied to the Anthropic client.
+                RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
+            }));
+
+        OpenAiProvider = new Lazy<IChatProvider>(() =>
+            new OpenAiResponsesProvider(openAi.Value.GetResponsesClient(), Logger));
+
+        OpenAiFiles = new Lazy<OpenAiFileStore>(() => new OpenAiFileStore(
+            openAi.Value.GetOpenAIFileClient(), openAi.Value.GetContainerClient()));
 
         // One SDK client shared by chat and files - same credentials, same transport, and the
         // file ids only mean anything to the account that issued them.

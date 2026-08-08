@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Anthropic.Models.Messages;
+using OpenAI.Responses;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -22,6 +23,9 @@ public class AttachmentTests
 {
     private static readonly OuroFileRef Csv =
         new("file_abc123") { Provider = OuroProvider.Anthropic, FileName = "data.csv" };
+
+    private static readonly OuroFileRef OpenAiCsv =
+        new("file-xyz789") { Provider = OuroProvider.OpenAi, FileName = "data.csv" };
 
     [Fact]
     public void With_No_Attachments_Content_Stays_A_Plain_String()
@@ -130,39 +134,114 @@ public class AttachmentTests
     }
 
     /// <summary>
-    /// Structured output is not implemented for Anthropic yet, and ignoring the request would send
-    /// it unconstrained - the response would then fail to parse and the caller would get a null
-    /// ResponseObject on an otherwise successful call, indistinguishable from a model that simply
-    /// returned nothing useful.
+    /// A ResponseType now reaches Anthropic as a schema rather than being refused.
     /// </summary>
+    /// <remarks>
+    /// This test used to assert the opposite. It was right to: while the mapper ignored ResponseType
+    /// the request went out unconstrained, the response failed to parse, and the caller got a null
+    /// ResponseObject on an otherwise successful call - indistinguishable from a model that returned
+    /// nothing useful. The refusal existed to make that visible, and is obsolete now the schema is
+    /// actually sent.
+    /// </remarks>
     [Fact]
-    public async Task A_ResponseType_On_Anthropic_Is_Refused()
+    public void A_ResponseType_On_Anthropic_Becomes_An_Output_Schema()
     {
-        var response = await Send(new ChatOptions
+        var mapped = AnthropicMappings.MapOptions([OuroMessage.FromUser("hi")], new ChatOptions
         {
             Model = OuroModels.Claude_Opus_5,
             ResponseType = typeof(SampleShape)
         });
 
-        var error = Assert.IsType<OuroResponseInternalError>(response);
+        Assert.NotNull(mapped.OutputConfig);
+        Assert.NotNull(mapped.OutputConfig!.Format);
+        Assert.Contains("Name", mapped.OutputConfig.Format!.Schema["properties"].ToString());
+    }
 
-        // Names the type, so it is obvious which call needs rerouting.
-        Assert.Contains(nameof(SampleShape), error.ResponseText);
+    /// <summary>
+    /// No ResponseType and no effort means no output config at all, rather than an empty one.
+    /// </summary>
+    [Fact]
+    public void No_ResponseType_Leaves_The_Output_Config_Off()
+    {
+        var mapped = AnthropicMappings.MapOptions([OuroMessage.FromUser("hi")], new ChatOptions
+        {
+            Model = OuroModels.Claude_Opus_5
+        });
+
+        Assert.Null(mapped.OutputConfig);
     }
 
     private sealed record SampleShape(string Name);
 
+    /// <summary>
+    /// An OpenAI attachment is mounted into the interpreter's container.
+    /// </summary>
     [Fact]
-    public async Task Attachments_On_OpenAi_Are_Refused_And_Spend_Nothing()
+    public void An_OpenAi_Attachment_Becomes_A_Container_File()
+    {
+        var mapped = OpenAiMappings.MapOptions([OuroMessage.FromUser("Summarise this.")], new ChatOptions
+        {
+            Model = OuroModels.Gpt_5_4_mini,
+            ServerTools = OuroServerTools.CodeExecution,
+            Attachments = [OpenAiCsv]
+        });
+
+        var tool = Assert.IsType<CodeInterpreterTool>(Assert.Single(mapped.Tools));
+        var configuration = Assert.IsType<AutomaticCodeInterpreterToolContainerConfiguration>(
+            tool.Container.ContainerConfiguration);
+
+        Assert.Equal([OpenAiCsv.Id], configuration.FileIds);
+    }
+
+    /// <summary>
+    /// A reference issued by one provider is refused by the other, before a call is spent.
+    /// </summary>
+    /// <remarks>
+    /// File ids are opaque and provider-scoped. Sent to the wrong vendor the request would come back
+    /// as a baffling 404 about an id the caller can see plainly exists.
+    ///
+    /// This test used to assert that OpenAI refused attachments outright, because they were not
+    /// implemented. It kept passing once they were - on the Anthropic reference it happened to use -
+    /// which is exactly the sort of test that reads as coverage while asserting something else.
+    /// </remarks>
+    [Fact]
+    public async Task An_Anthropic_Attachment_Sent_To_OpenAi_Is_Refused_And_Spends_Nothing()
     {
         var transport = new StubTransport(StubTransport.Response("ignored"));
 
         var response = await new ChatExecutor().ExecuteAsync(
             new OpenAiResponsesProvider(transport.ToClient()),
             [OuroMessage.FromUser("Summarise this.")],
-            new ChatOptions { Model = OuroModels.Gpt_5_4_mini, ServerTools = OuroServerTools.CodeExecution, Attachments = [Csv] });
+            new ChatOptions
+            {
+                Model = OuroModels.Gpt_5_4_mini,
+                ServerTools = OuroServerTools.CodeExecution,
+                Attachments = [Csv]
+            });
+
+        var error = Assert.IsType<OuroResponseInternalError>(response);
+
+        Assert.Contains("Anthropic", error.ResponseText);
+        Assert.Contains(Csv.Id, error.ResponseText);
+        Assert.Equal(0, transport.Calls);
+    }
+
+    /// <summary>
+    /// Attachments without the tool that mounts them are refused on OpenAI too - the rule is
+    /// Ouroboros' own, so it cannot differ by provider.
+    /// </summary>
+    [Fact]
+    public async Task An_OpenAi_Attachment_Without_Code_Execution_Is_Refused()
+    {
+        var transport = new StubTransport(StubTransport.Response("ignored"));
+
+        var response = await new ChatExecutor().ExecuteAsync(
+            new OpenAiResponsesProvider(transport.ToClient()),
+            [OuroMessage.FromUser("Summarise this.")],
+            new ChatOptions { Model = OuroModels.Gpt_5_4_mini, Attachments = [OpenAiCsv] });
 
         Assert.IsType<OuroResponseInternalError>(response);
+        Assert.Contains("CodeExecution", response.ResponseText);
         Assert.Equal(0, transport.Calls);
     }
 

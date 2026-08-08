@@ -49,7 +49,35 @@ internal static class OpenAiMappings
         if (options.ResponseType is { } responseType)
             request.TextOptions = new ResponseTextOptions { TextFormat = MapSchema(responseType) };
 
+        if (options.ServerTools.HasFlag(OuroServerTools.CodeExecution))
+            AddCodeInterpreter(request, options);
+
         return request;
+    }
+
+    /// <summary>
+    /// Turns on the code interpreter, mounting any attachments into its container.
+    /// </summary>
+    /// <remarks>
+    /// The IncludedProperties line is not optional. Without it the request still succeeds, the tool
+    /// still runs, and the outputs come back <em>empty</em> - so the model appears to have executed
+    /// nothing. It is an opt-in for a response field, not for the tool.
+    ///
+    /// The container is left automatic: OpenAI provisions one for the response and disposes of it.
+    /// Passing an explicit container id would let one persist across calls, which is a different
+    /// feature with a lifecycle to manage, and nothing asks for it yet.
+    /// </remarks>
+    private static void AddCodeInterpreter(CreateResponseOptions request, ChatOptions options)
+    {
+        var fileIds = options.Attachments is { Count: > 0 } attachments
+            ? attachments.Select(attachment => attachment.Id)
+            : [];
+
+        var container = new CodeInterpreterToolContainer(
+            CodeInterpreterToolContainerConfiguration.CreateAutomaticContainerConfiguration(fileIds));
+
+        request.Tools.Add(ResponseTool.CreateCodeInterpreterTool(container));
+        request.IncludedProperties.Add(IncludedResponseProperty.CodeInterpreterCallOutputs);
     }
 
     private static IEnumerable<ResponseItem> MapMessages(List<OuroMessage> messages)

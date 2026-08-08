@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Anthropic.Models.Messages;
 using AnthropicRole = Anthropic.Models.Messages.Role;
 using Ouroboros.Core;
 using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
+using Ouroboros.StructuredOutput;
 
 namespace Ouroboros.LargeLanguageModels.Providers.Anthropic;
 
@@ -13,7 +15,7 @@ namespace Ouroboros.LargeLanguageModels.Providers.Anthropic;
 /// Maps Ouroboros' request vocabulary onto Anthropic's.
 /// </summary>
 /// <remarks>
-/// The sibling of ChatMappings, and duplicated from it on purpose: the two providers disagree about
+/// The sibling of OpenAiMappings, and separate from it on purpose: the two providers disagree about
 /// enough that a shared mapper would be a pile of conditionals. The shapes that actually differ are
 /// called out below.
 /// </remarks>
@@ -52,6 +54,7 @@ internal static class AnthropicMappings
 
         var effort = MapEffort(options.ReasoningEffort);
         var tools = MapServerTools(options.ServerTools);
+        var format = MapSchema(options.ResponseType);
 
         // Every member is init-only, so this has to be one initializer rather than built up.
         return new MessageCreateParams
@@ -75,7 +78,7 @@ internal static class AnthropicMappings
 
             Thinking = thinking,
 
-            OutputConfig = effort is null ? null : new OutputConfig { Effort = effort },
+            OutputConfig = MapOutputConfig(effort, format),
 
             Tools = tools
         };
@@ -169,6 +172,55 @@ internal static class AnthropicMappings
         return string.Join(
             "\n\n",
             messages.Where(message => message.Role == OuroRole.System).Select(message => message.Content));
+    }
+
+    /// <summary>
+    /// Builds the strict JSON-schema output format from the caller's type, or null when they asked
+    /// for none.
+    /// </summary>
+    /// <remarks>
+    /// The schema comes from Ouroboros' own generator, the same one the OpenAI mapper uses. That is
+    /// what lets one ResponseType work on either provider, which is the whole point of generating it
+    /// ourselves rather than taking a vendor's.
+    ///
+    /// Only the schema is supplied: the SDK writes the "json_schema" discriminator itself.
+    /// </remarks>
+    private static JsonOutputFormat? MapSchema(System.Type? responseType)
+    {
+        if (responseType is null)
+            return null;
+
+        // Through a string rather than converting the node tree by hand. This runs once per request
+        // and is nothing beside the call it precedes, and hand-rolling JsonObject to JsonElement is
+        // a lot of surface on which to get a nested case subtly wrong.
+        var schema = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+            JsonSchemaGenerator.GenerateJson(responseType));
+
+        return new JsonOutputFormat { Schema = schema! };
+    }
+
+    /// <summary>
+    /// Combines the two things that ride on the output config, omitting it entirely when neither
+    /// was asked for.
+    /// </summary>
+    /// <remarks>
+    /// Spelled out as branches rather than one initializer with conditional values, because Effort
+    /// is one of the SDK union wrappers with an implicit conversion. Assigning a null through it
+    /// yields a non-null wrapper around nothing, which serialises as a present-but-empty field - the
+    /// same trap already documented on System and Thinking above.
+    /// </remarks>
+    private static OutputConfig? MapOutputConfig(Effort? effort, JsonOutputFormat? format)
+    {
+        if (effort is null && format is null)
+            return null;
+
+        if (effort is null)
+            return new OutputConfig { Format = format! };
+
+        if (format is null)
+            return new OutputConfig { Effort = effort };
+
+        return new OutputConfig { Effort = effort, Format = format };
     }
 
     /// <summary>

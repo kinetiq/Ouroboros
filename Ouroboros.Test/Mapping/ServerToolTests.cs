@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+using OpenAI.Responses;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -43,28 +44,38 @@ public class ServerToolTests
         Assert.Single(mapped.Tools!);
     }
 
-    /// <summary>
-    /// The failure this is designed to avoid: silently dropping the flag produces a response in
-    /// which the model explains it cannot run code, which reads as a model limitation rather than a
-    /// configuration mistake and is thoroughly miserable to diagnose.
-    /// </summary>
     [Fact]
-    public async Task Requesting_Code_Execution_From_OpenAi_Fails_And_Says_Why()
+    public void No_Tools_Are_Declared_By_Default_On_OpenAi()
     {
-        var transport = new StubTransport(StubTransport.Response("ignored"));
+        var mapped = OpenAiMappings.MapOptions(
+            [OuroMessage.FromUser("hi")],
+            new ChatOptions { Model = OuroModels.Gpt_5_4_mini });
 
-        var response = await new ChatExecutor().ExecuteAsync(
-            new OpenAiResponsesProvider(transport.ToClient()),
+        Assert.Empty(mapped.Tools);
+        Assert.Empty(mapped.IncludedProperties);
+    }
+
+    /// <summary>
+    /// Opting in declares the tool and asks for its outputs.
+    /// </summary>
+    /// <remarks>
+    /// The IncludedProperties half is the one worth pinning. Without it the request still succeeds
+    /// and the tool still runs, but the outputs come back empty - so the model looks like it
+    /// executed nothing, and the only symptom is an absence.
+    /// </remarks>
+    [Fact]
+    public void Requesting_Code_Execution_Declares_The_OpenAi_Tool_And_Asks_For_Its_Outputs()
+    {
+        var mapped = OpenAiMappings.MapOptions(
             [OuroMessage.FromUser("Work out the mean.")],
-            new ChatOptions { Model = OuroModels.Gpt_5_4_mini, ServerTools = OuroServerTools.CodeExecution });
+            new ChatOptions
+            {
+                Model = OuroModels.Gpt_5_4_mini,
+                ServerTools = OuroServerTools.CodeExecution
+            });
 
-        Assert.IsType<OuroResponseInternalError>(response);
-
-        // Names the capability and points at the fix, rather than just refusing.
-        Assert.Contains("CodeExecution", response.ResponseText);
-        Assert.Contains("Claude", response.ResponseText);
-
-        // And it fails before spending a request.
-        Assert.Equal(0, transport.Calls);
+        Assert.Single(mapped.Tools);
+        Assert.IsType<CodeInterpreterTool>(mapped.Tools[0]);
+        Assert.Contains(IncludedResponseProperty.CodeInterpreterCallOutputs, mapped.IncludedProperties);
     }
 }

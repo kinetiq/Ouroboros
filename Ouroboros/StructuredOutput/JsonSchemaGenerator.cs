@@ -26,7 +26,13 @@ namespace Ouroboros.StructuredOutput;
 /// wrong produces a model response that is quietly wrong, and the first person to notice is
 /// whoever reads the output weeks later.
 /// </remarks>
-internal static class JsonSchemaGenerator
+/// <remarks>
+/// Public so callers can see what their ResponseType actually produces. Two uses beyond curiosity:
+/// checking at build time that a type is usable at all - the unsupported shapes below throw, and
+/// without this that only surfaces on a live call - and reading the schema back when a model returns
+/// nulls, which is otherwise guesswork.
+/// </remarks>
+public static class JsonSchemaGenerator
 {
     /// <summary>
     /// How deep nesting may go before we assume a cycle.

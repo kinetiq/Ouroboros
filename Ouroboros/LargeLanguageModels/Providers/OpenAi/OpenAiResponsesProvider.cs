@@ -1,6 +1,7 @@
 using System;
 using System.ClientModel;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -68,16 +69,7 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
                 "ChatOptions.StopSequences is not supported on OpenAI's Responses API, which has no "
                 + "stop parameter. Remove them, or route the call to a Claude model.");
 
-        if (options.ServerTools != OuroServerTools.None)
-            return new OuroResponseInternalError(
-                $"{options.ServerTools} is not wired up for OpenAI yet. Route this call to a Claude "
-                + "model, which serves it today.");
-
-        if (options.Attachments is { Count: > 0 })
-            return new OuroResponseInternalError(
-                "Attachments are not wired up for OpenAI yet. Route this call to a Claude model.");
-
-        return null;
+        return AttachmentRules.Validate(options, OuroProvider.OpenAi);
     }
 
     private static ProviderAttempt MapResult(ResponseResult response, Type? responseType)
@@ -122,6 +114,14 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     {
         var blocks = new List<OuroContentBlock>();
 
+        // Where the last execution for each container landed, so files cited later can be attached
+        // to it. See AttachGeneratedFiles for why the last one.
+        var executionsByContainer = new Dictionary<string, int>();
+
+        // Generated files are cited on the message text rather than on the execution that wrote
+        // them, so they cannot be attached until every output item has been seen.
+        var citations = new List<ContainerFileCitationMessageAnnotation>();
+
         foreach (var item in response.OutputItems)
         {
             switch (item)
@@ -136,8 +136,18 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
 
                         if (!string.IsNullOrEmpty(text))
                             blocks.Add(new OuroTextBlock(text));
+
+                        citations.AddRange(part.OutputTextAnnotations
+                            .OfType<ContainerFileCitationMessageAnnotation>());
                     }
 
+                    break;
+
+                case CodeInterpreterCallResponseItem execution:
+                    if (execution.ContainerId is { } containerId)
+                        executionsByContainer[containerId] = blocks.Count;
+
+                    blocks.Add(MapExecution(execution));
                     break;
 
                 case ReasoningResponseItem:
@@ -149,7 +159,104 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
             }
         }
 
+        AttachGeneratedFiles(blocks, executionsByContainer, citations);
+
         return blocks;
+    }
+
+    /// <summary>
+    /// Maps one code interpreter call onto the neutral execution block.
+    /// </summary>
+    /// <remarks>
+    /// Two things this API does not report, both derived here rather than left to look like data.
+    ///
+    /// There is no exit code. The status says whether the <em>tool</em> completed, so Completed maps
+    /// to 0 and anything else to -1 with IsToolError set. A Python script that raises still counts
+    /// as completed - the interpreter ran fine and the traceback is in the logs - which is exactly
+    /// the distinction IsToolError already draws.
+    ///
+    /// There is no separate stderr either: the logs output is the combined stream, so Stderr stays
+    /// empty rather than guessing which lines belonged to which.
+    /// </remarks>
+    private static OuroCodeExecutionBlock MapExecution(CodeInterpreterCallResponseItem execution)
+    {
+        var completed = execution.Status == CodeInterpreterCallStatus.Completed;
+
+        var stdout = string.Concat(execution.Outputs
+            .OfType<CodeInterpreterCallLogsOutput>()
+            .Select(output => output.Logs));
+
+        return new OuroCodeExecutionBlock
+        {
+            Code = execution.Code,
+            Result = new OuroCodeExecutionResult
+            {
+                Stdout = stdout,
+                ExitCode = completed ? 0 : -1,
+                IsToolError = !completed
+            }
+        };
+    }
+
+    /// <summary>
+    /// Attaches files the interpreter wrote to the execution they came from.
+    /// </summary>
+    /// <remarks>
+    /// "Came from" is an approximation, deliberately. OpenAI cites a generated file against its
+    /// <em>container</em> rather than against the call that wrote it, and one container serves every
+    /// execution in the response - so when the model runs the tool twice, nothing on the wire says
+    /// which run produced the chart.
+    ///
+    /// Attaching to the last execution in that container is the least-wrong reading: it is the most
+    /// likely author, and it keeps each file appearing exactly once. Spreading them across every
+    /// execution in the container would mean a caller enumerating CodeExecutions for artifacts
+    /// downloads the same file repeatedly.
+    /// </remarks>
+    private static void AttachGeneratedFiles(List<OuroContentBlock> blocks,
+        Dictionary<string, int> executionsByContainer,
+        List<ContainerFileCitationMessageAnnotation> citations)
+    {
+        if (citations.Count == 0)
+            return;
+
+        var filesByExecution = new Dictionary<int, List<OuroFileRef>>();
+
+        foreach (var citation in citations)
+        {
+            if (citation.ContainerId is null
+                || !executionsByContainer.TryGetValue(citation.ContainerId, out var index))
+            {
+                continue;
+            }
+
+            if (!filesByExecution.TryGetValue(index, out var files))
+                filesByExecution[index] = files = [];
+
+            // Deduplicated by id. A file the prose mentions twice is cited twice, and handing the
+            // caller the same artifact twice would be an artefact of the mapper, not a fact.
+            if (files.Exists(file => file.Id == citation.FileId))
+                continue;
+
+            files.Add(new OuroFileRef(citation.FileId)
+            {
+                Provider = OuroProvider.OpenAi,
+                FileName = citation.Filename,
+
+                // Without this the id is unusable: container files live behind a different endpoint
+                // from the account-wide store, and fetching one needs both ids.
+                ContainerScope = citation.ContainerId
+            });
+        }
+
+        foreach (var (index, files) in filesByExecution)
+        {
+            var execution = (OuroCodeExecutionBlock)blocks[index];
+
+            blocks[index] = execution with
+            {
+                Result = (execution.Result ?? new OuroCodeExecutionResult()) with { Files = files }
+            };
+        }
     }
 
     /// <summary>
