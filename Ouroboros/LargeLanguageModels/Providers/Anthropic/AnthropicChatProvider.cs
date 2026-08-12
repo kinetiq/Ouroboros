@@ -65,14 +65,14 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     /// Catches request shapes the provider would accept but not honour, before spending a call.
     /// </summary>
     /// <remarks>
-    /// Attachments ride a container_upload block, which only means something inside a code
-    /// execution container. Sent without one they are accepted and ignored, and the model answers
-    /// as though the file were never mentioned - which reads as the model being obtuse rather than
-    /// the request being wrong.
+    /// The rules live in ProviderCapabilities so that this refusal and the failover chain's
+    /// validation are the same judgement - see the note there.
     /// </remarks>
     private static OuroResponseBase? Reject(ChatOptions options)
     {
-        return AttachmentRules.Validate(options, OuroProvider.Anthropic);
+        var check = ProviderCapabilities.Check(options, OuroProvider.Anthropic);
+
+        return check.IsSupported ? null : new OuroResponseInternalError(check.Message!);
     }
 
     private static OuroResponseProviderError Error(string? code, string message)

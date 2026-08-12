@@ -115,6 +115,42 @@ public class ChatOptions
     public OpenAiChatOptions OpenAi { get; init; } = new();
 
     /// <summary>
+    /// Models to try, in order, if this call cannot be served on <see cref="Model" />.
+    /// </summary>
+    /// <remarks>
+    /// Only transient failures move down the chain: rate limits and server faults that survived the
+    /// retry policy, transient network faults, and a blown attempt timeout. A request the provider
+    /// rejected on its merits - a bad parameter, an auth failure, a refused capability - fails where
+    /// it stands, because it would fail identically on the next provider at twice the cost.
+    ///
+    /// Each entry gets its own full retry budget and its own per-attempt timeout, so a chain can run
+    /// for considerably longer than a single call. Bound the whole thing with a CancellationToken if
+    /// that matters.
+    ///
+    /// Null means "use whatever the client was configured with" (see OuroClient.SetDefaultFallback).
+    /// An empty list means "no failover", and overrides the client default - the same distinction
+    /// Model draws between unset and set.
+    /// </remarks>
+    public IList<OuroModels>? FallbackModels { get; set; }
+
+    /// <summary>
+    /// Whether a fallback may serve this call without an option the primary could honour.
+    /// </summary>
+    /// <remarks>
+    /// Off by default: a chain that cannot carry every option fails when the call is made, naming
+    /// the option, rather than quietly returning output shaped differently from what was asked for.
+    /// Turning this on says a less exact answer beats no answer.
+    ///
+    /// It never drops an attachment. A model reasoning about a file it cannot see returns a
+    /// confident answer to a different question, so a provider that cannot see this call's files is
+    /// skipped rather than degraded. In practice this governs StopSequences, which OpenAI's
+    /// Responses API has no way to express.
+    ///
+    /// Only consulted when a fallback chain exists; a single-model call behaves exactly as before.
+    /// </remarks>
+    public bool AllowDegraded { get; set; }
+
+    /// <summary>
     /// Settings that only mean something on Anthropic. See <see cref="OpenAi" />.
     /// </summary>
     public AnthropicChatOptions Anthropic { get; init; } = new();
@@ -149,6 +185,8 @@ public class ChatOptions
             Timeout = Timeout,
             ServerTools = ServerTools,
             Attachments = Attachments,
+            FallbackModels = FallbackModels,
+            AllowDegraded = AllowDegraded,
 
             // Copied rather than shared. The rest of the reference members are read-only inputs, but
             // these are mutable settings the library may resolve defaults into - and writing a

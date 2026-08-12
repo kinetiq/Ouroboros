@@ -59,17 +59,16 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     /// <summary>
     /// Catches request shapes this API cannot honour, before spending a call.
     /// </summary>
+    /// <remarks>
+    /// The rules live in ProviderCapabilities so that this refusal and the failover chain's
+    /// validation are the same judgement. Two copies would eventually disagree, and the chain would
+    /// spend an attempt learning what it already knew.
+    /// </remarks>
     private static OuroResponseBase? Reject(ChatOptions options)
     {
-        // The Responses API has no stop parameter at all - this is an API-level gap, not an SDK
-        // omission. Silently dropping the sequences would produce output that runs past where the
-        // caller asked it to stop, which is worse than refusing.
-        if (options.StopSequences is { Count: > 0 })
-            return new OuroResponseInternalError(
-                "ChatOptions.StopSequences is not supported on OpenAI's Responses API, which has no "
-                + "stop parameter. Remove them, or route the call to a Claude model.");
+        var check = ProviderCapabilities.Check(options, OuroProvider.OpenAi);
 
-        return AttachmentRules.Validate(options, OuroProvider.OpenAi);
+        return check.IsSupported ? null : new OuroResponseInternalError(check.Message!);
     }
 
     private static ProviderAttempt MapResult(ResponseResult response, Type? responseType)
