@@ -32,6 +32,12 @@ public class ChatOptions
     ///     An upper bound for the number of tokens that can be generated for a completion,
     ///     including visible output tokens and reasoning tokens.
     /// </summary>
+    /// <remarks>
+    /// Covers the whole turn, not each request within it. A Claude turn that pauses is continued
+    /// automatically, and each continuation asks only for what is left of this - so a turn that
+    /// takes four rounds still produces at most what was asked for here, rather than that much per
+    /// round. A turn that spends the budget before finishing comes back with OuroStopReason.Paused.
+    /// </remarks>
     /// <see href="https://platform.openai.com/docs/api-reference/chat/create#chat-create-max_completion_tokens" />
     public int? MaxCompletionTokens { get; set; }
 

@@ -43,7 +43,7 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
 
         while (true)
         {
-            var parameters = AnthropicMappings.MapOptions(messages, options, turn.Produced);
+            var parameters = AnthropicMappings.MapOptions(messages, options, turn.Produced, turn.Remaining(options));
 
             Message message;
 
@@ -70,7 +70,14 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
 
             var stopReason = MapStopReason(message.StopReason is { } stop ? (string?)stop : null);
 
-            if (stopReason != OuroStopReason.Paused || turn.Continuations >= Constants.MaxPausedTurnContinuations)
+            // Two budgets end a turn, and both report it as paused because both leave the same
+            // thing behind: a real answer that is not finished. The token one matters because
+            // max_tokens is per request - a caller who asked for 1000 tokens and got four rounds of
+            // 1000 was billed for four, having capped nothing.
+            var exhausted = turn.Continuations >= Constants.MaxPausedTurnContinuations
+                            || turn.Remaining(options) <= 0;
+
+            if (stopReason != OuroStopReason.Paused || exhausted)
                 return ProviderAttempt.Final(turn.ToResponse(message, stopReason, options.ResponseType));
 
             Logger.LogInformation(
@@ -98,6 +105,16 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         private readonly List<ContentBlockParam> ProducedBlocks = [];
         private readonly List<OuroContentBlock> Blocks = [];
 
+        /// <summary>
+        /// Where each pending execution landed, keyed by tool-use id, for the whole turn.
+        /// </summary>
+        /// <remarks>
+        /// Turn-scoped rather than per round. A pause can fall between a tool invocation and its
+        /// result, and a dictionary rebuilt each round would never join the two - leaving an
+        /// execution that apparently never ran and a result belonging to nothing.
+        /// </remarks>
+        private readonly Dictionary<string, int> ExecutionsByToolUseId = [];
+
         private long PromptTokens;
         private long CompletionTokens;
 
@@ -110,9 +127,26 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
 
         public void Continue() => Continuations++;
 
+        /// <summary>
+        /// What is left of the caller's output-token ceiling, or null when they set none.
+        /// </summary>
+        /// <remarks>
+        /// max_tokens is a per-request cap, so a turn that pauses would otherwise get the whole
+        /// ceiling again on every round - a caller asking for 1000 tokens could be billed for four
+        /// times that and have capped nothing. Subtracting what the turn has already produced makes
+        /// MaxCompletionTokens mean what it says across the turn rather than within a round.
+        ///
+        /// Null rather than a sentinel so that comparisons against it are false when no cap was
+        /// asked for, which is exactly the behaviour the callers want.
+        /// </remarks>
+        public long? Remaining(ChatOptions options)
+        {
+            return options.MaxCompletionTokens is { } cap ? cap - CompletionTokens : null;
+        }
+
         public void Add(Message message)
         {
-            Blocks.AddRange(MapContent(message.Content));
+            MapContent(message.Content, Blocks, ExecutionsByToolUseId);
 
             foreach (var block in message.Content ?? [])
                 ProducedBlocks.Add(ToParam(block));
@@ -191,16 +225,17 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     ///
     /// Anything not yet modelled becomes an OuroUnknownBlock rather than being dropped, so a new
     /// provider block type degrades visibly instead of quietly shortening the response.
+    ///
+    /// Appends into the caller's list and correlation map rather than returning its own, so that a
+    /// turn spanning several requests keeps one set of both. Indexes recorded on an earlier round
+    /// stay valid because the list only ever grows, which is what lets a result arriving after a
+    /// pause still find the invocation it belongs to.
     /// </remarks>
-    private static List<OuroContentBlock> MapContent(IReadOnlyList<ContentBlock>? content)
+    private static void MapContent(IReadOnlyList<ContentBlock>? content, List<OuroContentBlock> blocks,
+        Dictionary<string, int> executionsByToolUseId)
     {
-        var blocks = new List<OuroContentBlock>();
-
         if (content is null)
-            return blocks;
-
-        // Where each pending execution landed, so its result can be filled in when it arrives.
-        var executionsByToolUseId = new Dictionary<string, int>();
+            return;
 
         foreach (var block in content)
         {
@@ -244,8 +279,6 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
 
             blocks.Add(new OuroUnknownBlock(DescribeBlock(block)));
         }
-
-        return blocks;
     }
 
     /// <summary>

@@ -80,6 +80,37 @@ internal sealed class SequencedTransport(params string[] responses) : HttpMessag
             """;
     }
 
+    /// <summary>
+    /// A server_tool_use block - the model asking to run something, with no result yet.
+    /// </summary>
+    public static string ToolUseBlock(string toolUseId, string command) =>
+        $$"""
+        [{
+          "type":"server_tool_use",
+          "id":{{JsonSerializer.Serialize(toolUseId)}},
+          "name":"bash_code_execution",
+          "input":{"command":{{JsonSerializer.Serialize(command)}}}
+        }]
+        """;
+
+    /// <summary>
+    /// The result for a tool use, which a pause can separate from the invocation it belongs to.
+    /// </summary>
+    public static string ToolResultBlock(string toolUseId, string stdout, int returnCode = 0) =>
+        $$"""
+        [{
+          "type":"bash_code_execution_tool_result",
+          "tool_use_id":{{JsonSerializer.Serialize(toolUseId)}},
+          "content":{
+            "type":"bash_code_execution_result",
+            "stdout":{{JsonSerializer.Serialize(stdout)}},
+            "stderr":"",
+            "return_code":{{returnCode}},
+            "content":[]
+          }
+        }]
+        """;
+
     public static string TextBlock(string text) =>
         $$"""[{"type":"text","text":{{JsonSerializer.Serialize(text)}},"citations":null}]""";
 

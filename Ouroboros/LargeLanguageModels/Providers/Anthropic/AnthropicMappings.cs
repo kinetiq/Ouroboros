@@ -29,8 +29,14 @@ internal static class AnthropicMappings
     /// appended as a single assistant turn - one that grows with each continuation rather than one
     /// per continuation, since consecutive assistant messages are not a shape the API takes.
     /// </param>
+    /// <param name="maxTokens">
+    /// Overrides the token ceiling for this request. Used when continuing a paused turn, where what
+    /// is left of the caller's budget is smaller than the budget itself - max_tokens is per request,
+    /// so passing the full ceiling each round would let one turn produce several times what the
+    /// caller asked for.
+    /// </param>
     internal static MessageCreateParams MapOptions(List<OuroMessage> messages, ChatOptions options,
-        IReadOnlyList<ContentBlockParam>? inProgress = null)
+        IReadOnlyList<ContentBlockParam>? inProgress = null, long? maxTokens = null)
     {
         // Demanded, not defaulted. Falling back to Constants.DefaultChatModel here was a latent
         // 404: that default is a GPT model, so an unresolved call would have stamped "gpt-5.4-mini"
@@ -75,7 +81,7 @@ internal static class AnthropicMappings
             // reservation - only tokens actually produced are billed. Note that on current models
             // this budget covers thinking as well as visible output, so a tight value truncates the
             // answer rather than merely shortening it.
-            MaxTokens = options.MaxCompletionTokens ?? model.GetMaxOutputTokens(),
+            MaxTokens = maxTokens ?? options.MaxCompletionTokens ?? model.GetMaxOutputTokens(),
 
             Messages = MapMessages(messages, options.Attachments, inProgress),
 

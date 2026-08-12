@@ -161,13 +161,118 @@ public class PausedTurnTests
         Assert.Equal(OuroStopReason.EndTurn, success.StopReason);
     }
 
-    private static async Task<OuroResponseBase> Send(SequencedTransport transport)
+    /// <summary>
+    /// A tool result arriving after the pause still finds the invocation it belongs to.
+    /// </summary>
+    /// <remarks>
+    /// The correlation map used to be rebuilt for each round, so a pause falling between a
+    /// server_tool_use and its result left an execution that apparently never ran and a result
+    /// belonging to nothing - the same orphaning the file-editor handling was added to fix,
+    /// reintroduced at the pause boundary.
+    /// </remarks>
+    [Fact]
+    public async Task A_Tool_Result_Arriving_After_A_Pause_Finds_Its_Invocation()
+    {
+        const string toolUseId = "srvtoolu_split";
+
+        var transport = new SequencedTransport(
+            SequencedTransport.Message("pause_turn", SequencedTransport.ToolUseBlock(toolUseId, "echo hi")),
+            SequencedTransport.Message("end_turn", SequencedTransport.ToolResultBlock(toolUseId, "hi")));
+
+        var success = Assert.IsType<OuroResponseSuccess>(await Send(transport));
+
+        // One execution, not an orphaned invocation plus a homeless result.
+        var execution = Assert.Single(success.CodeExecutions);
+
+        Assert.NotNull(execution.Result);
+        Assert.Equal("hi", execution.Result!.Stdout);
+        Assert.Equal(0, execution.Result.ExitCode);
+        Assert.False(execution.Result.IsToolError);
+
+        // And the code the model asked to run is still on it, from the earlier round.
+        Assert.Contains("echo hi", execution.Code);
+    }
+
+    /// <summary>
+    /// A continuation asks only for what is left of the caller's token ceiling.
+    /// </summary>
+    /// <remarks>
+    /// max_tokens is per request, so handing the full ceiling to every round would let a turn that
+    /// paused three times produce four times what the caller asked for - and bill for it.
+    /// </remarks>
+    [Fact]
+    public async Task A_Continuation_Asks_Only_For_The_Remaining_Tokens()
+    {
+        var transport = new SequencedTransport(
+            SequencedTransport.Message("pause_turn", SequencedTransport.TextBlock("a"), outputTokens: 300),
+            SequencedTransport.Message("end_turn", SequencedTransport.TextBlock("b"), outputTokens: 50));
+
+        await Send(transport, maxCompletionTokens: 1000);
+
+        Assert.Equal(2, transport.Calls);
+
+        Assert.Equal(1000, MaxTokensOf(transport.Requests[0]));
+        Assert.Equal(700, MaxTokensOf(transport.Requests[1]));
+    }
+
+    /// <summary>
+    /// A turn that spends the whole ceiling in one round is not continued.
+    /// </summary>
+    [Fact]
+    public async Task A_Spent_Token_Budget_Ends_The_Turn()
+    {
+        var transport = new SequencedTransport(
+            SequencedTransport.Message("pause_turn", SequencedTransport.TextBlock("all of it"), outputTokens: 1000));
+
+        var success = Assert.IsType<OuroResponseSuccess>(await Send(transport, maxCompletionTokens: 1000));
+
+        // Continuing would have asked for zero more tokens, which is not a request worth making.
+        Assert.Equal(1, transport.Calls);
+        Assert.Equal(OuroStopReason.Paused, success.StopReason);
+        Assert.False(success.IsComplete);
+    }
+
+    /// <summary>
+    /// With no ceiling set, a continuation is capped by the model rather than by arithmetic.
+    /// </summary>
+    [Fact]
+    public async Task Without_A_Ceiling_A_Continuation_Uses_The_Model_Maximum()
+    {
+        var transport = new SequencedTransport(
+            SequencedTransport.Message("pause_turn", SequencedTransport.TextBlock("a"), outputTokens: 300),
+            SequencedTransport.Message("end_turn", SequencedTransport.TextBlock("b")));
+
+        await Send(transport);
+
+        Assert.Equal(2, transport.Calls);
+
+        // The same value both times: nothing was subtracted, because nothing was asked for.
+        Assert.Equal(MaxTokensOf(transport.Requests[0]), MaxTokensOf(transport.Requests[1]));
+    }
+
+    private static long MaxTokensOf(string requestBody)
+    {
+        using var request = JsonDocument.Parse(requestBody);
+
+        return request.RootElement.GetProperty("max_tokens").GetInt64();
+    }
+
+    private static Task<OuroResponseBase> Send(SequencedTransport transport)
+    {
+        return Send(transport, null);
+    }
+
+    private static async Task<OuroResponseBase> Send(SequencedTransport transport, int? maxCompletionTokens)
     {
         var provider = new AnthropicChatProvider(transport.ToAnthropicClient());
 
         var attempt = await provider.SendAsync(
             [OuroMessage.FromUser("run something long")],
-            new ChatOptions { Model = OuroModels.Claude_Opus_5 },
+            new ChatOptions
+            {
+                Model = OuroModels.Claude_Opus_5,
+                MaxCompletionTokens = maxCompletionTokens
+            },
             CancellationToken.None);
 
         return attempt.Response;
