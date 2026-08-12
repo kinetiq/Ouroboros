@@ -113,6 +113,15 @@ public static class JsonSchemaGenerator
         return node;
     }
 
+    /// <summary>
+    /// An enum becomes a string constrained to its member names.
+    /// </summary>
+    /// <remarks>
+    /// Names rather than numbers because the number is meaningless to a model, and because both
+    /// providers' strict modes express a closed set this way. That makes ResponseParser's
+    /// string-enum converter part of the contract rather than a nicety: the default deserializer
+    /// accepts only the number, so without it every enum here would parse back to nothing.
+    /// </remarks>
     private static JsonObject BuildEnum(Type type, string? description)
     {
         var values = new JsonArray();

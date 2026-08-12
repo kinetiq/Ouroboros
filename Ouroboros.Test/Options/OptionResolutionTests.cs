@@ -78,6 +78,13 @@ public class OptionResolutionTests
     /// Clone is hand-written, so a new property silently stops being copied unless something
     /// checks. Reflection over the public surface is that something.
     /// </summary>
+    /// <remarks>
+    /// The guard only bites for properties this initializer sets to something other than their
+    /// default: an uncopied property compares null to null and passes. So a new property has to be
+    /// added <b>here, with a non-default value</b>, not only to Clone. FallbackModels and
+    /// AllowDegraded went in without that and were unguarded until a review noticed - a dropped
+    /// FallbackModels would have silently swapped a per-call chain for the client default.
+    /// </remarks>
     [Fact]
     public void Clone_Copies_Every_Property()
     {
@@ -94,6 +101,8 @@ public class OptionResolutionTests
             Timeout = TimeSpan.FromSeconds(7),
             ServerTools = OuroServerTools.CodeExecution,
             Attachments = [new OuroFileRef("file_1") { Provider = OuroProvider.Anthropic }],
+            FallbackModels = [OuroModels.Claude_Opus_5],
+            AllowDegraded = true,
             OpenAi = { User = "u" }
         };
 

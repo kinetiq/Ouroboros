@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Ouroboros.StructuredOutput;
 
@@ -50,12 +51,26 @@ internal static class ResponseParser
     }
 
     /// <summary>
-    /// Default options, deliberately: matching is case-sensitive, which is what makes the schema
-    /// generator's exact-PascalCase rule load-bearing. Relaxing this here would mask a schema that
-    /// emits the wrong casing rather than fixing it.
+    /// The reading half of the contract the schema generator writes.
     /// </summary>
+    /// <remarks>
+    /// Property matching stays case-sensitive - the default - which is what makes the generator's
+    /// exact-PascalCase rule load-bearing. Turning on case-insensitive matching here would mask a
+    /// schema emitting the wrong casing rather than fixing it.
+    ///
+    /// The one addition is the string-enum converter, and it is not a relaxation: JsonSchemaGenerator
+    /// emits enums as a string with an <c>enum</c> list of the member names, so the model returns
+    /// "Pass" rather than 0. Without this converter System.Text.Json only accepts the number, the
+    /// parse throws, and Parse returns null - a successful response with an empty ResponseObject and
+    /// nothing anywhere saying why. The two halves have to speak the same dialect.
+    /// </remarks>
+    private static readonly JsonSerializerOptions Options = new()
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private static object? Deserialize(string json, Type type)
     {
-        return JsonSerializer.Deserialize(json, type);
+        return JsonSerializer.Deserialize(json, type, Options);
     }
 }
