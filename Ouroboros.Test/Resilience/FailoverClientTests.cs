@@ -320,6 +320,66 @@ public class FailoverClientTests
     }
 
     /// <summary>
+    /// A client-default fallback to a provider with no key is dropped, not fatal.
+    /// </summary>
+    /// <remarks>
+    /// Configuring a client-wide fallback must not break calls the primary can serve. This threw
+    /// InvalidOperationException from every ChatAsync - the chain resolved all its providers up
+    /// front, and building one without a key is what throws - so a client holding only an OpenAI key
+    /// stopped working entirely the moment anyone added a Claude default.
+    /// </remarks>
+    [Fact]
+    public async Task A_Client_Default_Fallback_Without_A_Key_Is_Dropped()
+    {
+        // The primary is exhausted deliberately. A succeeding primary would leave the fallback
+        // uncalled whether or not it was dropped, so the assertion below could not tell the two
+        // apart - it would pass on a chain that had kept an unusable entry it simply never reached.
+        var gpt = FakeProvider.AlwaysRetryable(OuroProvider.OpenAi);
+        var claude = FakeProvider.Succeeds(OuroProvider.Anthropic, "should never be reached");
+
+        using var client = new OuroClient(
+            new OuroborosOptions { OpenAiApiKey = "test" },
+            model => model.GetProvider() == OuroProvider.OpenAi ? gpt : claude);
+
+        client.SetDefaultFallback(Claude);
+
+        var response = await client.ChatAsync([OuroMessage.FromUser("hi")], Options());
+
+        // The chain was one entry long, so the primary's own failure is the answer.
+        Assert.False(response.Success);
+        Assert.Equal(0, claude.Calls);
+    }
+
+    /// <summary>
+    /// The same gap named explicitly for this call is an error rather than a silent shortening.
+    /// </summary>
+    /// <remarks>
+    /// Same distinction Validate draws for an option a chain entry cannot carry: a chain the caller
+    /// wrote for this call is their intent, so a hole in it is worth telling them about.
+    /// </remarks>
+    [Fact]
+    public async Task An_Explicit_Fallback_Without_A_Key_Is_Refused()
+    {
+        var gpt = FakeProvider.Succeeds(OuroProvider.OpenAi);
+        var claude = FakeProvider.Succeeds(OuroProvider.Anthropic);
+
+        using var client = new OuroClient(
+            new OuroborosOptions { OpenAiApiKey = "test" },
+            model => model.GetProvider() == OuroProvider.OpenAi ? gpt : claude);
+
+        var response = await client.ChatAsync([OuroMessage.FromUser("hi")], Options(fallback: [Claude]));
+
+        var error = Assert.IsType<OuroResponseInternalError>(response);
+
+        Assert.Contains("Anthropic", error.ResponseText);
+        Assert.Contains("API key", error.ResponseText);
+
+        // A response, not an exception - and nothing was spent discovering it.
+        Assert.Equal(0, gpt.Calls);
+        Assert.Equal(0, claude.Calls);
+    }
+
+    /// <summary>
     /// A request that is wrong however it is routed fails, and never spends a call.
     /// </summary>
     [Fact]

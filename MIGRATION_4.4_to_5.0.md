@@ -413,6 +413,10 @@ because it would fail identically on the next provider at twice the cost.
 Each entry gets its own full retry budget, so a chain runs considerably longer than a single call
 in the worst case. Bound the whole thing with a `CancellationToken` if that matters.
 
+A fallback naming a provider you have no API key for is dropped from the chain when it came from
+`SetDefaultFallback`, and refused with an error when the call named it explicitly. The model you
+asked for directly still throws if its provider is unconfigured, exactly as before.
+
 If an option cannot be carried by every model in the chain — `StopSequences` with a GPT fallback,
 say — the call fails when it is made, naming the option. `AllowDegraded = true` says to run the
 chain for whatever it can still serve: entries run without options they cannot express, and entries

@@ -1,7 +1,6 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using OpenAI;
-using OpenAI.Responses;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Chaining;
@@ -166,9 +165,12 @@ public class OuroClient : IOuroClient, IDisposable
             options.ReasoningEffort = DefaultReasoningEffort;
         }
 
-        // Built before anything is sent, so a chain naming a provider with no API key throws here
-        // rather than after the primary attempt has already been paid for.
-        var chain = BuildChain(options);
+        // Built and checked before anything is sent, so a chain that cannot do what the call asks
+        // says so now rather than after the primary attempt has already been paid for.
+        var (chain, unreachable) = BuildChain(options);
+
+        if (unreachable is not null)
+            return unreachable;
 
         if (Validate(chain, options) is { } refusal)
             return refusal;
@@ -198,7 +200,7 @@ public class OuroClient : IOuroClient, IDisposable
     /// reused across invocations, and overlapping them would interleave two chats into one row.
     ///
     /// Every attempt's hook runs even when one of them throws under HookFailurePolicy.Throw, and the
-    /// first exception is rethrown afterwards. Bailing out on the first would mean a throw while
+    /// first exception is rethrown afterward. Bailing out on the first would mean a throw while
     /// logging the failed attempt discarded the successful attempt's response entirely - a chat the
     /// caller paid for and would never see, lost to a logging fault.
     /// </remarks>
@@ -248,13 +250,32 @@ public class OuroClient : IOuroClient, IDisposable
     /// <summary>
     /// Resolves the models this call may run on, in order, with a provider for each.
     /// </summary>
-    private List<ChainEntry> BuildChain(ChatOptions options)
+    /// <remarks>
+    /// A fallback whose provider has no API key configured is handled one of two ways, depending on
+    /// where the chain came from:
+    ///
+    /// - Set by SetDefaultFallback: the entry is dropped and a line is logged. The call runs on
+    ///   whatever is left, usually just the primary.
+    /// - Set on this call by ChatOptions.FallbackModels: the call fails immediately, with an error
+    ///   naming the provider.
+    ///
+    /// They differ because a client-wide default applies to every call, and most calls never fail
+    /// over. Breaking all of them over a key that only matters when something goes wrong is worse
+    /// than running with no fallback at all. A chain set on one call is different: the caller named
+    /// those models for this request, so a gap in them is worth stopping for.
+    ///
+    /// The primary model is covered by neither rule. A call naming a model whose provider has no key
+    /// throws, exactly as it did before failover existed.
+    /// </remarks>
+    private (List<ChainEntry> Chain, OuroResponseBase? Refusal) BuildChain(ChatOptions options)
     {
         var primary = options.Model!.Value; // always resolved by the caller
         var models = new List<OuroModels> { primary };
 
         // Null means "whatever the client was configured with"; an empty list means the caller
         // explicitly wants no failover, and beats the client default.
+        var callerChose = options.FallbackModels is not null;
+
         IEnumerable<OuroModels> fallbacks = options.FallbackModels is { } chosen
             ? chosen
             : DefaultFallbackModels;
@@ -267,12 +288,31 @@ public class OuroClient : IOuroClient, IDisposable
                 continue;
             }
 
+            if (!HasKeyFor(fallback.GetProvider()))
+            {
+                if (callerChose)
+                {
+                    return ([], new OuroResponseInternalError(
+                        $"{fallback} is in this call's fallback chain, but no {fallback.GetProvider()} "
+                        + "API key is configured on this client. Supply one through the "
+                        + "OuroborosOptions overload of AddOuroboros, or take the model out of the chain."));
+                }
+
+                Logger.LogInformation(
+                    "Dropping {Model} from the fallback chain: no {Provider} API key is configured.",
+                    fallback, fallback.GetProvider());
+
+                continue;
+            }
+
             models.Add(fallback);
         }
 
-        return models
+        var chain = models
             .Select(model => new ChainEntry(model, ResolveProvider(model), OptionsFor(options, model)))
             .ToList();
+
+        return (chain, null);
 
         ChatOptions OptionsFor(ChatOptions source, OuroModels model)
         {
@@ -282,6 +322,25 @@ public class OuroClient : IOuroClient, IDisposable
 
             return entry;
         }
+    }
+
+    /// <summary>
+    /// Whether this client could reach a provider at all.
+    /// </summary>
+    /// <remarks>
+    /// Reads the configured options rather than trying to build the client, because building it is
+    /// what throws - and the whole point here is to decide before that happens. The test seam is
+    /// deliberately not consulted: a fake provider still stands in for a real one, and a test that
+    /// wants a chain built supplies keys for it.
+    /// </remarks>
+    private bool HasKeyFor(OuroProvider provider)
+    {
+        return provider switch
+        {
+            OuroProvider.OpenAi => !string.IsNullOrWhiteSpace(Options.OpenAiApiKey),
+            OuroProvider.Anthropic => !string.IsNullOrWhiteSpace(Options.AnthropicApiKey),
+            _ => false
+        };
     }
 
     /// <summary>
@@ -504,16 +563,18 @@ public class OuroClient : IOuroClient, IDisposable
     /// serve it.
     /// </summary>
     /// <remarks>
-    /// Only transient failures fall through - see ChatOptions.FallbackModels for exactly which. An
-    /// individual call can override this by setting FallbackModels itself, including to an empty
-    /// list to opt out entirely.
+    /// Only transient failures move down the chain; ChatOptions.FallbackModels lists exactly which.
     ///
-    /// The reasoning effort travels with the call rather than the model, so a chain runs every entry
-    /// at whatever effort the request carried. That is usually what you want and occasionally not:
-    /// an effort chosen alongside a default model in SetDefaultChatModel is applied to the fallbacks
-    /// too, which were not part of that choice.
+    /// A single call overrides this by setting FallbackModels itself. Setting that to an empty list
+    /// opts one call out of failover; calling this method with no arguments turns it off for the
+    /// whole client.
     ///
-    /// Calling this with no arguments turns failover off.
+    /// Reasoning effort is not per model. Whatever effort a request carries is used for every entry
+    /// in its chain - including an effort passed to SetDefaultChatModel, which was chosen for that
+    /// model rather than for these.
+    ///
+    /// A model here whose provider has no API key is dropped from the chain rather than failing the
+    /// call. BuildChain explains why that differs from naming the same model on an individual call.
     /// </remarks>
     public void SetDefaultFallback(params OuroModels[] models)
     {
