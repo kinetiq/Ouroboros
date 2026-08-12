@@ -394,6 +394,38 @@ Code-execution turns can run for minutes — see `ChatOptions.Timeout` (per-atte
 minutes) and the `CancellationToken` parameter on `ChatAsync` (whole-call). Timeouts are no longer
 retried.
 
+### 7b. Provider failover (beta.2)
+
+Name one or more fallback models and a call the primary cannot serve is retried on the next one:
+
+```csharp
+new ChatOptions { Model = OuroModels.Gpt_5_4_mini, FallbackModels = [OuroModels.Claude_Opus_5] }
+```
+
+Or set it once for the client with `SetDefaultFallback(OuroModels.Claude_Opus_5)`. A per-call
+`FallbackModels` overrides that, and an empty list opts a single call out entirely.
+
+**Only transient failures move down the chain**: rate limits and server faults that outlived the
+retry policy, transient network errors, and a blown attempt timeout. A request the provider rejected
+on its merits — a bad parameter, an auth failure, a malformed response type — fails where it stands,
+because it would fail identically on the next provider at twice the cost.
+
+Each entry gets its own full retry budget, so a chain runs considerably longer than a single call
+in the worst case. Bound the whole thing with a `CancellationToken` if that matters.
+
+If an option cannot be carried by every model in the chain — `StopSequences` with a GPT fallback,
+say — the call fails when it is made, naming the option. `AllowDegraded = true` says to run the
+chain for whatever it can still serve: entries run without options they cannot express, and entries
+that cannot see the call's attachments are dropped rather than asked about a file they have no
+access to.
+
+**`OnChatCompleted` now fires once per attempt.** Without a fallback that is exactly once per call,
+as before. With one, a call that failed over reports the failed attempt and the successful one
+separately, in order — so a consumer logging these keeps a record of what the first provider cost.
+`ChatCompletedArgs` gains `Attempt` and `NextModel`, and its `Model` is now the model that attempt
+actually ran on rather than the one originally requested. `DurationMs` on the args is per attempt;
+the response object handed back carries the total.
+
 ### 8. Responses carry typed content blocks and a stop reason (beta.2)
 
 `OuroResponseSuccess.Content` is the response broken into `OuroContentBlock`s; `ResponseText` is

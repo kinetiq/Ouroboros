@@ -19,7 +19,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using AnthropicSdk = Anthropic;
@@ -38,9 +40,14 @@ public class OuroClient : IOuroClient, IDisposable
     private readonly ChatExecutor Executor;
 
     /// <summary>
-    /// When set, every request goes here regardless of model. Test seam only.
+    /// When set, supplies the provider for a model instead of the real clients. Test seam only.
     /// </summary>
-    private readonly IChatProvider? ProviderOverride;
+    /// <remarks>
+    /// Per model rather than one provider for everything, because a fallback chain needs each entry
+    /// to resolve somewhere different - a seam that collapsed them all onto one provider could not
+    /// express the thing under test.
+    /// </remarks>
+    private readonly Func<OuroModels, IChatProvider>? ProviderOverride;
 
     /// <summary>
     /// Where HookFailurePolicy.Log sends hook failures. Falls back to NullLogger, which is why
@@ -78,6 +85,11 @@ public class OuroClient : IOuroClient, IDisposable
     /// are intended to be a set; wouldn't want to overwrite an intentionally null reasoning effort.
     /// </summary>
     private OuroReasoningEffort? DefaultReasoningEffort = Constants.DefaultReasoningEffort;
+
+    /// <summary>
+    /// Models every call falls back to, unless it says otherwise. Empty means no failover.
+    /// </summary>
+    private IReadOnlyList<OuroModels> DefaultFallbackModels = [];
 
     /// <summary>
     /// Event fired after every ChatAsync call completes. Use for centralized logging.
@@ -154,30 +166,68 @@ public class OuroClient : IOuroClient, IDisposable
             options.ReasoningEffort = DefaultReasoningEffort;
         }
 
-        var provider = ResolveProvider(options.Model.Value);
+        // Built before anything is sent, so a chain naming a provider with no API key throws here
+        // rather than after the primary attempt has already been paid for.
+        var chain = BuildChain(options);
+
+        if (Validate(chain, options) is { } refusal)
+            return refusal;
 
         var stopwatch = Stopwatch.StartNew();
-        var response = await Executor.ExecuteAsync(provider, messages, options, cancellationToken);
+        var result = await Executor.ExecuteChainAsync(chain, messages, cancellationToken);
         stopwatch.Stop();
 
-        var durationMs = (int)stopwatch.ElapsedMilliseconds;
-        response.DurationMs = durationMs;
+        // The returned response reports the whole call, every attempt included. Each attempt's own
+        // duration stays on its record, which is what the hook reports.
+        result.FinalResponse.DurationMs = (int)stopwatch.ElapsedMilliseconds;
 
-        // Fire the OnChatCompleted hook for logging
-        if (OnChatCompleted != null)
+        await FireCompletedHooks(result, messages, options);
+
+        // Deferred to here so the attempts that did complete are logged first. Everything above is
+        // bookkeeping for work already done and paid for; this is the caller's own signal.
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return result.FinalResponse;
+    }
+
+    /// <summary>
+    /// Fires OnChatCompleted once per completed attempt, in order.
+    /// </summary>
+    /// <remarks>
+    /// Sequentially awaited, deliberately: a consumer's logger is frequently one stateful instance
+    /// reused across invocations, and overlapping them would interleave two chats into one row.
+    ///
+    /// Every attempt's hook runs even when one of them throws under HookFailurePolicy.Throw, and the
+    /// first exception is rethrown afterwards. Bailing out on the first would mean a throw while
+    /// logging the failed attempt discarded the successful attempt's response entirely - a chat the
+    /// caller paid for and would never see, lost to a logging fault.
+    /// </remarks>
+    private async Task FireCompletedHooks(ChainResult result, List<OuroMessage> messages, ChatOptions options)
+    {
+        if (OnChatCompleted is null || result.Attempts.Count == 0)
+            return;
+
+        Exception? firstToRethrow = null;
+
+        for (var index = 0; index < result.Attempts.Count; index++)
         {
+            var attempt = result.Attempts[index];
+            var isLast = index == result.Attempts.Count - 1;
+
             var args = new ChatCompletedArgs(
                 options.PromptName,
                 options.Session?.SessionId,
                 options.Thread?.ThreadId,
                 messages,
-                response,
-                options.Model!.Value, // always resolved above
+                attempt.Response,
+                attempt.Model,
                 options.ReasoningEffort,
-                durationMs,
+                attempt.DurationMs,
                 options.Thread?.Tags ?? [],
                 options.Session?.Tags ?? [],
-                options.Variables
+                options.Variables,
+                index + 1,
+                isLast ? null : result.Attempts[index + 1].Model
             );
 
             try
@@ -186,14 +236,134 @@ public class OuroClient : IOuroClient, IDisposable
             }
             catch (Exception ex)
             {
-                // Rethrow from inside the catch rather than from the helper, so the original
-                // stack trace survives.
                 if (ReportHookFailure(ex, args))
-                    throw;
+                    firstToRethrow ??= ex;
             }
         }
 
-        return response;
+        if (firstToRethrow is not null)
+            ExceptionDispatchInfo.Capture(firstToRethrow).Throw();
+    }
+
+    /// <summary>
+    /// Resolves the models this call may run on, in order, with a provider for each.
+    /// </summary>
+    private List<ChainEntry> BuildChain(ChatOptions options)
+    {
+        var primary = options.Model!.Value; // always resolved by the caller
+        var models = new List<OuroModels> { primary };
+
+        // Null means "whatever the client was configured with"; an empty list means the caller
+        // explicitly wants no failover, and beats the client default.
+        IEnumerable<OuroModels> fallbacks = options.FallbackModels is { } chosen
+            ? chosen
+            : DefaultFallbackModels;
+
+        foreach (var fallback in fallbacks)
+        {
+            if (models.Contains(fallback))
+            {
+                Logger.LogDebug("Skipping {Model} in the fallback chain; it is already in it.", fallback);
+                continue;
+            }
+
+            models.Add(fallback);
+        }
+
+        return models
+            .Select(model => new ChainEntry(model, ResolveProvider(model), OptionsFor(options, model)))
+            .ToList();
+
+        ChatOptions OptionsFor(ChatOptions source, OuroModels model)
+        {
+            // Each entry carries its own model, so the mapper stamps the right id on the request.
+            var entry = source.Clone();
+            entry.Model = model;
+
+            return entry;
+        }
+    }
+
+    /// <summary>
+    /// Checks every entry can serve this call, before any of them is asked to.
+    /// </summary>
+    /// <remarks>
+    /// A single-model call is not validated here at all: the provider's own refusal already covers
+    /// it, and behaviour for callers who never asked for failover has to stay exactly as it was.
+    ///
+    /// Whether an incompatibility is fatal depends on where the chain came from. A chain the caller
+    /// wrote for this call is their intent, so a conflict is an error naming the option. A chain
+    /// inherited from the client default is not about this call at all - failing here would mean
+    /// that configuring a default fallback broke every existing call using an option the fallback
+    /// cannot serve, whether or not it ever failed over. Those entries are dropped with a log.
+    /// </remarks>
+    private OuroResponseBase? Validate(List<ChainEntry> chain, ChatOptions options)
+    {
+        if (chain.Count <= 1)
+            return null;
+
+        var callerChose = options.FallbackModels is not null;
+
+        for (var index = chain.Count - 1; index >= 0; index--)
+        {
+            var entry = chain[index];
+            var check = ProviderCapabilities.Check(entry.Options, entry.Provider.Kind);
+
+            if (check.IsSupported)
+                continue;
+
+            // Wrong however it is routed. Failing over would only spend money confirming that.
+            if (check.Verdict == CapabilityVerdict.Invalid)
+                return new OuroResponseInternalError(check.Message!);
+
+            // The primary is the call the caller actually asked for; a chain must never silently
+            // drop it. Its own provider will refuse it with the same message.
+            if (index == 0)
+                return new OuroResponseInternalError(check.Message!);
+
+            // AllowDegraded is a standing instruction to do the best this chain can: run entries
+            // without what they cannot express, and drop the ones that cannot be salvaged that way.
+            if (options.AllowDegraded)
+            {
+                if (check.Verdict == CapabilityVerdict.Degradable)
+                {
+                    chain[index] = entry with { Options = ProviderCapabilities.Degrade(entry.Options, entry.Provider.Kind) };
+
+                    Logger.LogInformation(
+                        "{Model} cannot serve this call as asked, and AllowDegraded is set, so it will "
+                        + "run without that option. {Detail}", entry.Model, check.Message);
+
+                    continue;
+                }
+
+                // NotServable, so there is nothing to strip that would leave the same question
+                // being asked. Dropping the entry shortens the chain; degrading it would mean a
+                // model answering about a file it cannot see, which comes back looking like success.
+                Drop(chain, index, entry, check.Message);
+                continue;
+            }
+
+            if (!callerChose)
+            {
+                Drop(chain, index, entry, check.Message);
+                continue;
+            }
+
+            return new OuroResponseInternalError(
+                $"{check.Message} It is in this call's fallback chain as {entry.Model}. Remove it, "
+                + "route around it, or set ChatOptions.AllowDegraded to run the chain for whatever "
+                + "it can still serve.");
+        }
+
+        return null;
+
+        void Drop(List<ChainEntry> entries, int at, ChainEntry dropped, string? detail)
+        {
+            Logger.LogInformation(
+                "Dropping {Model} from the fallback chain for this call: {Detail}", dropped.Model, detail);
+
+            entries.RemoveAt(at);
+        }
     }
 
     /// <summary>
@@ -259,7 +429,7 @@ public class OuroClient : IOuroClient, IDisposable
     private IChatProvider ResolveProvider(OuroModels model)
     {
         if (ProviderOverride is not null)
-            return ProviderOverride;
+            return ProviderOverride(model);
 
         return model.GetProvider() switch
         {
@@ -329,6 +499,27 @@ public class OuroClient : IOuroClient, IDisposable
         DefaultReasoningEffort = reasoningEffort;
     }
 
+    /// <summary>
+    /// Configures the models every chat falls back to, in order, when the one it asked for cannot
+    /// serve it.
+    /// </summary>
+    /// <remarks>
+    /// Only transient failures fall through - see ChatOptions.FallbackModels for exactly which. An
+    /// individual call can override this by setting FallbackModels itself, including to an empty
+    /// list to opt out entirely.
+    ///
+    /// The reasoning effort travels with the call rather than the model, so a chain runs every entry
+    /// at whatever effort the request carried. That is usually what you want and occasionally not:
+    /// an effort chosen alongside a default model in SetDefaultChatModel is applied to the fallbacks
+    /// too, which were not part of that choice.
+    ///
+    /// Calling this with no arguments turns failover off.
+    /// </remarks>
+    public void SetDefaultFallback(params OuroModels[] models)
+    {
+        DefaultFallbackModels = models ?? [];
+    }
+
     private static string RequireKey(string? key, OuroProvider provider)
     {
         if (!string.IsNullOrWhiteSpace(key))
@@ -368,7 +559,7 @@ public class OuroClient : IOuroClient, IDisposable
     {
     }
 
-    internal OuroClient(OuroborosOptions options, IChatProvider? providerOverride,
+    internal OuroClient(OuroborosOptions options, Func<OuroModels, IChatProvider>? providerOverride,
         ILogger<OuroClient>? logger = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));

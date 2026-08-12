@@ -10,7 +10,9 @@ internal static class BackoffPolicy
     /// </summary>
     public static IEnumerable<TimeSpan> GetBackoffPolicy(bool enabled)
     {
-        // The delay schedule should be: 5s, 10s, 20s, 40s = 75s total.
+        // Five retries from a 5s base: roughly 5s, 10s, 20s, 40s, 80s - about 155s of waiting
+        // across a fully exhausted attempt, before any time the calls themselves take. Worth
+        // knowing when a fallback chain multiplies it by the number of entries.
 
         return Backoff.ExponentialBackoff(
             initialDelay: TimeSpan.FromSeconds(5),

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -32,6 +33,81 @@ internal sealed class ChatExecutor(ILogger? logger = null)
     public async Task<OuroResponseBase> ExecuteAsync(IChatProvider provider, List<OuroMessage> messages,
         ChatOptions options, CancellationToken cancellationToken = default)
     {
+        var outcome = await RunAsync(provider, messages, options, cancellationToken);
+
+        // The single-call path throws on caller cancellation, per the .NET contract and exactly as
+        // it always has. RunAsync reports it instead of throwing so the chain below can log the
+        // attempts that already ran; here there are none to lose.
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return outcome.Response;
+    }
+
+    /// <summary>
+    /// Runs each entry of a fallback chain in turn, stopping at the first that settles the call.
+    /// </summary>
+    /// <remarks>
+    /// Only a transient exhaustion moves to the next entry - see <see cref="Unwrap" />. Every entry
+    /// gets a fresh retry budget and fresh per-attempt timeouts, because each one is a full
+    /// ExecuteAsync in its own right. There is no extra delay between entries: the backoff already
+    /// happened inside the one that failed.
+    ///
+    /// Cancellation does not throw from here. The caller's token is reported through
+    /// <see cref="ChainResult.Cancelled" /> so that attempts which already ran - and already cost
+    /// money - can be logged before the exception surfaces. Throwing from inside the loop would
+    /// discard that record.
+    /// </remarks>
+    public async Task<ChainResult> ExecuteChainAsync(IReadOnlyList<ChainEntry> chain,
+        List<OuroMessage> messages, CancellationToken cancellationToken = default)
+    {
+        if (chain.Count == 0)
+        {
+            return new ChainResult([],
+                new OuroResponseInternalError("A fallback chain was run with no entries in it."),
+                Cancelled: false);
+        }
+
+        var attempts = new List<AttemptRecord>();
+
+        for (var index = 0; index < chain.Count; index++)
+        {
+            var entry = chain[index];
+            var stopwatch = Stopwatch.StartNew();
+
+            var outcome = await RunAsync(entry.Provider, messages, entry.Options, cancellationToken);
+
+            stopwatch.Stop();
+
+            // A cancelled attempt is not recorded: it did not finish, so there is no outcome worth
+            // logging. Earlier entries that did finish are still returned - they cost real money and
+            // their record is the thing throwing from inside the loop would have thrown away.
+            if (cancellationToken.IsCancellationRequested)
+                return new ChainResult(attempts, outcome.Response, Cancelled: true);
+
+            var durationMs = (int)stopwatch.ElapsedMilliseconds;
+
+            // Each attempt's response carries its own duration. The total across the chain is
+            // stamped onto whichever response is handed back, by ChatAsync.
+            outcome.Response.DurationMs = durationMs;
+            attempts.Add(new AttemptRecord(entry.Model, outcome.Response, durationMs));
+
+            var isLast = index == chain.Count - 1;
+
+            if (!outcome.FailoverEligible || isLast)
+                return new ChainResult(attempts, outcome.Response, Cancelled: false);
+
+            Logger.LogWarning(
+                "{Model} did not settle the call, so failing over to {NextModel}. Last word: {Reason}",
+                entry.Model, chain[index + 1].Model, outcome.Response.ResponseText);
+        }
+
+        // Not reachable: the loop returns on its last iteration.
+        return new ChainResult(attempts, attempts[^1].Response, Cancelled: false);
+    }
+
+    private async Task<ExecutionOutcome> RunAsync(IChatProvider provider, List<OuroMessage> messages,
+        ChatOptions options, CancellationToken cancellationToken)
+    {
         var delay = BackoffPolicy.GetBackoffPolicy(options.UseExponentialBackOff);
         var attemptTimeout = options.Timeout ?? Constants.DefaultAttemptTimeout;
 
@@ -62,38 +138,74 @@ internal sealed class ChatExecutor(ILogger? logger = null)
                 cancellationToken);
 
         // ExecuteAndCaptureAsync captures unhandled exceptions as well as handled ones, so nothing
-        // propagates out of the policy - cancellation included. The caller's token is the one case
-        // that must still throw, so check it explicitly rather than waiting for an exception.
-        cancellationToken.ThrowIfCancellationRequested();
+        // propagates out of the policy - cancellation included. Caller cancellation is reported
+        // rather than thrown here so that both callers can decide: ExecuteAsync throws, and the
+        // chain returns what already completed first. Checked explicitly against the token, because
+        // a caller-cancelled attempt and a blown attempt budget are the same exception type and
+        // would otherwise be reported as a timeout the caller never set.
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new ExecutionOutcome(
+                new OuroResponseInternalError("The call was cancelled by its caller."),
+                FailoverEligible: false);
+        }
 
         return Unwrap(policyResult, provider, attemptTimeout);
     }
 
-    private static OuroResponseBase Unwrap(PolicyResult<ProviderAttempt> policyResult, IChatProvider provider,
+    /// <summary>
+    /// Turns the policy's outcome into a response, and says whether another provider deserves a go.
+    /// </summary>
+    /// <remarks>
+    /// The eligibility rule is narrower than "it failed". A failure the policy never handled is a
+    /// deterministic one - a mapper that threw, a response type that will not turn into a schema -
+    /// and it fails identically on the next provider, having cost twice as much to learn that. So
+    /// eligibility tracks what the policy actually did: results and exceptions it handled and then
+    /// exhausted, plus the attempt timeout, which it deliberately does not handle.
+    /// </remarks>
+    private static ExecutionOutcome Unwrap(PolicyResult<ProviderAttempt> policyResult, IChatProvider provider,
         TimeSpan attemptTimeout)
     {
         if (policyResult.Outcome == OutcomeType.Successful)
-            return policyResult.Result?.Response
-                   ?? new OuroResponseInternalError(
-                       $"The {provider.Kind} provider reported success but returned nothing. This should never happen.");
+        {
+            var response = policyResult.Result?.Response
+                           ?? new OuroResponseInternalError(
+                               $"The {provider.Kind} provider reported success but returned nothing. This should never happen.");
+
+            return new ExecutionOutcome(response, FailoverEligible: false);
+        }
 
         // A blown attempt budget arrives as a captured exception rather than a throw. Discriminate
         // on the exception itself; FaultType only says whether the policy chose to retry it.
         if (policyResult.FinalException is OperationCanceledException)
-            return new OuroResponseInternalError(
-                $"The request exceeded its {attemptTimeout.TotalSeconds:0}s attempt timeout. " +
-                "Raise ChatOptions.Timeout if the work legitimately takes this long.");
+        {
+            return new ExecutionOutcome(
+                new OuroResponseInternalError(
+                    $"The request exceeded its {attemptTimeout.TotalSeconds:0}s attempt timeout. " +
+                    "Raise ChatOptions.Timeout if the work legitimately takes this long."),
+                FailoverEligible: true);
+        }
 
         if (policyResult.FinalException is { } exception)
-            return new OuroResponseInternalError("Exception calling endpoint: " + exception.Message);
+        {
+            // Handled means IsTransient said yes and the retries then ran out. Anything else got
+            // here on its first throw and is the request's own fault, not the provider's.
+            var transient = policyResult.FaultType == FaultType.ExceptionHandledByThisPolicy;
+
+            return new ExecutionOutcome(
+                new OuroResponseInternalError("Exception calling endpoint: " + exception.Message),
+                FailoverEligible: transient);
+        }
 
         // Retries exhausted on a retryable failure - hand back the provider's own last word on it,
         // which carries the real error code rather than a summary of it.
         if (policyResult.FinalHandledResult?.Response is { } exhausted)
-            return exhausted;
+            return new ExecutionOutcome(exhausted, FailoverEligible: true);
 
-        return new OuroResponseInternalError(
-            $"The retry policy reported an unexpected fault type: {policyResult.FaultType}.");
+        return new ExecutionOutcome(
+            new OuroResponseInternalError(
+                $"The retry policy reported an unexpected fault type: {policyResult.FaultType}."),
+            FailoverEligible: false);
     }
 
     /// <summary>

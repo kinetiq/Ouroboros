@@ -28,7 +28,7 @@ public class OptionResolutionTests
     public async Task ChatAsync_Does_Not_Write_Into_The_Callers_Options()
     {
         var provider = new RecordingProvider();
-        using var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, provider);
+        using var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, _ => provider);
 
         var options = new ChatOptions();
 
@@ -48,7 +48,7 @@ public class OptionResolutionTests
     public async Task A_Reused_Options_Object_Picks_Up_A_Changed_Default()
     {
         var provider = new RecordingProvider();
-        using var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, provider);
+        using var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, _ => provider);
 
         var options = new ChatOptions();
 
@@ -65,7 +65,7 @@ public class OptionResolutionTests
     public async Task An_Explicit_Model_Still_Wins()
     {
         var provider = new RecordingProvider();
-        using var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, provider);
+        using var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, _ => provider);
 
         await client.ChatAsync(
             [OuroMessage.FromUser("hi")],

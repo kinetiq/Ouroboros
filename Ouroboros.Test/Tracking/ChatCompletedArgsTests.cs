@@ -110,7 +110,7 @@ public class ChatCompletedArgsTests
     public async Task Policy_Log_Writes_To_The_Logger_And_Returns_The_Response()
     {
         var logger = new CapturingLogger();
-        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, new StubChatProvider(), logger);
+        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, _ => new StubChatProvider(), logger);
         client.OnChatCompleted = _ => throw new InvalidOperationException("logging blew up");
 
         var response = await client.ChatAsync([OuroMessage.FromUser("hi")]);
@@ -141,7 +141,7 @@ public class ChatCompletedArgsTests
     public async Task Policy_Ignore_Does_Not_Touch_The_Logger()
     {
         var logger = new CapturingLogger();
-        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, new StubChatProvider(), logger);
+        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, _ => new StubChatProvider(), logger);
         client.OnChatCompleted = _ => throw new InvalidOperationException("logging blew up");
         client.OnChatCompletedFailure = HookFailurePolicy.Ignore;
 
@@ -183,7 +183,7 @@ public class ChatCompletedArgsTests
     public async Task Policy_Handle_Falls_Back_To_The_Logger_When_The_Handler_Throws()
     {
         var logger = new CapturingLogger();
-        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, new StubChatProvider(), logger);
+        var client = new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, _ => new StubChatProvider(), logger);
         client.OnChatCompleted = _ => throw new InvalidOperationException("logging blew up");
 
         var handlerFailure = new InvalidOperationException("reporting blew up too");
@@ -249,7 +249,7 @@ public class ChatCompletedArgsTests
     {
         var provider = new StubChatProvider();
 
-        return (new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, provider), provider);
+        return (new OuroClient(new OuroborosOptions { OpenAiApiKey = "test-key" }, _ => provider), provider);
     }
 
     /// <summary>
