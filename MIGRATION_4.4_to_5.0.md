@@ -426,6 +426,23 @@ separately, in order — so a consumer logging these keeps a record of what the 
 actually ran on rather than the one originally requested. `DurationMs` on the args is per attempt;
 the response object handed back carries the total.
 
+### 7c. Paused turns are continued for you (beta.2)
+
+Anthropic pauses a turn when its own server-side tool loop hits an internal limit. Before, that came
+back as a successful response that was quietly half-finished, with only `StopReason` to say so.
+
+Ouroboros now continues a paused turn automatically, up to `Constants.MaxPausedTurnContinuations`
+(3). Everything the turn produced across every round arrives as one response: one block list, and
+token usage summed over each request it took — each round bills its own input, and a continuation
+re-sends what came before, so the later rounds cost the most.
+
+`OuroStopReason.Paused` therefore only reaches you when a turn paused more times than the budget
+allows. That response is still successful and still carries its work; `IsComplete` reports it as
+incomplete, exactly as it does for a truncated one.
+
+Nothing to change in your code. If you were checking for `Paused`, that check still means what it
+said — it just fires far less often.
+
 ### 8. Responses carry typed content blocks and a stop reason (beta.2)
 
 `OuroResponseSuccess.Content` is the response broken into `OuroContentBlock`s; `ResponseText` is

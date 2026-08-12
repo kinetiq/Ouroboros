@@ -30,4 +30,18 @@ public static class Constants
     /// provider-side code execution can run for minutes.
     /// </remarks>
     public static readonly TimeSpan DefaultAttemptTimeout = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// How many times a paused turn may be continued before the response is handed back as it is.
+    /// </summary>
+    /// <remarks>
+    /// A provider pauses a turn when its own tool loop hits an internal limit; continuing it is a
+    /// fresh request carrying everything produced so far, so each one costs more than the last.
+    /// The cap exists because a model that keeps pausing would otherwise bill indefinitely for a
+    /// turn nobody is watching.
+    ///
+    /// Reaching it is not an error: the response comes back successful with
+    /// OuroStopReason.Paused, which IsComplete reports as incomplete.
+    /// </remarks>
+    public static readonly int MaxPausedTurnContinuations = 3;
 }

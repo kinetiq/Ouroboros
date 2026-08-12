@@ -21,7 +21,16 @@ namespace Ouroboros.LargeLanguageModels.Providers.Anthropic;
 /// </remarks>
 internal static class AnthropicMappings
 {
-    internal static MessageCreateParams MapOptions(List<OuroMessage> messages, ChatOptions options)
+    /// <summary>
+    /// Builds a request from the conversation, optionally continuing a turn already under way.
+    /// </summary>
+    /// <param name="inProgress">
+    /// Blocks the model has already produced for this turn, when continuing a paused one. They are
+    /// appended as a single assistant turn - one that grows with each continuation rather than one
+    /// per continuation, since consecutive assistant messages are not a shape the API takes.
+    /// </param>
+    internal static MessageCreateParams MapOptions(List<OuroMessage> messages, ChatOptions options,
+        IReadOnlyList<ContentBlockParam>? inProgress = null)
     {
         // Demanded, not defaulted. Falling back to Constants.DefaultChatModel here was a latent
         // 404: that default is a GPT model, so an unresolved call would have stamped "gpt-5.4-mini"
@@ -68,7 +77,7 @@ internal static class AnthropicMappings
             // answer rather than merely shortening it.
             MaxTokens = options.MaxCompletionTokens ?? model.GetMaxOutputTokens(),
 
-            Messages = MapMessages(messages, options.Attachments),
+            Messages = MapMessages(messages, options.Attachments, inProgress),
 
             System = system,
 
@@ -105,7 +114,7 @@ internal static class AnthropicMappings
     }
 
     private static List<MessageParam> MapMessages(List<OuroMessage> messages,
-        IReadOnlyList<OuroFileRef>? attachments)
+        IReadOnlyList<OuroFileRef>? attachments, IReadOnlyList<ContentBlockParam>? inProgress = null)
     {
         var mapped = messages
             .Where(message => message.Role != OuroRole.System)
@@ -118,6 +127,17 @@ internal static class AnthropicMappings
 
         if (attachments is { Count: > 0 })
             AttachFiles(mapped, attachments);
+
+        // After the attachments, so the files stay on the last user turn rather than landing on the
+        // partial assistant one.
+        if (inProgress is { Count: > 0 })
+        {
+            mapped.Add(new MessageParam
+            {
+                Role = AnthropicRole.Assistant,
+                Content = inProgress.ToList()
+            });
+        }
 
         return mapped;
     }

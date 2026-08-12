@@ -40,8 +40,10 @@ public enum OuroStopReason
     /// and continuing it requires sending the turn back.
     /// </summary>
     /// <remarks>
-    /// Ouroboros continues paused turns internally up to a budget, so this only reaches a caller
-    /// when that budget ran out.
+    /// Ouroboros continues paused turns for you, up to Constants.MaxPausedTurnContinuations, so
+    /// this only reaches a caller when a turn paused more times than that. The response is still
+    /// successful and carries everything the turn produced across every round - it is unfinished,
+    /// not failed, which is what IsComplete reports.
     /// </remarks>
     Paused = 4
 }

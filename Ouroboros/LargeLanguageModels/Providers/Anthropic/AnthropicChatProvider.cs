@@ -37,27 +37,127 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         if (Reject(options) is { } refusal)
             return ProviderAttempt.Final(refusal);
 
-        var parameters = AnthropicMappings.MapOptions(messages, options);
+        // Everything the turn has produced so far, across however many requests it took. A paused
+        // turn is one turn: its blocks and its token usage belong to a single response.
+        var turn = new PausedTurn();
 
-        try
+        while (true)
         {
-            var message = await client.Messages.Create(parameters, cancellationToken);
+            var parameters = AnthropicMappings.MapOptions(messages, options, turn.Produced);
 
-            return ProviderAttempt.Final(MapSuccess(message, options.ResponseType));
+            Message message;
+
+            try
+            {
+                message = await client.Messages.Create(parameters, cancellationToken);
+            }
+            catch (AnthropicSdk.Exceptions.AnthropicRateLimitException ex)
+            {
+                return ProviderAttempt.Retryable(Error("429", ex.Message));
+            }
+            catch (AnthropicSdk.Exceptions.Anthropic5xxException ex)
+            {
+                return ProviderAttempt.Retryable(Error("5xx", ex.Message));
+            }
+            catch (AnthropicSdk.Exceptions.AnthropicApiException ex)
+            {
+                // Everything else the API reports is the request's own fault - a bad model id, a
+                // rejected parameter, an auth problem. Retrying just repeats it.
+                return ProviderAttempt.Final(Error(null, ex.Message));
+            }
+
+            turn.Add(message);
+
+            var stopReason = MapStopReason(message.StopReason is { } stop ? (string?)stop : null);
+
+            if (stopReason != OuroStopReason.Paused || turn.Continuations >= Constants.MaxPausedTurnContinuations)
+                return ProviderAttempt.Final(turn.ToResponse(message, stopReason, options.ResponseType));
+
+            Logger.LogInformation(
+                "Anthropic paused the turn after {Blocks} blocks. Continuing ({Continuation} of {Max}).",
+                turn.Produced.Count, turn.Continuations + 1, Constants.MaxPausedTurnContinuations);
+
+            turn.Continue();
         }
-        catch (AnthropicSdk.Exceptions.AnthropicRateLimitException ex)
+    }
+
+    /// <summary>
+    /// A turn in progress, gathering what each request produced until the model stops pausing.
+    /// </summary>
+    /// <remarks>
+    /// Anthropic pauses a turn when its own server-side tool loop hits an internal limit. The turn
+    /// is not finished and not failed; continuing it means sending back everything produced so far
+    /// and asking it to carry on. Without that, a code-execution turn that needed two rounds came
+    /// back half-done and successful, which is the worst of both.
+    ///
+    /// State is kept here rather than in locals because three things have to accumulate together
+    /// and stay consistent: the blocks, the token usage, and the count of continuations.
+    /// </remarks>
+    private sealed class PausedTurn
+    {
+        private readonly List<ContentBlockParam> ProducedBlocks = [];
+        private readonly List<OuroContentBlock> Blocks = [];
+
+        private long PromptTokens;
+        private long CompletionTokens;
+
+        /// <summary>
+        /// What to send back as the assistant's turn so far. Empty on the first request.
+        /// </summary>
+        public IReadOnlyList<ContentBlockParam> Produced => ProducedBlocks;
+
+        public int Continuations { get; private set; }
+
+        public void Continue() => Continuations++;
+
+        public void Add(Message message)
         {
-            return ProviderAttempt.Retryable(Error("429", ex.Message));
+            Blocks.AddRange(MapContent(message.Content));
+
+            foreach (var block in message.Content ?? [])
+                ProducedBlocks.Add(ToParam(block));
+
+            // Summed, not replaced. Each request bills its own input, and a continuation re-sends
+            // the whole turn - so the later requests are the expensive ones. Reporting only the
+            // last would under-bill every paused turn.
+            PromptTokens += message.Usage?.InputTokens ?? 0;
+            CompletionTokens += message.Usage?.OutputTokens ?? 0;
         }
-        catch (AnthropicSdk.Exceptions.Anthropic5xxException ex)
+
+        public OuroResponseBase ToResponse(Message last, OuroStopReason stopReason, System.Type? responseType)
         {
-            return ProviderAttempt.Retryable(Error("5xx", ex.Message));
+            var success = new OuroResponseSuccess(Blocks)
+            {
+                // Cast, never ToString(). These SDK wrappers serialise themselves as JSON, so
+                // ToString() yields "claude-opus-5" complete with the quotation marks.
+                Model = (string?)last.Model ?? "",
+                StopReason = stopReason,
+                PromptTokens = (int)PromptTokens,
+                CompletionTokens = (int)CompletionTokens,
+                TotalTokenUsage = (int)(PromptTokens + CompletionTokens)
+            };
+
+            success.ResponseObject = ResponseParser.Parse(responseType, success.ResponseText);
+
+            return success;
         }
-        catch (AnthropicSdk.Exceptions.AnthropicApiException ex)
+
+        /// <summary>
+        /// Turns a block the model produced into one that can be sent back to it.
+        /// </summary>
+        /// <remarks>
+        /// Through the block's own raw JSON and the SDK's union converter, rather than a switch over
+        /// the dozen block types. Two reasons, and the first is the important one: thinking blocks
+        /// carry a signature the API verifies, so a converter that rebuilt them field by field would
+        /// reject the whole turn the moment it dropped or reordered anything. Round-tripping the
+        /// bytes cannot get that wrong.
+        ///
+        /// The second is that it carries block types this version has never heard of, which is worth
+        /// having on a surface the vendor keeps extending.
+        /// </remarks>
+        private static ContentBlockParam ToParam(ContentBlock block)
         {
-            // Everything else the API reports is the request's own fault - a bad model id, a
-            // rejected parameter, an auth problem. Retrying just repeats it.
-            return ProviderAttempt.Final(Error(null, ex.Message));
+            return JsonSerializer.Deserialize<ContentBlockParam>(block.Json.GetRawText())!;
         }
     }
 
@@ -80,34 +180,6 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         return new OuroResponseProviderError("Anthropic", code, message);
     }
 
-    private static OuroResponseBase MapSuccess(Message message, System.Type? responseType)
-    {
-        var blocks = MapContent(message.Content);
-
-        var usage = message.Usage;
-
-        var success = new OuroResponseSuccess(blocks)
-        {
-            // Cast, never ToString(). These SDK wrappers serialise themselves as JSON, so ToString()
-            // yields "claude-opus-5" complete with the quotation marks - which would be stored
-            // verbatim here and would silently never match in MapStopReason below.
-            Model = (string?)message.Model ?? "",
-            StopReason = MapStopReason(message.StopReason is { } stop ? (string?)stop : null),
-            PromptTokens = (int)(usage?.InputTokens ?? 0),
-            CompletionTokens = (int?)usage?.OutputTokens,
-            TotalTokenUsage = (int)((usage?.InputTokens ?? 0) + (usage?.OutputTokens ?? 0))
-        };
-
-        // Set afterwards rather than in the initializer because the text it parses is derived from
-        // the blocks by the constructor. Reading it back is what keeps the parsed object and the
-        // stored text guaranteed to be the same string.
-        //
-        // The shared parser, so a parse failure means the same thing here as on OpenAI: a null
-        // ResponseObject on an otherwise successful response, never an exception.
-        success.ResponseObject = ResponseParser.Parse(responseType, success.ResponseText);
-
-        return success;
-    }
 
     /// <summary>
     /// Turns Anthropic's content array into Ouroboros blocks.
