@@ -15,7 +15,7 @@ public abstract class TemplateBase
     /// If you want to go beyond storing fields on your templates, and maintain a shared set of global fields, you can pass this
     /// in via constructor.
     /// </summary>
-    internal dynamic GlobalContext { get; set; }
+    internal object GlobalContext { get; set; }
 
     /// <summary>
     /// Filename of the template we're working with. If this isn't overridden, it will attempt to derive the
