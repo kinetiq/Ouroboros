@@ -1,20 +1,26 @@
 # Ouroboros Migration Guide: 4.4.0 → 5.0.0
 
-This release removes the provider SDK (Betalgo) from Ouroboros' public API. Nothing in your code
-should need to reference `Betalgo.Ranul.OpenAI` after migrating. That is the whole point of the
-release: it means adding other providers later won't be another breaking change.
+This release removes the provider SDK from Ouroboros' public API. Nothing in your code should
+need to reference an SDK after migrating. That is the whole point of the release: it means adding
+other providers later won't be another breaking change — and beta.2 already does, with Anthropic
+alongside OpenAI.
+
+Internally the OpenAI path also moved off `Betalgo.Ranul.OpenAI` and onto the official `OpenAI`
+package over the Responses API. That is invisible from your code, which is the test the seam was
+built to pass — but see the note on stop sequences below.
 
 ## Prerequisites
 
 - **.NET 10** — unchanged from 4.4.0.
-- **5.0 ships as a prerelease first** (`5.0.0-beta.1`). Reference it explicitly —
-  `<PackageReference Include="OuroborosAI.Core" Version="5.0.0-beta.1" />` — and note that a
+- **5.0 ships as a prerelease first** (currently `5.0.0-beta.2`). Reference it explicitly —
+  `<PackageReference Include="OuroborosAI.Core" Version="5.0.0-beta.2" />` — and note that a
   floating `5.*` will **not** resolve prereleases; you need `5.*-*` if you want to float.
 - Dependency changes:
   - `Microsoft.ML.Tokenizers` → **2.0.0** (new)
   - `Microsoft.ML.Tokenizers.Data.O200kBase` → **2.0.0** (new)
   - `Microsoft.Extensions.DependencyInjection.Abstractions` → **10.0.9** (was transitive, now explicit)
-  - `Betalgo.Ranul.OpenAI` → 9.2.6 (unchanged, now an internal implementation detail)
+  - `OpenAI` → **2.12.0** (new — the official SDK, replacing `Betalgo.Ranul.OpenAI`, which is gone)
+  - `Anthropic` → **12.39.0** (new)
 
 ---
 
@@ -177,6 +183,34 @@ new ChatOptions { StopAsList = new List<string> { "END" } }
 new ChatOptions { StopSequences = new List<string> { "END" } }
 ```
 
+**They no longer work on OpenAI models.** The Responses API, which 5.0 uses, has no `stop`
+parameter at all — this is a gap in the API, not in the SDK or in Ouroboros. Rather than drop the
+sequences silently and hand back output that runs past where you asked it to stop, a request that
+sets them fails with an `OuroResponseInternalError` naming the property.
+
+They keep working on Claude models. If you depend on them, route those calls to one, or trim the
+output yourself.
+
+### 10b. `ChatOptions.User` moved to `ChatOptions.OpenAi.User`
+
+Provider-specific settings now live in their own blocks, so a setting meant for one provider cannot
+reach the other. `User` only ever mapped to OpenAI's `EndUserId` — on an Anthropic call it was
+accepted and then dropped, with nothing to say so.
+
+**Before (5.0.0-beta.1):**
+```csharp
+new ChatOptions { User = "end-user-42" }
+```
+
+**After (5.0.0-beta.2):**
+```csharp
+new ChatOptions { OpenAi = { User = "end-user-42" } }
+```
+
+`ChatOptions.Anthropic` exists alongside it and is empty for now. Anything both providers honour —
+model, token ceiling, reasoning effort, structured output, timeouts — stays on `ChatOptions` itself,
+so it carries over whichever provider serves the call.
+
 ### 11. `ChatOptions.ResponseType` is nullable; `NoType` is gone
 
 `null` now means "no structured output" — the `NoType` sentinel served no other purpose.
@@ -265,11 +299,154 @@ client.SetDefaultChatModel(OuroModels.Gpt_5_4, OuroReasoningEffort.High);       
 
 If you were passing an effort and wondering why nothing changed, this is why.
 
-### 4. Reusing a `ChatOptions` no longer leaks schema state
+### 4. A failing `OnChatCompleted` hook no longer fails the chat
+
+*(Added in `5.0.0-beta.2`.)*
+
+The hook is awaited inline inside `ChatAsync`, so previously anything it threw propagated to the
+caller — a logging bug surfaced as a failed AI call. Every consumer had to wrap their own handler
+to defend against Ouroboros' internal sequencing, and forgetting once produced an outage.
+
+Ouroboros now catches it and applies `OnChatCompletedFailure`, which takes one of four policies:
+
+| Policy | Effect |
+|---|---|
+| `HookFailurePolicy.Log` | **Default.** Writes to the client's `ILogger`, chat succeeds |
+| `HookFailurePolicy.Throw` | Rethrows, failing the chat — the pre-5.0 behaviour |
+| `HookFailurePolicy.Ignore` | Discards it |
+| `HookFailurePolicy.Handle(h)` | Calls your handler, chat succeeds |
+
+`Log` is the default because a hook failure is usually systemic — a bad migration, a DI
+misconfiguration — so `Throw` takes down every call at once rather than one. Losing a log row is
+almost always the cheaper failure. Pick `Throw` only when the hook does something the caller
+genuinely depends on, like persisting the conversation or enforcing a spend cap.
+
+`Handle` is for routing errors somewhere other than `ILogger`:
+
+```csharp
+client.OnChatCompleted = args => sp.GetRequiredService<ChatLogger>().LogFromHook(args);
+client.OnChatCompletedFailure = HookFailurePolicy.Handle(ex => tracker.TrackException(ex));
+```
+
+There is a second overload taking `Action<Exception, ChatCompletedArgs>`, which also hands you the
+args the failed hook was given so the report can name the prompt, session and model rather than
+just saying logging failed. If your handler throws, that is logged and discarded — there is
+nowhere left to report to.
+
+If you already wrap your handler in a try/catch, it is now redundant and can go.
+
+**One caveat on the default:** `Log` is only as visible as your logging setup. `AddOuroboros`
+resolves `ILogger<OuroClient>` with `GetService`, so a host with no logging configured falls back
+to `NullLogger` and the policy degrades to `Ignore`. Use `Handle` if you need certainty.
+
+### 5. Reusing a `ChatOptions` no longer leaks schema state
 
 The structured-output schema used to be written back onto the `ChatOptions` you passed in, so
 reusing one instance across calls with different `ResponseType`s could send a stale schema. The
 schema is now built at request-mapping time and your options object is left alone.
+
+As of beta.2 this goes further: `ChatAsync` works on a copy, so **nothing** is written back onto
+your options. Previously a reused instance had the default model resolved into it on first use,
+which meant a later `SetDefaultChatModel` never applied to it.
+
+### 6. Anthropic as a second provider (beta.2)
+
+Claude models route through the same client. Configure both keys via the new options overload —
+only the providers you use need one:
+
+```csharp
+services.AddOuroboros(options =>
+{
+    options.OpenAiApiKey = configuration["OpenAI:ApiKey"];
+    options.AnthropicApiKey = configuration["Anthropic:ApiKey"];
+});
+
+var response = await client.ChatAsync(messages, new ChatOptions { Model = OuroModels.Claude_Opus_5 });
+```
+
+Provider-specific caveats, all of which fail loudly rather than degrading:
+
+- `OuroClient.TokenCount` throws for Claude models — Anthropic publishes no tokenizer. Read
+  `PromptTokens` / `CompletionTokens` off the response instead. This one is physics, not backlog.
+- `ChatOptions.StopSequences` is refused on GPT models: the Responses API has no stop parameter.
+
+Structured output, code execution and file I/O all work on both providers as of beta.2, from the
+same `ChatOptions` — the schema is generated by Ouroboros rather than taken from a vendor SDK,
+which is what lets one `ResponseType` serve either.
+
+### 7. Server-side code execution and file I/O (beta.2)
+
+Opt in per call with `ChatOptions.ServerTools = OuroServerTools.CodeExecution`. The model writes
+and runs Python in a provider-hosted sandbox; results arrive as `OuroCodeExecutionBlock` entries
+on `OuroResponseSuccess.Content` (or the `CodeExecutions` convenience projection), carrying the
+executed code, stdout/stderr, exit code, and references to any files it produced.
+
+Two fields are approximations on OpenAI, which reports neither: `ExitCode` is 0 when the tool
+completed and -1 with `IsToolError` when it did not (a script that raises still counts as
+completed — the traceback is in stdout), and `Stderr` stays empty because the logs output is the
+combined stream.
+
+Files cross the sandbox boundary through the client: `UploadFileAsync` returns an `OuroFileRef`
+you attach via `ChatOptions.Attachments`; generated files come back as refs you hand to
+`DownloadFileAsync`. Uploads persist until `DeleteFileAsync`.
+
+Code-execution turns can run for minutes — see `ChatOptions.Timeout` (per-attempt, default 10
+minutes) and the `CancellationToken` parameter on `ChatAsync` (whole-call). Timeouts are no longer
+retried.
+
+### 7b. Provider failover (beta.2)
+
+Name one or more fallback models and a call the primary cannot serve is retried on the next one:
+
+```csharp
+new ChatOptions { Model = OuroModels.Gpt_5_4_mini, FallbackModels = [OuroModels.Claude_Opus_5] }
+```
+
+Or set it once for the client with `SetDefaultFallback(OuroModels.Claude_Opus_5)`. A per-call
+`FallbackModels` overrides that, and an empty list opts a single call out entirely.
+
+**Only transient failures move down the chain**: rate limits and server faults that outlived the
+retry policy, transient network errors, and a blown attempt timeout. A request the provider rejected
+on its merits — a bad parameter, an auth failure, a malformed response type — fails where it stands,
+because it would fail identically on the next provider at twice the cost.
+
+**`OnChatCompleted` now fires once per attempt.** Without a fallback that is exactly once per call,
+as before. With one, a failed-over call reports the failed attempt and the successful one
+separately, so a consumer logging these writes two rows where it used to write one.
+`ChatCompletedArgs` gains `Attempt` and `NextModel`, and its `Model` is now the model that attempt
+actually ran on rather than the one originally requested.
+
+Declaring the chain in `OuroborosOptions.FallbackModels` is checked when your host starts: a chain
+naming a provider you have no key for throws from `AddOuroboros` rather than failing later.
+
+**[FAILOVER.md](FAILOVER.md) is the full description** — triggers, degradation, latency, logging,
+and the calls that must opt out with `FallbackModels = []`.
+
+### 7c. Paused turns are continued for you (beta.2)
+
+Anthropic pauses a turn when its own server-side tool loop hits an internal limit. Before, that came
+back as a successful response that was quietly half-finished, with only `StopReason` to say so.
+
+Ouroboros now continues a paused turn automatically, up to `Constants.MaxPausedTurnContinuations`
+(3). Everything the turn produced across every round arrives as one response: one block list, and
+token usage summed over each request it took — each round bills its own input, and a continuation
+re-sends what came before, so the later rounds cost the most.
+
+`OuroStopReason.Paused` therefore only reaches you when a turn paused more times than the budget
+allows. That response is still successful and still carries its work; `IsComplete` reports it as
+incomplete, exactly as it does for a truncated one.
+
+Nothing to change in your code. If you were checking for `Paused`, that check still means what it
+said — it just fires far less often.
+
+### 8. Responses carry typed content blocks and a stop reason (beta.2)
+
+`OuroResponseSuccess.Content` is the response broken into `OuroContentBlock`s; `ResponseText` is
+unchanged (the text blocks joined) so existing consumers keep working. `StopReason` /
+`IsComplete` make truncation visible — previously a response cut off at the token ceiling was
+indistinguishable from a complete one, and truncated structured output silently parsed to a null
+`ResponseObject`. **Always include a discard arm when switching over block types** — new kinds
+will arrive.
 
 ---
 
@@ -285,9 +462,11 @@ schema is now built at request-mapping time and your options object is left alon
 - [ ] Rename `OuroResponseOpenAiError` to `OuroResponseProviderError`
 - [ ] Remove `Temperature`, `TopP`, `FrequencyPenalty`, `PresencePenalty`, `LogitBias`, `BestOf`, `Suffix`, `ResponseFormat` from `ChatOptions` initializers
 - [ ] Rename `Stop` / `StopAsList` to `StopSequences`
+- [ ] Move `ChatOptions.User` to `ChatOptions.OpenAi.User`
 - [ ] Replace `typeof(NoType)` checks with `is null`
 - [ ] Replace `Json.GetSchema` / `Json.ParseJson` calls (use `ChatOptions.ResponseType` and `System.Text.Json`)
 - [ ] Change `GetLast(string)` calls to `GetLast(OuroRole)`
 - [ ] Drop any remaining `using Betalgo.Ranul.OpenAI.*` from your code
+- [ ] Pick an `OnChatCompletedFailure` policy, and drop any try/catch you wrapped your `OnChatCompleted` handler in
 - [ ] Consider depending on `IOuroClient` and deleting any hand-rolled test seams
 - [ ] Re-baseline stored token counts if you persist them

@@ -1,4 +1,8 @@
+using System.Text;
+using System.IO;
+using System.Linq;
 using Ouroboros;
+using Ouroboros.Config;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -7,7 +11,138 @@ using Spectre.Console;
 
 AnsiConsole.MarkupLine("[red]Starting...[/]");
 
-var client = new OuroClient("[secret]");
+// Keys come from the environment rather than being pasted here - this file is committed, and a
+// key in it would be too. Set whichever you want to exercise:
+//   setx OPENAI_API_KEY    "..."
+//   setx ANTHROPIC_API_KEY "..."
+// setx only affects new processes, so open a fresh terminal afterwards.
+var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+var anthropicKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+
+var client = new OuroClient(new OuroborosOptions
+{
+    OpenAiApiKey = openAiKey,
+    AnthropicApiKey = anthropicKey
+});
+
+// --- Claude + provider-side code execution -------------------------------
+// Claude writes Python, Anthropic runs it, and the output comes back as its own block rather
+// than as prose the model claims it produced. Edit the prompt and re-run to poke at it.
+
+if (!string.IsNullOrWhiteSpace(anthropicKey))
+{
+    AnsiConsole.MarkupLine("\n[yellow]-- code execution --[/]");
+
+    var codeResponse = await client.ChatAsync(
+        [OuroMessage.FromUser(
+            "Using the code execution tool, generate 20 random integers between 1 and 100 with a "
+            + "fixed seed, then print their mean, median and standard deviation.")],
+        new ChatOptions
+        {
+            Model = OuroModels.Claude_Opus_5,
+            ServerTools = OuroServerTools.CodeExecution,
+            MaxCompletionTokens = 8192,
+
+            // Server-side execution runs well past a conventional HTTP default.
+            Timeout = TimeSpan.FromMinutes(5)
+        });
+
+    if (codeResponse is OuroResponseSuccess codeSuccess)
+    {
+        // Model output goes through Markup.Escape - it is arbitrary text, and Spectre reads square
+        // brackets as markup tags. A printed list like [82, 14] otherwise crashes the renderer.
+        foreach (var execution in codeSuccess.CodeExecutions)
+        {
+            AnsiConsole.MarkupLine($"[grey]code:[/]\n{Markup.Escape(execution.Code ?? "")}");
+            AnsiConsole.MarkupLine($"[grey]exit:[/] {execution.Result?.ExitCode}");
+            AnsiConsole.MarkupLine($"[grey]stdout:[/]\n{Markup.Escape(execution.Result?.Stdout ?? "")}");
+
+            if (!string.IsNullOrWhiteSpace(execution.Result?.Stderr))
+                AnsiConsole.MarkupLine($"[red]stderr:[/]\n{Markup.Escape(execution.Result.Stderr)}");
+        }
+
+        // Note what is NOT in here: stdout stays in its block, so this is only the model's prose.
+        AnsiConsole.MarkupLine($"[grey]text:[/]\n{Markup.Escape(codeSuccess.ResponseText)}");
+        AnsiConsole.MarkupLine(
+            $"[grey]stop:[/] {codeSuccess.StopReason} | complete: {codeSuccess.IsComplete} | " +
+            $"tokens: {codeSuccess.PromptTokens} in / {codeSuccess.CompletionTokens} out");
+    }
+
+    if (codeResponse is OuroResponseFailure codeFailure)
+        AnsiConsole.MarkupLine($"[red]Failure:[/] {codeFailure.ErrorOrigin} | {codeFailure.ResponseText}");
+
+    // --- File round trip -------------------------------------------------
+    // Data in, analysis, artifact out. The sandbox has no internet, so the Files API is the only
+    // way across that boundary.
+
+    AnsiConsole.MarkupLine("\n[yellow]-- file round trip --[/]");
+
+    const string csv = "name,score\nada,37\ngrace,41\nalan,29\nedsger,53\n";
+
+    var upload = await client.UploadFileAsync(
+        Encoding.UTF8.GetBytes(csv), "scores.csv", "text/csv", OuroProvider.Anthropic);
+
+    AnsiConsole.MarkupLine($"[grey]uploaded:[/] {upload.Id}");
+
+    try
+    {
+        var fileResponse = await client.ChatAsync(
+            [OuroMessage.FromUser(
+                "Read the attached CSV with the code execution tool, print the mean score, then "
+                + "save a bar chart of it as a PNG.")],
+            new ChatOptions
+            {
+                Model = OuroModels.Claude_Opus_5,
+                ServerTools = OuroServerTools.CodeExecution,
+                Attachments = [upload],
+                MaxCompletionTokens = 8192,
+                Timeout = TimeSpan.FromMinutes(5)
+            });
+
+        if (fileResponse is OuroResponseSuccess fileSuccess)
+        {
+            foreach (var generated in fileSuccess.CodeExecutions.SelectMany(x => x.Result?.Files ?? []))
+            {
+                var content = await client.DownloadFileAsync(generated);
+
+                // Path.GetFileName, because the name is model-chosen: a file called "..\evil.bat"
+                // must land in the temp directory, not wherever the traversal points.
+                var safeName = Path.GetFileName(content.FileName ?? "");
+                if (string.IsNullOrWhiteSpace(safeName))
+                    safeName = $"{generated.Id}.bin";
+
+                var path = Path.Combine(Path.GetTempPath(), safeName);
+
+                await File.WriteAllBytesAsync(path, content.Content);
+                AnsiConsole.MarkupLine($"[green]saved:[/] {Markup.Escape(path)} ({content.SizeBytes} bytes)");
+
+                // Generated files persist in the account's store just like uploads do - without
+                // this, every demo run leaks a chart into it forever.
+                await client.DeleteFileAsync(generated);
+            }
+
+            AnsiConsole.MarkupLine($"[grey]text:[/]\n{Markup.Escape(fileSuccess.ResponseText)}");
+        }
+
+        if (fileResponse is OuroResponseFailure fileFailure)
+            AnsiConsole.MarkupLine($"[red]Failure:[/] {fileFailure.ErrorOrigin} | {fileFailure.ResponseText}");
+    }
+    finally
+    {
+        // Uploads persist until deleted and count against the account's storage.
+        await client.DeleteFileAsync(upload);
+    }
+}
+else
+{
+    AnsiConsole.MarkupLine("[grey]ANTHROPIC_API_KEY not set - skipping the code execution demo.[/]");
+}
+
+if (string.IsNullOrWhiteSpace(openAiKey))
+{
+    AnsiConsole.MarkupLine("[grey]OPENAI_API_KEY not set - stopping before the OpenAI sections.[/]");
+    return;
+}
 
 // --- Simple chat ---------------------------------------------------------
 

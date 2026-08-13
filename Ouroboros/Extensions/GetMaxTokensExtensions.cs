@@ -47,4 +47,21 @@ public static class GetMaxTokensExtensions
 
         return field != null && Attribute.GetCustomAttribute(field, typeof(ReasoningAttribute)) is ReasoningAttribute;
     }
+
+    /// <summary>
+    /// Which vendor's API serves this model, and therefore which client the request is routed to.
+    /// </summary>
+    public static OuroProvider GetProvider(this OuroModels model)
+    {
+        var field = model
+            .GetType()
+            .GetField(model.ToString());
+
+        if (field != null && Attribute.GetCustomAttribute(field, typeof(ProviderAttribute)) is ProviderAttribute attribute)
+            return attribute.Provider;
+
+        throw new ArgumentException(
+            $"No provider is set on {model}. Every model must declare one - without it there is " +
+            "nothing to route the request to.", nameof(model));
+    }
 }

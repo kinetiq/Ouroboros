@@ -6,6 +6,11 @@
     <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
+
+    <!-- The Responses surface is [Experimental("OPENAI001")], and the stub transports build a real
+         ResponsesClient on purpose - a fake shaped differently from the client OuroClient builds
+         would prove nothing about it. Same suppression as Ouroboros.csproj, same reason. -->
+    <NoWarn>$(NoWarn);OPENAI001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
