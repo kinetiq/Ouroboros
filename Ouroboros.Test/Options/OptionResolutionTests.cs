@@ -80,10 +80,11 @@ public class OptionResolutionTests
     /// </summary>
     /// <remarks>
     /// The guard only bites for properties this initializer sets to something other than their
-    /// default: an uncopied property compares null to null and passes. So a new property has to be
-    /// added <b>here, with a non-default value</b>, not only to Clone. FallbackModels and
-    /// AllowDegraded went in without that and were unguarded until a review noticed - a dropped
-    /// FallbackModels would have silently swapped a per-call chain for the client default.
+    /// default. An uncopied property otherwise compares null to null and passes. So a new property
+    /// must be added <b>here, with a non-default value</b>, not only to Clone.
+    ///
+    /// FallbackModels and AllowDegraded went in without that and were unguarded until a review
+    /// noticed. A dropped FallbackModels would have swapped a per-call chain for the client default.
     /// </remarks>
     [Fact]
     public void Clone_Copies_Every_Property()
@@ -116,9 +117,9 @@ public class OptionResolutionTests
     /// </summary>
     /// <remarks>
     /// They are mutable settings objects the library may one day resolve defaults into, which is
-    /// exactly what Clone exists to keep out of the caller's instance - ChatAsync used to write
-    /// straight onto the object it was handed, so a reused ChatOptions kept the first call's model
-    /// forever. Sharing the blocks would reintroduce that on the provider surface.
+    /// what Clone exists to keep out of the caller's instance. ChatAsync used to write straight onto
+    /// the object it was handed, so a reused ChatOptions kept the first call's model forever.
+    /// Sharing the blocks would bring that back on the provider surface.
     /// </remarks>
     [Fact]
     public void Clone_Copies_The_Provider_Blocks_Rather_Than_Sharing_Them()

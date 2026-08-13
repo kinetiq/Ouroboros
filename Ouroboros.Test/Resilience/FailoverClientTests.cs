@@ -323,17 +323,17 @@ public class FailoverClientTests
     /// A client-default fallback to a provider with no key is dropped, not fatal.
     /// </summary>
     /// <remarks>
-    /// Configuring a client-wide fallback must not break calls the primary can serve. This threw
-    /// InvalidOperationException from every ChatAsync - the chain resolved all its providers up
-    /// front, and building one without a key is what throws - so a client holding only an OpenAI key
-    /// stopped working entirely the moment anyone added a Claude default.
+    /// Configuring a client-wide fallback must not break calls the primary can serve. This used to
+    /// throw InvalidOperationException from every ChatAsync: the chain resolved all its providers up
+    /// front, and building one without a key throws. A client holding only an OpenAI key stopped
+    /// working entirely the moment anyone added a Claude default.
     /// </remarks>
     [Fact]
     public async Task A_Client_Default_Fallback_Without_A_Key_Is_Dropped()
     {
-        // The primary is exhausted deliberately. A succeeding primary would leave the fallback
-        // uncalled whether or not it was dropped, so the assertion below could not tell the two
-        // apart - it would pass on a chain that had kept an unusable entry it simply never reached.
+        // The primary is exhausted deliberately. A succeeding primary leaves the fallback uncalled
+        // whether or not it was dropped, so the assertion below could not tell those apart. It would
+        // pass on a chain that kept an unusable entry and simply never reached it.
         var gpt = FakeProvider.AlwaysRetryable(OuroProvider.OpenAi);
         var claude = FakeProvider.Succeeds(OuroProvider.Anthropic, "should never be reached");
 

@@ -17,8 +17,8 @@ namespace Ouroboros.Test.Responses;
 /// </summary>
 /// <remarks>
 /// Anthropic pauses a turn when its own server-side tool loop hits an internal limit. The turn is
-/// neither finished nor failed, and before this it came back half-done and successful - the model
-/// having run one round of tools and stopped mid-thought, with only StopReason to say so.
+/// neither finished nor failed. Before this it came back half-done and successful: one round of
+/// tools run, stopped mid-thought, with only StopReason to say so.
 /// </remarks>
 public class PausedTurnTests
 {
@@ -165,10 +165,9 @@ public class PausedTurnTests
     /// A tool result arriving after the pause still finds the invocation it belongs to.
     /// </summary>
     /// <remarks>
-    /// The correlation map used to be rebuilt for each round, so a pause falling between a
-    /// server_tool_use and its result left an execution that apparently never ran and a result
-    /// belonging to nothing - the same orphaning the file-editor handling was added to fix,
-    /// reintroduced at the pause boundary.
+    /// The correlation map used to be rebuilt each round. A pause falling between a server_tool_use
+    /// and its result then left an execution that apparently never ran, plus a result belonging to
+    /// nothing. The file-editor handling fixed that same orphaning once already.
     /// </remarks>
     [Fact]
     public async Task A_Tool_Result_Arriving_After_A_Pause_Finds_Its_Invocation()
@@ -197,8 +196,8 @@ public class PausedTurnTests
     /// A continuation asks only for what is left of the caller's token ceiling.
     /// </summary>
     /// <remarks>
-    /// max_tokens is per request, so handing the full ceiling to every round would let a turn that
-    /// paused three times produce four times what the caller asked for - and bill for it.
+    /// max_tokens is per request. Handing the full ceiling to every round would let a turn that
+    /// paused three times produce four times what the caller asked for, and bill for it.
     /// </remarks>
     [Fact]
     public async Task A_Continuation_Asks_Only_For_The_Remaining_Tokens()

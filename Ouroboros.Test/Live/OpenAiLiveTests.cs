@@ -20,10 +20,10 @@ namespace Ouroboros.Test.Live;
 /// Real calls against OpenAI's Responses API. Skipped unless OPENAI_API_KEY is set.
 /// </summary>
 /// <remarks>
-/// The sibling of AnthropicLiveTests, and doubly worth having here: this provider replaced a
-/// working one built on a different SDK against a different wire API. Every stub test in this suite
-/// asserts that the mapper produces the shape we believe in, which is exactly the belief that
-/// changed. Only a real call can say whether OpenAI agrees.
+/// The sibling of AnthropicLiveTests, and doubly worth having. This provider replaced a working one
+/// built on a different SDK against a different wire API. Every stub test in the suite asserts the
+/// mapper produces the shape we believe in, and that belief is what changed. Only a real call can
+/// say whether OpenAI agrees.
 /// </remarks>
 public class OpenAiLiveTests(ITestOutputHelper output)
 {
@@ -69,11 +69,12 @@ public class OpenAiLiveTests(ITestOutputHelper output)
     /// What model string the API echoes back.
     /// </summary>
     /// <remarks>
-    /// Not a formality. Consumers key their pricing tables on this exact string - Keystone stores it
-    /// on every chat row and joins it to a model table to compute cost. If Responses echoes a
-    /// different shape than Chat Completions did, the join silently misses, a priceless row is
-    /// created, and cost goes null with nothing failing anywhere. So the string is asserted to be
-    /// present and recognisable, and printed so it can be compared against what is already stored.
+    /// Not a formality. Consumers key their pricing tables on this exact string. Keystone stores it
+    /// on every chat row and joins it to a model table to compute cost.
+    ///
+    /// If Responses echoes a different shape than Chat Completions did, the join misses, a priceless
+    /// row is created, and cost goes null with nothing failing anywhere. So the string is asserted
+    /// present and recognisable, and printed for comparison against what is already stored.
     /// </remarks>
     [RequiresOpenAiKeyFact]
     public async Task The_Echoed_Model_Id_Is_Reported()
@@ -321,13 +322,13 @@ public class OpenAiLiveTests(ITestOutputHelper output)
     /// The full round trip: data in, analysis, artifact out.
     /// </summary>
     /// <remarks>
-    /// This is the half of code execution that makes it useful, and on OpenAI it is also the only
-    /// exercise of the two-store split - the upload is addressed by id alone, while the chart the
-    /// interpreter writes lives inside the container and needs both ids to fetch. A reference that
-    /// lost its ContainerScope would 404 here and nowhere else.
+    /// This is the half of code execution that makes it useful. On OpenAI it is also the only
+    /// exercise of the two-store split: the upload is addressed by id alone, while the chart the
+    /// interpreter writes lives inside the container and needs both ids. A reference that lost its
+    /// ContainerScope would 404 here and nowhere else.
     ///
-    /// Cleans up after itself: uploads persist and count against the account, so a test that leaked
-    /// one per run would quietly accumulate forever.
+    /// Cleans up after itself. Uploads persist and count against the account, so a test leaking one
+    /// per run would accumulate forever.
     /// </remarks>
     [RequiresOpenAiKeyFact]
     public async Task A_File_Round_Trips_Through_Code_Execution()

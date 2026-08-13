@@ -8,9 +8,9 @@ namespace Ouroboros.LargeLanguageModels.Providers;
 /// One entry of a fallback chain: a model, the provider that serves it, and the options to send.
 /// </summary>
 /// <remarks>
-/// Options are per entry rather than shared because a degraded entry carries a trimmed copy - see
-/// ProviderCapabilities.Degrade - and because each entry's Model has to match the provider it is
-/// paired with, or the mapper would stamp the wrong model id onto the request.
+/// Options are per entry, not shared. A degraded entry carries a trimmed copy (see
+/// ProviderCapabilities.Degrade), and each entry's Model must match the provider beside it or the
+/// mapper stamps the wrong model id onto the request.
 /// </remarks>
 internal sealed record ChainEntry(OuroModels Model, IChatProvider Provider, ChatOptions Options);
 

@@ -196,10 +196,10 @@ public static class JsonSchemaGenerator
     /// The properties that become schema fields.
     /// </summary>
     /// <remarks>
-    /// Setter-less properties are skipped. A computed property like <c>IsPass => Verdict == "pass"</c>
-    /// cannot be deserialized into, so asking the model to produce one only spends tokens on a value
-    /// that is then discarded - and invites it to contradict the field the value is derived from.
-    /// The previous generator emitted them.
+    /// Setter-less properties are skipped. Nothing can be deserialized into a computed property like
+    /// <c>IsPass => Verdict == "pass"</c>, so asking the model to fill one spends tokens on a value
+    /// that is then discarded. It also invites the model to contradict the field the value derives
+    /// from. The previous generator emitted them.
     /// </remarks>
     private static IEnumerable<PropertyInfo> Readable(Type type)
     {

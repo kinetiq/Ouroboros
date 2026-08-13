@@ -33,10 +33,11 @@ public class ChatOptions
     ///     including visible output tokens and reasoning tokens.
     /// </summary>
     /// <remarks>
-    /// Covers the whole turn, not each request within it. A Claude turn that pauses is continued
-    /// automatically, and each continuation asks only for what is left of this - so a turn that
-    /// takes four rounds still produces at most what was asked for here, rather than that much per
-    /// round. A turn that spends the budget before finishing comes back with OuroStopReason.Paused.
+    /// Covers the whole turn, not each request within it. A paused Claude turn is continued
+    /// automatically, and each continuation asks only for what is left of this. A turn taking four
+    /// rounds still produces at most what was asked for here, not that much per round.
+    ///
+    /// A turn that spends the budget before finishing returns OuroStopReason.Paused.
     /// </remarks>
     /// <see href="https://platform.openai.com/docs/api-reference/chat/create#chat-create-max_completion_tokens" />
     public int? MaxCompletionTokens { get; set; }
@@ -46,11 +47,11 @@ public class ChatOptions
     ///     stop sequence.
     /// </summary>
     /// <remarks>
-    /// Honoured on Anthropic; refused on OpenAI, whose Responses API has no stop parameter at all.
-    /// Shared rather than filed under <see cref="Anthropic" /> deliberately - the concept is
-    /// universal and the gap is one API's, so relocating it would bake that gap into the public API
-    /// and make undoing it a breaking change. Refusing loudly is the honest way to carry an
-    /// asymmetry the caller cannot otherwise see.
+    /// Honoured on Anthropic, refused on OpenAI, whose Responses API has no stop parameter at all.
+    ///
+    /// Deliberately shared rather than filed under <see cref="Anthropic" />. The concept is
+    /// universal and the gap belongs to one API, so moving it here would bake that gap into the
+    /// public API and make undoing it a breaking change.
     /// </remarks>
     public IList<string>? StopSequences { get; set; }
 
@@ -113,10 +114,9 @@ public class ChatOptions
     /// Settings that only mean something on OpenAI.
     /// </summary>
     /// <remarks>
-    /// Never null, so callers can set into it without a null check. Each mapper reads only its own
-    /// block, which is what makes it structurally impossible for a setting meant for one provider
-    /// to reach the other - and lets both be populated on a single request, as a call able to run
-    /// on either provider will need.
+    /// Never null, so you can set into it without a null check. Each mapper reads only its own
+    /// block, so a setting meant for one provider cannot reach the other. Both can be populated at
+    /// once, which is what a call able to run on either provider needs.
     /// </remarks>
     public OpenAiChatOptions OpenAi { get; init; } = new();
 
@@ -124,18 +124,16 @@ public class ChatOptions
     /// Models to try, in order, if this call cannot be served on <see cref="Model" />.
     /// </summary>
     /// <remarks>
-    /// Only transient failures move down the chain: rate limits and server faults that survived the
-    /// retry policy, transient network faults, and a blown attempt timeout. A request the provider
-    /// rejected on its merits - a bad parameter, an auth failure, a refused capability - fails where
-    /// it stands, because it would fail identically on the next provider at twice the cost.
+    /// Only transient failures move down the chain: rate limits and server faults that outlived the
+    /// retry policy, transient network faults, a blown attempt timeout. A request the provider
+    /// rejected on its merits fails where it stands. A bad parameter or an auth failure would fail
+    /// the same way on the next provider, for twice the money.
     ///
-    /// Each entry gets its own full retry budget and its own per-attempt timeout, so a chain can run
-    /// for considerably longer than a single call. Bound the whole thing with a CancellationToken if
-    /// that matters.
+    /// Each entry gets a full retry budget and its own per-attempt timeout, so a chain can run far
+    /// longer than a single call. Bound it with a CancellationToken if that matters.
     ///
-    /// Null means "use whatever the client was configured with" (see OuroClient.SetDefaultFallback).
-    /// An empty list means "no failover", and overrides the client default - the same distinction
-    /// Model draws between unset and set.
+    /// Null means "use the client default" (OuroClient.SetDefaultFallback). An empty list means "no
+    /// failover" and overrides that default - the same unset-versus-set distinction Model draws.
     /// </remarks>
     public IList<OuroModels>? FallbackModels { get; set; }
 
@@ -143,16 +141,15 @@ public class ChatOptions
     /// Whether a fallback may serve this call without an option the primary could honour.
     /// </summary>
     /// <remarks>
-    /// Off by default: a chain that cannot carry every option fails when the call is made, naming
-    /// the option, rather than quietly returning output shaped differently from what was asked for.
+    /// Off by default. A chain that cannot carry every option fails when the call is made, naming
+    /// the option, instead of quietly returning output shaped differently from what was asked for.
     /// Turning this on says a less exact answer beats no answer.
     ///
-    /// It never drops an attachment. A model reasoning about a file it cannot see returns a
-    /// confident answer to a different question, so a provider that cannot see this call's files is
-    /// skipped rather than degraded. In practice this governs StopSequences, which OpenAI's
-    /// Responses API has no way to express.
+    /// It never drops an attachment. A model reasoning about a file it cannot see answers a
+    /// different question confidently, so a provider that cannot see this call's files is skipped
+    /// instead. In practice this governs StopSequences, which Responses cannot express.
     ///
-    /// Only consulted when a fallback chain exists; a single-model call behaves exactly as before.
+    /// Only consulted when a fallback chain exists. A single-model call behaves exactly as before.
     /// </remarks>
     public bool AllowDegraded { get; set; }
 
