@@ -42,9 +42,8 @@ public class OuroClient : IOuroClient, IDisposable
     /// When set, supplies the provider for a model instead of the real clients. Test seam only.
     /// </summary>
     /// <remarks>
-    /// Per model rather than one provider for everything, because a fallback chain needs each entry
-    /// to resolve somewhere different - a seam that collapsed them all onto one provider could not
-    /// express the thing under test.
+    /// Keyed by model so a test can give each chain entry a different provider. One provider for
+    /// every model cannot express a fallback chain at all.
     /// </remarks>
     private readonly Func<OuroModels, IChatProvider>? ProviderOverride;
 
@@ -58,11 +57,11 @@ public class OuroClient : IOuroClient, IDisposable
     /// One transport and one provider client each, built on first use.
     /// </summary>
     /// <remarks>
-    /// Separate HttpClients per provider on purpose - SDKs set their own auth headers on the client
-    /// they are handed, so sharing one would send an OpenAI key to Anthropic.
+    /// One HttpClient per provider, never shared. Each SDK sets its own auth headers on the client
+    /// it is given, so a shared one would send an OpenAI key to Anthropic.
     ///
-    /// Both run with no timeout of their own. HttpClient.Timeout is per-client and cannot express a
-    /// per-attempt budget; the real deadline is applied per attempt by ChatExecutor.
+    /// Neither has a timeout. HttpClient.Timeout is per client and cannot express a per-attempt
+    /// budget, so ChatExecutor applies the real deadline to each attempt.
     /// </remarks>
     private readonly Lazy<HttpClient> OpenAiTransport;
 
@@ -123,11 +122,8 @@ public class OuroClient : IOuroClient, IDisposable
     /// Gets the number of tokens the given text would take up for the given model.
     /// </summary>
     /// <remarks>
-    /// The model matters: different families tokenize the same text differently, so a count
-    /// taken against the wrong model is simply wrong.
-    ///
-    /// OpenAI models only. Anthropic publishes no tokenizer, so Claude models throw rather than
-    /// return a guess - read the provider's own usage off the response instead.
+    /// The model matters. Families tokenize the same text differently, so a count taken against the
+    /// wrong one is simply wrong. OpenAI models only; see <see cref="CanCountTokens" />.
     /// </remarks>
     public static int TokenCount(string text, OuroModels model)
     {
@@ -196,13 +192,12 @@ public class OuroClient : IOuroClient, IDisposable
     /// Fires OnChatCompleted once per completed attempt, in order.
     /// </summary>
     /// <remarks>
-    /// Sequentially awaited, deliberately: a consumer's logger is frequently one stateful instance
-    /// reused across invocations, and overlapping them would interleave two chats into one row.
+    /// Awaited one at a time. A consumer's logger is often a single stateful instance, and
+    /// overlapping calls would interleave two chats into one row.
     ///
-    /// Every attempt's hook runs even when one of them throws under HookFailurePolicy.Throw, and the
-    /// first exception is rethrown afterward. Bailing out on the first would mean a throw while
-    /// logging the failed attempt discarded the successful attempt's response entirely - a chat the
-    /// caller paid for and would never see, lost to a logging fault.
+    /// Under HookFailurePolicy.Throw every hook still runs, and the first exception is raised after
+    /// the loop. Stopping at the first would lose the successful attempt's response to a fault
+    /// while logging the failed one.
     /// </remarks>
     private async Task FireCompletedHooks(ChainResult result, List<OuroMessage> messages, ChatOptions options)
     {
@@ -328,10 +323,8 @@ public class OuroClient : IOuroClient, IDisposable
     /// Whether this client could reach a provider at all.
     /// </summary>
     /// <remarks>
-    /// Reads the configured options rather than trying to build the client, because building it is
-    /// what throws - and the whole point here is to decide before that happens. The test seam is
-    /// deliberately not consulted: a fake provider still stands in for a real one, and a test that
-    /// wants a chain built supplies keys for it.
+    /// Reads the configured options instead of building the client, because building it is what
+    /// throws, and the point is to decide before that happens.
     /// </remarks>
     private bool HasKeyFor(OuroProvider provider)
     {
@@ -347,14 +340,13 @@ public class OuroClient : IOuroClient, IDisposable
     /// Checks every entry can serve this call, before any of them is asked to.
     /// </summary>
     /// <remarks>
-    /// A single-model call is not validated here at all: the provider's own refusal already covers
-    /// it, and behaviour for callers who never asked for failover has to stay exactly as it was.
+    /// A single-model call skips this entirely. The provider refuses it on its own, and callers who
+    /// never asked for failover must behave exactly as they did before.
     ///
-    /// Whether an incompatibility is fatal depends on where the chain came from. A chain the caller
+    /// For longer chains, where the chain came from decides how strict to be. A chain the caller
     /// wrote for this call is their intent, so a conflict is an error naming the option. A chain
-    /// inherited from the client default is not about this call at all - failing here would mean
-    /// that configuring a default fallback broke every existing call using an option the fallback
-    /// cannot serve, whether or not it ever failed over. Those entries are dropped with a log.
+    /// from the client default is not about this call, so the offending entry is dropped with a
+    /// log. BuildChain applies the same split to a missing API key.
     /// </remarks>
     private OuroResponseBase? Validate(List<ChainEntry> chain, ChatOptions options)
     {
@@ -467,9 +459,8 @@ public class OuroClient : IOuroClient, IDisposable
     /// Picks the file store for a provider.
     /// </summary>
     /// <remarks>
-    /// A file reference belongs to the store that issued it, so routing on the reference rather
-    /// than on a model is what stops an Anthropic id being sent to OpenAI and coming back as a
-    /// baffling 404.
+    /// Routed on the reference, not on a model. A file id only means something to the store that
+    /// issued it, and one sent to the wrong vendor returns a 404 for an id you can see exists.
     /// </remarks>
     private IProviderFileStore ResolveFileStore(OuroProvider provider)
     {

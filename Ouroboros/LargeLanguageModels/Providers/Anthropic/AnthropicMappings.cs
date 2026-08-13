@@ -15,9 +15,9 @@ namespace Ouroboros.LargeLanguageModels.Providers.Anthropic;
 /// Maps Ouroboros' request vocabulary onto Anthropic's.
 /// </summary>
 /// <remarks>
-/// The sibling of OpenAiMappings, and separate from it on purpose: the two providers disagree about
-/// enough that a shared mapper would be a pile of conditionals. The shapes that actually differ are
-/// called out below.
+/// The sibling of OpenAiMappings, kept separate on purpose. The two providers disagree about enough
+/// that a shared mapper would be a pile of conditionals. The shapes that differ are called out
+/// below.
 /// </remarks>
 internal static class AnthropicMappings
 {
@@ -25,15 +25,14 @@ internal static class AnthropicMappings
     /// Builds a request from the conversation, optionally continuing a turn already under way.
     /// </summary>
     /// <param name="inProgress">
-    /// Blocks the model has already produced for this turn, when continuing a paused one. They are
-    /// appended as a single assistant turn - one that grows with each continuation rather than one
-    /// per continuation, since consecutive assistant messages are not a shape the API takes.
+    /// Blocks the model already produced for this turn, when continuing a paused one. They go in as
+    /// one assistant turn that grows with each continuation. Consecutive assistant messages are not
+    /// a shape the API accepts.
     /// </param>
     /// <param name="maxTokens">
-    /// Overrides the token ceiling for this request. Used when continuing a paused turn, where what
-    /// is left of the caller's budget is smaller than the budget itself - max_tokens is per request,
-    /// so passing the full ceiling each round would let one turn produce several times what the
-    /// caller asked for.
+    /// Overrides the token ceiling for this request. A continuation passes what is left of the
+    /// caller's budget: max_tokens is per request, so sending the full ceiling every round would
+    /// let one turn produce several times what was asked for.
     /// </param>
     internal static MessageCreateParams MapOptions(List<OuroMessage> messages, ChatOptions options,
         IReadOnlyList<ContentBlockParam>? inProgress = null, long? maxTokens = null)
@@ -49,11 +48,10 @@ internal static class AnthropicMappings
         // with a system role, so it has to be lifted out of the list.
         var joinedSystem = JoinSystemPrompts(messages);
 
-        // Assigned through an explicit local rather than `cond ? joined : null` on purpose. These
-        // SDK union types define an implicit conversion from string, and in a conditional the
-        // compiler types the whole expression as string and converts the *result* - so the null
-        // branch produces a non-null wrapper around a null value, and an empty system prompt gets
-        // sent rather than omitted. The same trap applies to Thinking below.
+        // An explicit local, not `cond ? joined : null`. These SDK union types convert implicitly
+        // from string. In a conditional the compiler types the whole expression as string and
+        // converts the result, so the null branch yields a non-null wrapper around nothing - and an
+        // empty system prompt is sent instead of omitted. Thinking below has the same trap.
         MessageCreateParamsSystem? system = null;
 
         if (!string.IsNullOrWhiteSpace(joinedSystem))
@@ -76,15 +74,12 @@ internal static class AnthropicMappings
         {
             Model = ModelMappings.GetModelNameAsString(model),
 
-            // Required by Anthropic, unlike OpenAI where it is optional. With no ceiling asked
-            // for, the model's own is closest to "no limit". A cap, not a reservation: only tokens
-            // actually produced are billed.
+            // Required here, unlike OpenAI. With no ceiling asked for, the model's own is
+            // closest to "no limit". The override comes first: a continuation gets what is left of
+            // the caller's budget, not all of it again.
             //
-            // The override comes first because a continuation gets what is left of the caller's
-            // budget, not the whole of it again. See the maxTokens parameter.
-            //
-            // On current models this budget covers thinking as well as visible output, so a tight
-            // value truncates the answer instead of shortening it.
+            // On current models this covers thinking as well as visible output, so a tight value
+            // truncates the answer instead of shortening it.
             MaxTokens = maxTokens ?? options.MaxCompletionTokens ?? model.GetMaxOutputTokens(),
 
             Messages = MapMessages(messages, options.Attachments, inProgress),
@@ -156,10 +151,9 @@ internal static class AnthropicMappings
     /// Hangs the uploaded files off the last user turn.
     /// </summary>
     /// <remarks>
-    /// The last user turn specifically: that is the request the files are evidence for, and putting
-    /// them there keeps them adjacent to the question in the model's context. A message's content
-    /// has to become a block list to carry them, since the plain-string form has nowhere to put
-    /// anything but text.
+    /// The last user turn specifically. That is the request the files are evidence for, so it keeps
+    /// them next to the question in the model's context. Carrying them turns that message's content
+    /// into a block list, because the plain-string form holds nothing but text.
     /// </remarks>
     private static void AttachFiles(List<MessageParam> messages, IReadOnlyList<OuroFileRef> attachments)
     {
@@ -209,20 +203,19 @@ internal static class AnthropicMappings
     /// for none.
     /// </summary>
     /// <remarks>
-    /// The schema comes from Ouroboros' own generator, the same one the OpenAI mapper uses. That is
-    /// what lets one ResponseType work on either provider, which is the whole point of generating it
-    /// ourselves rather than taking a vendor's.
+    /// The schema comes from Ouroboros' own generator, the same one OpenAI gets. Generating it here
+    /// instead of taking a vendor's is what lets one ResponseType work on either provider.
     ///
-    /// Only the schema is supplied: the SDK writes the "json_schema" discriminator itself.
+    /// Only the schema is supplied; the SDK writes the "json_schema" discriminator itself.
     /// </remarks>
     private static JsonOutputFormat? MapSchema(System.Type? responseType)
     {
         if (responseType is null)
             return null;
 
-        // Through a string rather than converting the node tree by hand. This runs once per request
-        // and is nothing beside the call it precedes, and hand-rolling JsonObject to JsonElement is
-        // a lot of surface on which to get a nested case subtly wrong.
+        // Through a string, not by converting the node tree by hand. It runs once per request and
+        // costs nothing beside the call it precedes, and hand-rolling JsonObject to JsonElement is a
+        // lot of surface on which to get a nested case subtly wrong.
         var schema = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             JsonSchemaGenerator.GenerateJson(responseType));
 
@@ -234,10 +227,9 @@ internal static class AnthropicMappings
     /// was asked for.
     /// </summary>
     /// <remarks>
-    /// Spelled out as branches rather than one initializer with conditional values, because Effort
-    /// is one of the SDK union wrappers with an implicit conversion. Assigning a null through it
-    /// yields a non-null wrapper around nothing, which serialises as a present-but-empty field - the
-    /// same trap already documented on System and Thinking above.
+    /// Branches, not one initializer with conditional values. Effort is another SDK union wrapper
+    /// with an implicit conversion, so assigning a null through it yields a non-null wrapper around
+    /// nothing, which serialises as a present-but-empty field. Same trap as System and Thinking.
     /// </remarks>
     private static OutputConfig? MapOutputConfig(Effort? effort, JsonOutputFormat? format)
     {

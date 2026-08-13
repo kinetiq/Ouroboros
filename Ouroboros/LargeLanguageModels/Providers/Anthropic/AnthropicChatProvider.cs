@@ -19,11 +19,10 @@ namespace Ouroboros.LargeLanguageModels.Providers.Anthropic;
 /// Anthropic, over the Messages API.
 /// </summary>
 /// <remarks>
-/// One attempt per call. Retry, timeout and cancellation are ChatExecutor's job - see IChatProvider.
+/// One attempt per call. Retry, timeout and cancellation belong to ChatExecutor; see IChatProvider.
 ///
-/// Unlike OpenAI's Chat Completions, this API carries server-side tools natively, which is why code
-/// execution and MCP land here first: they are a tool declaration on the request rather than a
-/// different API surface.
+/// This API carries server-side tools natively, which is why code execution and MCP land here
+/// first. On this provider they are a tool declaration on the request, not a separate API surface.
 /// </remarks>
 internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client, ILogger? logger = null) : IChatProvider
 {
@@ -93,12 +92,12 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     /// </summary>
     /// <remarks>
     /// Anthropic pauses a turn when its own server-side tool loop hits an internal limit. The turn
-    /// is not finished and not failed; continuing it means sending back everything produced so far
-    /// and asking it to carry on. Without that, a code-execution turn that needed two rounds came
-    /// back half-done and successful, which is the worst of both.
+    /// is neither finished nor failed. Continuing it means sending back everything produced so far
+    /// and asking it to carry on. Without that, a code-execution turn needing two rounds came back
+    /// half-done and successful, which is the worst of both.
     ///
-    /// State is kept here rather than in locals because three things have to accumulate together
-    /// and stay consistent: the blocks, the token usage, and the count of continuations.
+    /// A class, not locals, because four things accumulate together and must stay consistent: the
+    /// blocks, the tool-use map that indexes into them, the token usage, and the continuation count.
     /// </remarks>
     private sealed class PausedTurn
     {
@@ -131,13 +130,13 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         /// What is left of the caller's output-token ceiling, or null when they set none.
         /// </summary>
         /// <remarks>
-        /// max_tokens is a per-request cap, so a turn that pauses would otherwise get the whole
-        /// ceiling again on every round - a caller asking for 1000 tokens could be billed for four
-        /// times that and have capped nothing. Subtracting what the turn has already produced makes
-        /// MaxCompletionTokens mean what it says across the turn rather than within a round.
+        /// max_tokens is a per-request cap. Without this a paused turn would get the whole ceiling
+        /// again every round, so a caller asking for 1000 tokens could be billed for four times
+        /// that having capped nothing. Subtracting what the turn already produced makes
+        /// MaxCompletionTokens mean what it says across the turn, not within a round.
         ///
-        /// Null rather than a sentinel so that comparisons against it are false when no cap was
-        /// asked for, which is exactly the behaviour the callers want.
+        /// Null, not a sentinel: comparisons against null are false when no cap was asked for,
+        /// which is what both callers want.
         /// </remarks>
         public long? Remaining(ChatOptions options)
         {
@@ -180,14 +179,13 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
         /// Turns a block the model produced into one that can be sent back to it.
         /// </summary>
         /// <remarks>
-        /// Through the block's own raw JSON and the SDK's union converter, rather than a switch over
-        /// the dozen block types. Two reasons, and the first is the important one: thinking blocks
-        /// carry a signature the API verifies, so a converter that rebuilt them field by field would
-        /// reject the whole turn the moment it dropped or reordered anything. Round-tripping the
-        /// bytes cannot get that wrong.
+        /// Through the block's own raw JSON and the SDK's union converter, not a switch over the
+        /// dozen block types.
         ///
-        /// The second is that it carries block types this version has never heard of, which is worth
-        /// having on a surface the vendor keeps extending.
+        /// Thinking blocks carry a signature the API verifies. A converter rebuilding them field by
+        /// field would have the whole turn rejected the moment it dropped or reordered anything;
+        /// round-tripping the bytes cannot get that wrong. It also carries block types this version
+        /// has never heard of, on a surface the vendor keeps extending.
         /// </remarks>
         private static ContentBlockParam ToParam(ContentBlock block)
         {
@@ -219,17 +217,16 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     /// Turns Anthropic's content array into Ouroboros blocks.
     /// </summary>
     /// <remarks>
-    /// Code execution arrives as two separate blocks correlated by id - a server_tool_use carrying
-    /// the code, then a result block carrying stdout. They are coalesced into one
-    /// OuroCodeExecutionBlock here, so the join lives in the mapper rather than in every consumer.
+    /// Code execution arrives as two blocks correlated by id: a server_tool_use carrying the code,
+    /// then a result carrying stdout. They are coalesced into one OuroCodeExecutionBlock here, so
+    /// the join lives in the mapper instead of in every consumer.
     ///
-    /// Anything not yet modelled becomes an OuroUnknownBlock rather than being dropped, so a new
-    /// provider block type degrades visibly instead of quietly shortening the response.
+    /// Anything not yet modelled becomes an OuroUnknownBlock. A new provider block type then
+    /// degrades visibly instead of quietly shortening the response.
     ///
-    /// Appends into the caller's list and correlation map rather than returning its own, so that a
-    /// turn spanning several requests keeps one set of both. Indexes recorded on an earlier round
-    /// stay valid because the list only ever grows, which is what lets a result arriving after a
-    /// pause still find the invocation it belongs to.
+    /// Appends into the caller's list and correlation map instead of returning its own, so a turn
+    /// spanning several requests keeps one set of both. The list only grows, so an index from an
+    /// earlier round stays valid.
     /// </remarks>
     private static void MapContent(IReadOnlyList<ContentBlock>? content, List<OuroContentBlock> blocks,
         Dictionary<string, int> executionsByToolUseId)
@@ -266,10 +263,10 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
                 continue;
             }
 
-            // The code execution tool has a file-editor half as well as a shell half - asked for
-            // anything non-trivial the model writes a script with `create` and then runs it with
-            // bash, producing two invocations and two different result shapes. Handling only the
-            // bash one leaves the create invocation orphaned with a null Result.
+            // The code execution tool has a file-editor half as well as a shell half. Asked for
+            // anything non-trivial the model writes a script with `create`, then runs it with bash:
+            // two invocations, two different result shapes. Handling only the bash one leaves the
+            // create invocation orphaned with a null Result.
             if (block.TryPickTextEditorCodeExecutionToolResult(out TextEditorCodeExecutionToolResultBlock? edit)
                 && edit is not null)
             {
@@ -285,8 +282,8 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     /// Fills in the result on the execution block its tool-use id points at.
     /// </summary>
     /// <remarks>
-    /// A result with no matching invocation becomes its own block rather than being discarded -
-    /// dropping it would lose the only record that something ran.
+    /// A result with no matching invocation becomes its own block. Discarding it would lose the
+    /// only record that something ran.
     /// </remarks>
     private static void Attach(List<OuroContentBlock> blocks, Dictionary<string, int> executionsByToolUseId,
         string? toolUseId, OuroCodeExecutionResult mapped)
@@ -306,9 +303,9 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     /// Maps a file-editor result onto the same shape as a shell one.
     /// </summary>
     /// <remarks>
-    /// These carry no stdout or exit code - the useful signal is just whether the edit worked - so
-    /// they are normalised into the common shape rather than given a block type of their own. A
-    /// caller iterating CodeExecutions sees the whole sequence the model ran, in order.
+    /// These carry no stdout or exit code; the useful signal is whether the edit worked. Normalising
+    /// them into the common shape, instead of giving them a block type of their own, means a caller
+    /// iterating CodeExecutions sees the whole sequence the model ran, in order.
     /// </remarks>
     private static OuroCodeExecutionResult MapEditResult(TextEditorCodeExecutionToolResultBlock edit)
     {

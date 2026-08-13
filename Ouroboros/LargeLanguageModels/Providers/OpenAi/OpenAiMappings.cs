@@ -13,9 +13,9 @@ namespace Ouroboros.LargeLanguageModels.Providers.OpenAi;
 /// Maps Ouroboros' request vocabulary onto OpenAI's Responses API.
 /// </summary>
 /// <remarks>
-/// The sibling of AnthropicMappings. The two APIs turn out to agree on more than they disagree:
-/// both lift the system prompt to a top-level field, both take an effort level, and both express
-/// structured output as a JSON schema. What differs is spelling, which is what a mapper is for.
+/// The sibling of AnthropicMappings. The two APIs agree on more than they disagree: both lift the
+/// system prompt to a top-level field, both take an effort level, both express structured output as
+/// a JSON schema. What differs is spelling, which is what a mapper is for.
 /// </remarks>
 internal static class OpenAiMappings
 {
@@ -59,13 +59,13 @@ internal static class OpenAiMappings
     /// Turns on the code interpreter, mounting any attachments into its container.
     /// </summary>
     /// <remarks>
-    /// The IncludedProperties line is not optional. Without it the request still succeeds, the tool
-    /// still runs, and the outputs come back <em>empty</em> - so the model appears to have executed
-    /// nothing. It is an opt-in for a response field, not for the tool.
+    /// The IncludedProperties line is not optional. Without it the request still succeeds and the
+    /// tool still runs, but the outputs come back <em>empty</em>, so the model looks like it
+    /// executed nothing. It opts in to a response field, not to the tool.
     ///
-    /// The container is left automatic: OpenAI provisions one for the response and disposes of it.
-    /// Passing an explicit container id would let one persist across calls, which is a different
-    /// feature with a lifecycle to manage, and nothing asks for it yet.
+    /// The container stays automatic. OpenAI provisions one per response and disposes of it. An
+    /// explicit container id would persist across calls, which is a different feature with a
+    /// lifecycle to manage.
     /// </remarks>
     private static void AddCodeInterpreter(CreateResponseOptions request, ChatOptions options)
     {
@@ -93,8 +93,8 @@ internal static class OpenAiMappings
     /// Concatenates every system message into the single instructions field.
     /// </summary>
     /// <remarks>
-    /// Ouroboros permits several; dropping all but the first would silently lose instructions,
-    /// which surfaces later as the model ignoring a rule nobody can find.
+    /// Ouroboros permits several. Dropping all but the first would lose instructions, which shows
+    /// up later as the model ignoring a rule nobody can find.
     /// </remarks>
     private static string JoinSystemPrompts(List<OuroMessage> messages)
     {
@@ -122,14 +122,10 @@ internal static class OpenAiMappings
     /// Maps our three-level effort onto OpenAI's.
     /// </summary>
     /// <remarks>
-    /// The API also offers None and Minimal below Low. Our enum is a subset, so nothing is
-    /// misreported - the extra levels are simply not reachable yet.
-    ///
     /// The casts on the arms are load-bearing. ResponseReasoningEffortLevel converts implicitly
-    /// from string, so without them the compiler types the whole switch as the non-nullable level
-    /// and runs the null arm through that conversion - which throws ArgumentNullException on every
-    /// reasoning-model call that did not specify an effort. Anthropic's wrappers have the same
-    /// shape and the same trap.
+    /// from string. Without them the compiler types the whole switch as the non-nullable level and
+    /// runs the null arm through that conversion, throwing ArgumentNullException on every
+    /// reasoning-model call that named no effort. Anthropic's wrappers carry the same trap.
     /// </remarks>
     private static ResponseReasoningEffortLevel? MapEffort(OuroReasoningEffort? effort)
     {

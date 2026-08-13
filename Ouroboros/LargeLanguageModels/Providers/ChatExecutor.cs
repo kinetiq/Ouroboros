@@ -21,10 +21,10 @@ namespace Ouroboros.LargeLanguageModels.Providers;
 /// Runs a provider attempt under Ouroboros' retry, timeout and cancellation policy.
 /// </summary>
 /// <remarks>
-/// This sits above <see cref="IChatProvider" /> deliberately. Retry logic that lives inside each
-/// provider drifts - one grows jitter, another forgets that cancellation is not transient - and the
-/// bugs are then N times over. Provider SDKs that ship their own retries have them turned off at
-/// construction for the same reason: one authority, not two stacked multiplicatively.
+/// Sits above <see cref="IChatProvider" /> so there is one retry policy, not one per provider.
+/// Per-provider policies drift: one grows jitter, another forgets that cancellation is not
+/// transient. Provider SDKs ship their own retries, which OuroClient turns off at construction for
+/// the same reason - two policies stack multiplicatively.
 /// </remarks>
 internal sealed class ChatExecutor(ILogger? logger = null)
 {
@@ -47,15 +47,14 @@ internal sealed class ChatExecutor(ILogger? logger = null)
     /// Runs each entry of a fallback chain in turn, stopping at the first that settles the call.
     /// </summary>
     /// <remarks>
-    /// Only a transient exhaustion moves to the next entry - see <see cref="Unwrap" />. Every entry
-    /// gets a fresh retry budget and fresh per-attempt timeouts, because each one is a full
-    /// ExecuteAsync in its own right. There is no extra delay between entries: the backoff already
-    /// happened inside the one that failed.
+    /// Only a transient exhaustion moves to the next entry; <see cref="Unwrap" /> decides which
+    /// those are. Each entry runs a full attempt of its own, so it gets a fresh retry budget and
+    /// fresh per-attempt timeouts. Nothing waits between entries, because the entry that failed
+    /// already served out its backoff.
     ///
-    /// Cancellation does not throw from here. The caller's token is reported through
-    /// <see cref="ChainResult.Cancelled" /> so that attempts which already ran - and already cost
-    /// money - can be logged before the exception surfaces. Throwing from inside the loop would
-    /// discard that record.
+    /// Cancellation is reported through <see cref="ChainResult.Cancelled" /> instead of throwing.
+    /// Attempts that already ran cost money, and throwing from inside the loop would discard their
+    /// record before anything could log it.
     /// </remarks>
     public async Task<ChainResult> ExecuteChainAsync(IReadOnlyList<ChainEntry> chain,
         List<OuroMessage> messages, CancellationToken cancellationToken = default)
@@ -137,12 +136,13 @@ internal sealed class ChatExecutor(ILogger? logger = null)
                 },
                 cancellationToken);
 
-        // ExecuteAndCaptureAsync captures unhandled exceptions as well as handled ones, so nothing
-        // propagates out of the policy - cancellation included. Caller cancellation is reported
-        // rather than thrown here so that both callers can decide: ExecuteAsync throws, and the
-        // chain returns what already completed first. Checked explicitly against the token, because
-        // a caller-cancelled attempt and a blown attempt budget are the same exception type and
-        // would otherwise be reported as a timeout the caller never set.
+        // ExecuteAndCaptureAsync captures unhandled exceptions too, so nothing escapes the policy,
+        // cancellation included. Reported here instead of thrown, so each caller can decide:
+        // ExecuteAsync throws, the chain first returns what completed.
+        //
+        // Checked against the token, not the exception. A caller-cancelled attempt and a blown
+        // attempt budget throw the same type, and the second message would name a timeout nobody
+        // set.
         if (cancellationToken.IsCancellationRequested)
         {
             return new ExecutionOutcome(
@@ -157,11 +157,12 @@ internal sealed class ChatExecutor(ILogger? logger = null)
     /// Turns the policy's outcome into a response, and says whether another provider deserves a go.
     /// </summary>
     /// <remarks>
-    /// The eligibility rule is narrower than "it failed". A failure the policy never handled is a
-    /// deterministic one - a mapper that threw, a response type that will not turn into a schema -
-    /// and it fails identically on the next provider, having cost twice as much to learn that. So
-    /// eligibility tracks what the policy actually did: results and exceptions it handled and then
-    /// exhausted, plus the attempt timeout, which it deliberately does not handle.
+    /// Eligibility is narrower than "it failed". A failure the policy never handled is a
+    /// deterministic one: a mapper that threw, a response type that will not turn into a schema.
+    /// That fails the same way on the next provider, for twice the money.
+    ///
+    /// So eligibility follows what the policy did. Results and exceptions it handled and then
+    /// exhausted qualify, as does the attempt timeout, which it deliberately never handles.
     /// </remarks>
     private static ExecutionOutcome Unwrap(PolicyResult<ProviderAttempt> policyResult, IChatProvider provider,
         TimeSpan attemptTimeout)

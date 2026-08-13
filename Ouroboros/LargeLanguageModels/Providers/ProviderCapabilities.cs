@@ -22,9 +22,9 @@ internal enum CapabilityVerdict
     /// This provider cannot serve the call at all, though another one could.
     /// </summary>
     /// <remarks>
-    /// Distinct from <see cref="Degradable" /> because dropping the offending option would produce
-    /// an answer to a different question - a model reasoning about a file it cannot see, say - and
-    /// that comes back looking like a confident success.
+    /// Distinct from <see cref="Degradable" />. Dropping the offending option here would answer a
+    /// different question: a model reasoning about a file it cannot see. That comes back looking
+    /// like a confident success.
     /// </remarks>
     NotServable,
 
@@ -49,12 +49,12 @@ internal sealed record CapabilityCheck(CapabilityVerdict Verdict, string? Messag
 /// What each provider can and cannot honour, in one place.
 /// </summary>
 /// <remarks>
-/// Shared by two callers that must never disagree: a provider's own pre-flight refusal, and the
-/// failover chain's up-front validation. If the chain believed a provider could serve a call that
-/// the provider then refused, failover would burn an attempt to discover what was already known.
+/// Two callers must never disagree about this: a provider's own pre-flight refusal, and the
+/// failover chain's up-front validation. If the chain thought a provider could serve a call the
+/// provider then refused, failover would burn an attempt learning what was already known.
 ///
-/// These are Ouroboros' own rules plus the vendors' hard gaps - not preferences. A rule that only
-/// held on one provider by accident would be a bug in the mapper, not an entry here.
+/// Everything here is either an Ouroboros rule or a vendor's hard gap, never a preference. A rule
+/// that held on one provider by accident would be a mapper bug, not an entry here.
 /// </remarks>
 internal static class ProviderCapabilities
 {
@@ -63,12 +63,11 @@ internal static class ProviderCapabilities
     /// </summary>
     public static CapabilityCheck Check(ChatOptions options, OuroProvider provider)
     {
-        // Invalid first: it is wrong whoever serves it, so it must not read as "try the next one".
+        // Invalid first: wrong whoever serves it, so it must not read as "try the next one".
         //
-        // Attachments ride into the execution container, so without the tool that mounts them there
-        // is nowhere for them to go. Sent anyway they are accepted and ignored, and the model
-        // answers as though the file were never mentioned - which reads as the model being obtuse
-        // rather than the request being wrong.
+        // Attachments mount into the execution container, so without that tool there is nowhere for
+        // them to go. Sent anyway they are accepted and ignored, and the model answers as though the
+        // file were never mentioned - which reads as the model being obtuse.
         if (options.Attachments is { Count: > 0 } && !options.ServerTools.HasFlag(OuroServerTools.CodeExecution))
         {
             return new CapabilityCheck(CapabilityVerdict.Invalid,
@@ -109,9 +108,9 @@ internal static class ProviderCapabilities
     /// A copy of these options with anything this provider cannot honour removed.
     /// </summary>
     /// <remarks>
-    /// Only ever reached under <see cref="ChatOptions.AllowDegraded" />, and only for verdicts of
-    /// <see cref="CapabilityVerdict.Degradable" /> - the caller has said in as many words that a
-    /// less exact answer beats no answer. Nothing here drops an attachment; see the note on
+    /// Reached only under <see cref="ChatOptions.AllowDegraded" />, and only for a verdict of
+    /// <see cref="CapabilityVerdict.Degradable" />. The caller has said outright that a less exact
+    /// answer beats no answer. Nothing here drops an attachment - see
     /// <see cref="CapabilityVerdict.NotServable" />.
     /// </remarks>
     public static ChatOptions Degrade(ChatOptions options, OuroProvider provider)

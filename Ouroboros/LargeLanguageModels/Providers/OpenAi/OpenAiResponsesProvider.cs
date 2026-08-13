@@ -18,11 +18,10 @@ namespace Ouroboros.LargeLanguageModels.Providers.OpenAi;
 /// OpenAI, over the Responses API.
 /// </summary>
 /// <remarks>
-/// One attempt per call. Retry, timeout and cancellation are ChatExecutor's job - see IChatProvider.
+/// One attempt per call. Retry, timeout and cancellation belong to ChatExecutor; see IChatProvider.
 ///
-/// This replaced a Chat Completions provider built on a third-party SDK. Responses is where
-/// OpenAI's server-side tools live, so it is the only surface on which this provider can reach
-/// parity with the Anthropic one.
+/// This replaced a Chat Completions provider built on a third-party SDK. OpenAI's server-side tools
+/// live only on Responses, so it is the one surface where this provider can match the Anthropic one.
 /// </remarks>
 internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? logger = null) : IChatProvider
 {
@@ -60,9 +59,9 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     /// Catches request shapes this API cannot honour, before spending a call.
     /// </summary>
     /// <remarks>
-    /// The rules live in ProviderCapabilities so that this refusal and the failover chain's
-    /// validation are the same judgement. Two copies would eventually disagree, and the chain would
-    /// spend an attempt learning what it already knew.
+    /// The rules live in ProviderCapabilities so this refusal and the failover chain's validation
+    /// are one judgement. Two copies would eventually disagree, and the chain would spend an
+    /// attempt learning what it already knew.
     /// </remarks>
     private static OuroResponseBase? Reject(ChatOptions options)
     {
@@ -107,7 +106,7 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     /// <remarks>
     /// Reasoning items are skipped for the same reason Anthropic's thinking blocks are: the raw
     /// chain of thought is not returned, so there is nothing in them worth a block. Anything not
-    /// modelled becomes an unknown block rather than being dropped.
+    /// modelled becomes an unknown block instead of being dropped.
     /// </remarks>
     private static List<OuroContentBlock> MapContent(ResponseResult response)
     {
@@ -167,15 +166,15 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     /// Maps one code interpreter call onto the neutral execution block.
     /// </summary>
     /// <remarks>
-    /// Two things this API does not report, both derived here rather than left to look like data.
+    /// Two things this API does not report, both derived here so neither looks like data.
     ///
     /// There is no exit code. The status says whether the <em>tool</em> completed, so Completed maps
     /// to 0 and anything else to -1 with IsToolError set. A Python script that raises still counts
-    /// as completed - the interpreter ran fine and the traceback is in the logs - which is exactly
-    /// the distinction IsToolError already draws.
+    /// as completed: the interpreter ran fine and the traceback is in the logs. That is the
+    /// distinction IsToolError already draws.
     ///
-    /// There is no separate stderr either: the logs output is the combined stream, so Stderr stays
-    /// empty rather than guessing which lines belonged to which.
+    /// There is no separate stderr. The logs output is the combined stream, so Stderr stays empty
+    /// instead of guessing which lines were which.
     /// </remarks>
     private static OuroCodeExecutionBlock MapExecution(CodeInterpreterCallResponseItem execution)
     {
@@ -202,14 +201,13 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     /// </summary>
     /// <remarks>
     /// "Came from" is an approximation, deliberately. OpenAI cites a generated file against its
-    /// <em>container</em> rather than against the call that wrote it, and one container serves every
-    /// execution in the response - so when the model runs the tool twice, nothing on the wire says
+    /// <em>container</em>, not against the call that wrote it, and one container serves every
+    /// execution in the response. When the model runs the tool twice, nothing on the wire says
     /// which run produced the chart.
     ///
-    /// Attaching to the last execution in that container is the least-wrong reading: it is the most
-    /// likely author, and it keeps each file appearing exactly once. Spreading them across every
-    /// execution in the container would mean a caller enumerating CodeExecutions for artifacts
-    /// downloads the same file repeatedly.
+    /// Attaching to the last execution in that container is the least-wrong reading. It is the most
+    /// likely author, and each file then appears exactly once. Spreading them across every execution
+    /// would make a caller enumerating CodeExecutions download the same file repeatedly.
     /// </remarks>
     private static void AttachGeneratedFiles(List<OuroContentBlock> blocks,
         Dictionary<string, int> executionsByContainer,
@@ -262,9 +260,9 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     /// Maps the response status onto the provider-neutral stop reason.
     /// </summary>
     /// <remarks>
-    /// Truncation is reported as an Incomplete status with a reason, rather than as a distinct
-    /// finish reason. Getting this wrong makes a cut-off response indistinguishable from a
-    /// complete one - which is exactly the bug the stop reason exists to expose.
+    /// Truncation arrives as an Incomplete status with a reason beside it, not as a distinct finish
+    /// reason. Read it wrong and a cut-off response is indistinguishable from a complete one, which
+    /// is the bug the stop reason exists to expose.
     /// </remarks>
     private static OuroStopReason MapStopReason(ResponseResult response)
     {
