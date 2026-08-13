@@ -8,14 +8,14 @@ namespace Ouroboros.Test.StructuredOutput;
 /// The schema and the parser have to agree, not merely each be defensible alone.
 /// </summary>
 /// <remarks>
-/// JsonSchemaTests pins what the generator emits and nothing checks what comes back; between them
-/// sat a gap that shipped. Enums were emitted as strings - correctly, it is what strict mode wants -
-/// and deserialized with default options, which accept only the number. Every ResponseType with an
-/// enum on it produced a successful response whose ResponseObject was silently null.
+/// JsonSchemaTests pins what the generator emits. Nothing checked what came back, and a bug
+/// shipped in the gap. Enums were emitted as strings, which is what strict mode wants, but the
+/// parser then accepted only the number. Every ResponseType with an enum on it produced a
+/// successful response whose ResponseObject was silently null.
 ///
-/// These tests go the whole way round: generate the schema, feed back exactly the JSON that schema
-/// asks a model for, and assert a populated object. A schema assertion alone could not have caught
-/// it, because the schema was never the thing that was wrong.
+/// These tests go the whole way round: generate the schema, feed back exactly the JSON it asks a
+/// model for, assert a populated object. A schema assertion could not have caught this, because
+/// the schema was never the thing that was wrong.
 /// </remarks>
 public class StructuredOutputRoundTripTests
 {

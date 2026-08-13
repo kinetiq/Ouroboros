@@ -11,26 +11,16 @@ namespace Ouroboros.StructuredOutput;
 /// Builds a JSON Schema from a CLR type, in the strict-mode dialect both providers accept.
 /// </summary>
 /// <remarks>
-/// Provider-neutral by design. It replaced a generator that emitted Betalgo's PropertyDefinition
-/// objects, which tied structured output to one SDK and was the last thing blocking a second
-/// provider from supporting it at all.
+/// Property names are emitted <b>exactly as declared</b>, in PascalCase, with no naming policy.
+/// ResponseParser matches them case-sensitively. A camelCased schema would still parse, into an
+/// object with every property left at its default: non-null, no exception, all fields empty.
 ///
-/// Two rules matter more than they look:
+/// Shapes this cannot express faithfully <b>throw</b>. A schema that is quietly wrong produces a
+/// response that is quietly wrong, and the first person to notice reads the output weeks later.
 ///
-/// Property names are emitted <b>exactly as declared</b> - PascalCase, no naming policy. The
-/// response is deserialized with default System.Text.Json options, which are case-sensitive, so a
-/// camelCased schema would produce a perfectly successful parse into an object with every property
-/// left at its default. Non-null, no exception, all fields empty.
-///
-/// Anything not understood <b>throws</b> rather than being approximated. A schema that is quietly
-/// wrong produces a model response that is quietly wrong, and the first person to notice is
-/// whoever reads the output weeks later.
-/// </remarks>
-/// <remarks>
-/// Public so callers can see what their ResponseType actually produces. Two uses beyond curiosity:
-/// checking at build time that a type is usable at all - the unsupported shapes below throw, and
-/// without this that only surfaces on a live call - and reading the schema back when a model returns
-/// nulls, which is otherwise guesswork.
+/// Public because a caller sometimes needs to see the schema their ResponseType produces. It
+/// answers two questions: whether a type is usable at all, which otherwise only surfaces on a live
+/// call, and what was actually sent when a model returns nulls.
 /// </remarks>
 public static class JsonSchemaGenerator
 {

@@ -33,10 +33,9 @@ public class JsonSchemaTests
     }
 
     /// <summary>
-    /// The single most dangerous thing this generator could get wrong. Responses are deserialized
-    /// with default System.Text.Json options, which are case-sensitive - so a camelCased schema
-    /// yields a successful parse into an object with every property left at its default. Non-null,
-    /// no exception, silently empty.
+    /// The single most dangerous thing this generator could get wrong. ResponseParser matches
+    /// property names case-sensitively, so a camelCased schema still parses. It yields an object
+    /// with every property left at its default: non-null, no exception, silently empty.
     /// </summary>
     [Fact]
     public void Property_Names_Are_Emitted_Exactly_As_Declared()

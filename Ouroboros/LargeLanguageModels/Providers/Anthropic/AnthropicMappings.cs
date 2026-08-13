@@ -76,11 +76,15 @@ internal static class AnthropicMappings
         {
             Model = ModelMappings.GetModelNameAsString(model),
 
-            // Required by Anthropic, unlike OpenAI where it is optional. Defaulting to the model's
-            // own ceiling keeps behaviour closest to "no limit was asked for". It is a cap, not a
-            // reservation - only tokens actually produced are billed. Note that on current models
-            // this budget covers thinking as well as visible output, so a tight value truncates the
-            // answer rather than merely shortening it.
+            // Required by Anthropic, unlike OpenAI where it is optional. With no ceiling asked
+            // for, the model's own is closest to "no limit". A cap, not a reservation: only tokens
+            // actually produced are billed.
+            //
+            // The override comes first because a continuation gets what is left of the caller's
+            // budget, not the whole of it again. See the maxTokens parameter.
+            //
+            // On current models this budget covers thinking as well as visible output, so a tight
+            // value truncates the answer instead of shortening it.
             MaxTokens = maxTokens ?? options.MaxCompletionTokens ?? model.GetMaxOutputTokens(),
 
             Messages = MapMessages(messages, options.Attachments, inProgress),
