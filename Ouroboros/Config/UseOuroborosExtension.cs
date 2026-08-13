@@ -47,6 +47,11 @@ public static class UseOuroborosExtension
         var options = new OuroborosOptions();
         configureOptions(options);
 
+        // Registration time, which is host startup. The client itself is transient, so validating
+        // only in its constructor would defer this to the first chat - and a fallback chain that
+        // cannot work is exactly the thing you want to hear about before serving traffic.
+        options.Validate();
+
         services.AddTransient<OuroClient>(serviceProvider =>
         {
             // GetService, not GetRequiredService: a host without logging configured should still

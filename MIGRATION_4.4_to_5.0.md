@@ -410,25 +410,17 @@ retry policy, transient network errors, and a blown attempt timeout. A request t
 on its merits — a bad parameter, an auth failure, a malformed response type — fails where it stands,
 because it would fail identically on the next provider at twice the cost.
 
-Each entry gets its own full retry budget, so a chain runs considerably longer than a single call
-in the worst case. Bound the whole thing with a `CancellationToken` if that matters.
-
-A fallback naming a provider you have no API key for is dropped from the chain when it came from
-`SetDefaultFallback`, and refused with an error when the call named it explicitly. The model you
-asked for directly still throws if its provider is unconfigured, exactly as before.
-
-If an option cannot be carried by every model in the chain — `StopSequences` with a GPT fallback,
-say — the call fails when it is made, naming the option. `AllowDegraded = true` says to run the
-chain for whatever it can still serve: entries run without options they cannot express, and entries
-that cannot see the call's attachments are dropped rather than asked about a file they have no
-access to.
-
 **`OnChatCompleted` now fires once per attempt.** Without a fallback that is exactly once per call,
-as before. With one, a call that failed over reports the failed attempt and the successful one
-separately, in order — so a consumer logging these keeps a record of what the first provider cost.
+as before. With one, a failed-over call reports the failed attempt and the successful one
+separately, so a consumer logging these writes two rows where it used to write one.
 `ChatCompletedArgs` gains `Attempt` and `NextModel`, and its `Model` is now the model that attempt
-actually ran on rather than the one originally requested. `DurationMs` on the args is per attempt;
-the response object handed back carries the total.
+actually ran on rather than the one originally requested.
+
+Declaring the chain in `OuroborosOptions.FallbackModels` is checked when your host starts: a chain
+naming a provider you have no key for throws from `AddOuroboros` rather than failing later.
+
+**[FAILOVER.md](FAILOVER.md) is the full description** — triggers, degradation, latency, logging,
+and the calls that must opt out with `FallbackModels = []`.
 
 ### 7c. Paused turns are continued for you (beta.2)
 

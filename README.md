@@ -1,7 +1,7 @@
 # What is Ouroboros?
 Ouroboros makes it easy to chain and transform LLM API calls, with support for OpenAI and Anthropic behind one provider-neutral surface. You get:
  - **Multi-provider:** GPT and Claude models through the same client — pick a model, the request routes to the right vendor.
- - **Failover:** name a fallback model and a call that a provider cannot serve is retried on the other vendor. Only transient failures move down the chain; a request that is simply wrong fails where it stands.
+ - **Failover:** name a fallback model and a call that a provider cannot serve is retried on the other vendor. Only transient failures move down the chain; a request that is simply wrong fails where it stands. See [FAILOVER.md](FAILOVER.md).
  - **Paused turns continue themselves:** a Claude turn whose tool loop pauses part-way is carried on automatically, and comes back as one response carrying every round.
  - **Server-side code execution:** The model writes and runs Python in a provider-hosted sandbox; stdout, exit codes, and generated files come back as typed blocks on the response. Works on GPT and Claude alike.
  - **File I/O:** Upload data for the model to analyze; download the artifacts (charts, spreadsheets) it produces. Same call on either provider.

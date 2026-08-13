@@ -320,34 +320,25 @@ public class FailoverClientTests
     }
 
     /// <summary>
-    /// A client-default fallback to a provider with no key is dropped, not fatal.
+    /// A client-default fallback to a provider with no key is refused where it is declared.
     /// </summary>
     /// <remarks>
-    /// Configuring a client-wide fallback must not break calls the primary can serve. This used to
-    /// throw InvalidOperationException from every ChatAsync: the chain resolved all its providers up
-    /// front, and building one without a key throws. A client holding only an OpenAI key stopped
-    /// working entirely the moment anyone added a Claude default.
+    /// It used to be dropped with a log when the call ran. That is silent degradation of the one
+    /// feature bought for an emergency: you would find out during the outage. Configuration is known
+    /// long before a call, so it is checked long before a call - here at the point of declaration,
+    /// and at host startup for the OuroborosOptions path.
     /// </remarks>
     [Fact]
-    public async Task A_Client_Default_Fallback_Without_A_Key_Is_Dropped()
+    public void A_Client_Default_Fallback_Without_A_Key_Is_Refused()
     {
-        // The primary is exhausted deliberately. A succeeding primary leaves the fallback uncalled
-        // whether or not it was dropped, so the assertion below could not tell those apart. It would
-        // pass on a chain that kept an unusable entry and simply never reached it.
-        var gpt = FakeProvider.AlwaysRetryable(OuroProvider.OpenAi);
-        var claude = FakeProvider.Succeeds(OuroProvider.Anthropic, "should never be reached");
-
         using var client = new OuroClient(
             new OuroborosOptions { OpenAiApiKey = "test" },
-            model => model.GetProvider() == OuroProvider.OpenAi ? gpt : claude);
+            _ => FakeProvider.Succeeds(OuroProvider.OpenAi));
 
-        client.SetDefaultFallback(Claude);
+        var ex = Assert.Throws<InvalidOperationException>(() => client.SetDefaultFallback(Claude));
 
-        var response = await client.ChatAsync([OuroMessage.FromUser("hi")], Options());
-
-        // The chain was one entry long, so the primary's own failure is the answer.
-        Assert.False(response.Success);
-        Assert.Equal(0, claude.Calls);
+        Assert.Contains("Anthropic", ex.Message);
+        Assert.Contains(nameof(OuroborosOptions.FallbackModels), ex.Message);
     }
 
     /// <summary>

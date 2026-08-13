@@ -246,18 +246,14 @@ public class OuroClient : IOuroClient, IDisposable
     /// Resolves the models this call may run on, in order, with a provider for each.
     /// </summary>
     /// <remarks>
-    /// A fallback whose provider has no API key configured is handled one of two ways, depending on
-    /// where the chain came from:
+    /// A fallback naming a provider with no API key can only get here from this call's
+    /// ChatOptions.FallbackModels, and the call fails with an error naming the provider. Nothing is
+    /// spent finding out.
     ///
-    /// - Set by SetDefaultFallback: the entry is dropped and a line is logged. The call runs on
-    ///   whatever is left, usually just the primary.
-    /// - Set on this call by ChatOptions.FallbackModels: the call fails immediately, with an error
-    ///   naming the provider.
-    ///
-    /// They differ because a client-wide default applies to every call, and most calls never fail
-    /// over. Breaking all of them over a key that only matters when something goes wrong is worse
-    /// than running with no fallback at all. A chain set on one call is different: the caller named
-    /// those models for this request, so a gap in them is worth stopping for.
+    /// A client-wide default cannot be in that state: OuroborosOptions.Validate refuses it when the
+    /// host starts, and SetDefaultFallback refuses it when called. Configuration is known early, so
+    /// it is checked early - a fallback that was quietly discarded would be discovered during the
+    /// outage it was configured for.
     ///
     /// The primary model is covered by neither rule. A call naming a model whose provider has no key
     /// throws, exactly as it did before failover existed.
@@ -283,21 +279,15 @@ public class OuroClient : IOuroClient, IDisposable
                 continue;
             }
 
-            if (!HasKeyFor(fallback.GetProvider()))
+            // Only a per-call chain can reach this. A client default naming a provider with no
+            // key cannot be configured at all - OuroborosOptions.Validate refuses it at startup, and
+            // SetDefaultFallback refuses it at the point of the call.
+            if (callerChose && !Options.HasKeyFor(fallback.GetProvider()))
             {
-                if (callerChose)
-                {
-                    return ([], new OuroResponseInternalError(
-                        $"{fallback} is in this call's fallback chain, but no {fallback.GetProvider()} "
-                        + "API key is configured on this client. Supply one through the "
-                        + "OuroborosOptions overload of AddOuroboros, or take the model out of the chain."));
-                }
-
-                Logger.LogInformation(
-                    "Dropping {Model} from the fallback chain: no {Provider} API key is configured.",
-                    fallback, fallback.GetProvider());
-
-                continue;
+                return ([], new OuroResponseInternalError(
+                    $"{fallback} is in this call's fallback chain, but no {fallback.GetProvider()} "
+                    + "API key is configured on this client. Supply one through OuroborosOptions, or "
+                    + "take the model out of the chain."));
             }
 
             models.Add(fallback);
@@ -317,23 +307,6 @@ public class OuroClient : IOuroClient, IDisposable
 
             return entry;
         }
-    }
-
-    /// <summary>
-    /// Whether this client could reach a provider at all.
-    /// </summary>
-    /// <remarks>
-    /// Reads the configured options instead of building the client, because building it is what
-    /// throws, and the point is to decide before that happens.
-    /// </remarks>
-    private bool HasKeyFor(OuroProvider provider)
-    {
-        return provider switch
-        {
-            OuroProvider.OpenAi => !string.IsNullOrWhiteSpace(Options.OpenAiApiKey),
-            OuroProvider.Anthropic => !string.IsNullOrWhiteSpace(Options.AnthropicApiKey),
-            _ => false
-        };
     }
 
     /// <summary>
@@ -564,11 +537,23 @@ public class OuroClient : IOuroClient, IDisposable
     /// in its chain - including an effort passed to SetDefaultChatModel, which was chosen for that
     /// model rather than for these.
     ///
-    /// A model here whose provider has no API key is dropped from the chain rather than failing the
-    /// call. BuildChain explains why that differs from naming the same model on an individual call.
+    /// A model here whose provider has no API key throws immediately. Prefer
+    /// OuroborosOptions.FallbackModels, which is validated when the host starts rather than when
+    /// this client is first resolved.
     /// </remarks>
     public void SetDefaultFallback(params OuroModels[] models)
     {
+        foreach (var model in models ?? [])
+        {
+            if (Options.HasKeyFor(model.GetProvider()))
+                continue;
+
+            throw new InvalidOperationException(
+                $"{model} cannot be a fallback: no {model.GetProvider()} API key is configured on "
+                + "this client. Configure one, or declare the chain through "
+                + "OuroborosOptions.FallbackModels, which is checked when the host starts.");
+        }
+
         DefaultFallbackModels = models ?? [];
     }
 
@@ -615,6 +600,12 @@ public class OuroClient : IOuroClient, IDisposable
         ILogger<OuroClient>? logger = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
+
+        // AddOuroboros already did this at registration. Repeated here because a client can be
+        // constructed directly, and the failure should look the same either way.
+        Options.Validate();
+
+        DefaultFallbackModels = [.. options.FallbackModels ?? []];
         ProviderOverride = providerOverride;
         Logger = logger ?? NullLogger<OuroClient>.Instance;
         Executor = new ChatExecutor(Logger);
