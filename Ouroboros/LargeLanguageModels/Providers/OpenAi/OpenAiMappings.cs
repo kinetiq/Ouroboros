@@ -35,13 +35,25 @@ internal static class OpenAiMappings
 
         // Like Anthropic, the Responses API carries the system prompt in its own field rather than
         // as a message in the list, so it has to be lifted out.
-        var system = JoinSystemPrompts(messages);
+        //
+        // Unless nothing else remains: 'input' is required, so a system-only conversation with the
+        // lift applied would send no input at all and be rejected. System-role input items are the
+        // one honest way this API can express that shape, so the lift steps aside for it.
+        if (messages.TrueForAll(message => message.Role == OuroRole.System))
+        {
+            foreach (var message in messages)
+                request.InputItems.Add(ResponseItem.CreateSystemMessageItem(message.Content));
+        }
+        else
+        {
+            var system = JoinSystemPrompts(messages);
 
-        if (!string.IsNullOrWhiteSpace(system))
-            request.Instructions = system;
+            if (!string.IsNullOrWhiteSpace(system))
+                request.Instructions = system;
 
-        foreach (var item in MapMessages(messages))
-            request.InputItems.Add(item);
+            foreach (var item in MapMessages(messages))
+                request.InputItems.Add(item);
+        }
 
         if (model.IsReasoningModel() && MapEffort(options.ReasoningEffort) is { } effort)
             request.ReasoningOptions = new ResponseReasoningOptions { ReasoningEffortLevel = effort };

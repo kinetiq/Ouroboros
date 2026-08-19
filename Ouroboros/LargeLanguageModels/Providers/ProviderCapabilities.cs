@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 
 namespace Ouroboros.LargeLanguageModels.Providers;
@@ -59,12 +62,33 @@ internal sealed record CapabilityCheck(CapabilityVerdict Verdict, string? Messag
 internal static class ProviderCapabilities
 {
     /// <summary>
-    /// The most severe problem this provider has with these options.
+    /// The most severe problem this provider has with this request.
     /// </summary>
-    public static CapabilityCheck Check(ChatOptions options, OuroProvider provider)
+    public static CapabilityCheck Check(List<OuroMessage> messages, ChatOptions options, OuroProvider provider)
     {
         // Invalid first: wrong whoever serves it, so it must not read as "try the next one".
         //
+        // An empty conversation asks nothing. Both providers reject it, but each with its own
+        // opaque wire error - OpenAI complains about a missing 'input', which names its request
+        // field rather than the caller's actual mistake.
+        if (messages.Count == 0)
+        {
+            return new CapabilityCheck(CapabilityVerdict.Invalid,
+                "At least one message is required. The message list is empty.");
+        }
+
+        // Anthropic has no system role inside the messages array - system prompts ride in a
+        // top-level parameter - so a system-only call leaves messages empty, and the API requires
+        // at least one. NotServable rather than Invalid: OpenAI can express the same call as
+        // system-role input items.
+        if (provider == OuroProvider.Anthropic && messages.All(message => message.Role == OuroRole.System))
+        {
+            return new CapabilityCheck(CapabilityVerdict.NotServable,
+                "Claude requires at least one user or assistant message; a system-only conversation "
+                + "cannot be expressed in its API. Add a user message, or route the call to an "
+                + "OpenAI model.");
+        }
+
         // Attachments mount into the execution container, so without that tool there is nowhere for
         // them to go. Sent anyway they are accepted and ignored, and the model answers as though the
         // file were never mentioned - which reads as the model being obtuse.

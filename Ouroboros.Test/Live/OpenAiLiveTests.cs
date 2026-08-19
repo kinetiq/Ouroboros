@@ -66,6 +66,33 @@ public class OpenAiLiveTests(ITestOutputHelper output)
     }
 
     /// <summary>
+    /// A conversation with no user turn still round-trips.
+    /// </summary>
+    /// <remarks>
+    /// The exact shape that broke in 5.0: the Instructions lift left 'input' empty and OpenAI
+    /// returned 400 missing_required_parameter. The mapper now sends system-only conversations as
+    /// system-role input items, and only a real call proves OpenAI accepts that form.
+    /// </remarks>
+    [RequiresOpenAiKeyFact]
+    public async Task A_System_Only_Chat_Round_Trips()
+    {
+        using var client = Build();
+
+        var response = await client.ChatAsync(
+            [OuroMessage.FromSystem("You reply with a single word. The word is: Paris. Reply now.")],
+            new ChatOptions { Model = Model, MaxCompletionTokens = 2048 });
+
+        AssertSucceeded(response);
+
+        var success = Assert.IsType<OuroResponseSuccess>(response);
+
+        output.WriteLine($"stop={success.StopReason} text={success.ResponseText}");
+
+        Assert.Contains("Paris", success.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.True(success.IsComplete, $"Expected a complete turn, got {success.StopReason}.");
+    }
+
+    /// <summary>
     /// What model string the API echoes back.
     /// </summary>
     /// <remarks>

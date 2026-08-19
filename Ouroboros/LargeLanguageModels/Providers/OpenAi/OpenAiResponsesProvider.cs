@@ -32,8 +32,19 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     public async Task<ProviderAttempt> SendAsync(List<OuroMessage> messages, ChatOptions options,
         CancellationToken cancellationToken)
     {
-        if (Reject(options) is { } refusal)
+        if (Reject(messages, options) is { } refusal)
             return ProviderAttempt.Final(refusal);
+
+        // Served, but worth flagging: the mapper can only express this by demoting the system
+        // prompt into ordinary input, and the same call fails outright on Anthropic. The durable
+        // fix is a real user message.
+        if (messages.TrueForAll(message => message.Role == OuroRole.System))
+        {
+            Logger.LogWarning(
+                "Prompt {PromptName} contains only system messages. It will run, but system-only "
+                + "prompts are not portable: Anthropic cannot express them at all. Add a user message.",
+                options.PromptName ?? "(unnamed)");
+        }
 
         var request = OpenAiMappings.MapOptions(messages, options);
 
@@ -63,9 +74,9 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
     /// are one judgement. Two copies would eventually disagree, and the chain would spend an
     /// attempt learning what it already knew.
     /// </remarks>
-    private static OuroResponseBase? Reject(ChatOptions options)
+    private static OuroResponseBase? Reject(List<OuroMessage> messages, ChatOptions options)
     {
-        var check = ProviderCapabilities.Check(options, OuroProvider.OpenAi);
+        var check = ProviderCapabilities.Check(messages, options, OuroProvider.OpenAi);
 
         return check.IsSupported ? null : new OuroResponseInternalError(check.Message!);
     }
