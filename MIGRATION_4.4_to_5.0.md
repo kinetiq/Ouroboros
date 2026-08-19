@@ -354,10 +354,10 @@ later `SetDefaultChatModel` never applied to it.
 
 ### 5b. System-only conversations
 
-A message list with no user or assistant turn worked on 4.4's Chat Completions path, silently broke
-in early 5.0 betas (the Responses API requires `input`, and lifting every system message into
-`Instructions` left it empty), and works again as of beta.4 - system-only conversations are sent as
-system-role input items. A warning is logged when this happens, because the shape is not portable:
+A message list with no user or assistant turn keeps working, but the shape is worth knowing about.
+The Responses API requires `input`, and 5.0 lifts every system message into `Instructions`, so a
+system-only conversation is sent as system-role input items instead. A warning is logged when that
+happens, because the shape is not portable:
 
 - **Anthropic refuses it before the call is spent.** Claude's API cannot express a conversation
   with no user or assistant message. The error names the fix: add a user message, or route the
