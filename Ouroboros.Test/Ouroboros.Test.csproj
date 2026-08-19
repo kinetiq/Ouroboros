@@ -7,10 +7,19 @@
 
     <IsPackable>false</IsPackable>
 
+    <!-- xunit v3 test projects self-host their runner, so the project builds as an executable. -->
+    <OutputType>Exe</OutputType>
+
     <!-- The Responses surface is [Experimental("OPENAI001")], and the stub transports build a real
          ResponsesClient on purpose - a fake shaped differently from the client OuroClient builds
          would prove nothing about it. Same suppression as Ouroboros.csproj, same reason. -->
     <NoWarn>$(NoWarn);OPENAI001</NoWarn>
+
+    <!-- xUnit1051 wants every CancellationToken-accepting call in a test to pass
+         TestContext.Current.CancellationToken. It is advisory, it fires ~48 times across the suite,
+         and none of these tests are long enough for cancellation responsiveness to matter. Worth
+         doing as its own pass rather than inside the v2-to-v3 migration. -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,16 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="coverlet.collector" Version="10.0.1">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
   </ItemGroup>
 
   <ItemGroup>

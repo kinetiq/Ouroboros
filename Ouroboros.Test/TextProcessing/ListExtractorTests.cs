@@ -1,5 +1,4 @@
 ﻿using Ouroboros.TextProcessing;
-using Xunit.Abstractions;
 
 namespace Ouroboros.Test.TextProcessing;
 
