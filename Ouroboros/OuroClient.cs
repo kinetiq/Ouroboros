@@ -168,7 +168,7 @@ public class OuroClient : IOuroClient, IDisposable
         if (unreachable is not null)
             return unreachable;
 
-        if (Validate(chain, options) is { } refusal)
+        if (Validate(chain, messages, options) is { } refusal)
             return refusal;
 
         var stopwatch = Stopwatch.StartNew();
@@ -321,7 +321,7 @@ public class OuroClient : IOuroClient, IDisposable
     /// from the client default is not about this call, so the offending entry is dropped with a
     /// log. BuildChain applies the same split to a missing API key.
     /// </remarks>
-    private OuroResponseBase? Validate(List<ChainEntry> chain, ChatOptions options)
+    private OuroResponseBase? Validate(List<ChainEntry> chain, List<OuroMessage> messages, ChatOptions options)
     {
         if (chain.Count <= 1)
             return null;
@@ -331,7 +331,7 @@ public class OuroClient : IOuroClient, IDisposable
         for (var index = chain.Count - 1; index >= 0; index--)
         {
             var entry = chain[index];
-            var check = ProviderCapabilities.Check(entry.Options, entry.Provider.Kind);
+            var check = ProviderCapabilities.Check(messages, entry.Options, entry.Provider.Kind);
 
             if (check.IsSupported)
                 continue;

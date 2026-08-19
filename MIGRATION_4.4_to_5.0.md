@@ -352,6 +352,22 @@ This goes further: `ChatAsync` works on a copy, so **nothing** is written back o
 Previously a reused instance had the default model resolved into it on first use, which meant a
 later `SetDefaultChatModel` never applied to it.
 
+### 5b. System-only conversations
+
+A message list with no user or assistant turn keeps working, but the shape is worth knowing about.
+The Responses API requires `input`, and 5.0 lifts every system message into `Instructions`, so a
+system-only conversation is sent as system-role input items instead. A warning is logged when that
+happens, because the shape is not portable:
+
+- **Anthropic refuses it before the call is spent.** Claude's API cannot express a conversation
+  with no user or assistant message. The error names the fix: add a user message, or route the
+  call to an OpenAI model.
+- **An empty message list is refused on both providers**, with a clear error rather than a vendor
+  wire error.
+
+The durable fix is a real user turn. Move the task ("Question: ...", "Evaluate the output") into a
+user message and keep the persona and rules in the system message.
+
 ### 6. Anthropic as a second provider
 
 Claude models route through the same client. Configure both keys via the new options overload —

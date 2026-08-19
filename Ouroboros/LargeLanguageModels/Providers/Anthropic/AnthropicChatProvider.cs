@@ -33,7 +33,7 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     public async Task<ProviderAttempt> SendAsync(List<OuroMessage> messages, ChatOptions options,
         CancellationToken cancellationToken)
     {
-        if (Reject(options) is { } refusal)
+        if (Reject(messages, options) is { } refusal)
             return ProviderAttempt.Final(refusal);
 
         // Everything the turn has produced so far, across however many requests it took. A paused
@@ -200,9 +200,9 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
     /// The rules live in ProviderCapabilities so that this refusal and the failover chain's
     /// validation are the same judgement - see the note there.
     /// </remarks>
-    private static OuroResponseBase? Reject(ChatOptions options)
+    private static OuroResponseBase? Reject(List<OuroMessage> messages, ChatOptions options)
     {
-        var check = ProviderCapabilities.Check(options, OuroProvider.Anthropic);
+        var check = ProviderCapabilities.Check(messages, options, OuroProvider.Anthropic);
 
         return check.IsSupported ? null : new OuroResponseInternalError(check.Message!);
     }

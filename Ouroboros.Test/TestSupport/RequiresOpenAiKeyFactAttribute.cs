@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Xunit;
 
 namespace Ouroboros.Test.TestSupport;
@@ -16,7 +17,10 @@ public sealed class RequiresOpenAiKeyFactAttribute : FactAttribute
 {
     internal const string KeyVariable = "OPENAI_API_KEY";
 
-    public RequiresOpenAiKeyFactAttribute()
+    public RequiresOpenAiKeyFactAttribute(
+        [CallerFilePath] string? sourceFilePath = null,
+        [CallerLineNumber] int sourceLineNumber = -1)
+            : base(sourceFilePath, sourceLineNumber)
     {
         if (string.IsNullOrWhiteSpace(ApiKey))
             Skip = $"Live test. Set {KeyVariable} to run it.";
