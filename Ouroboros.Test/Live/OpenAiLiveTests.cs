@@ -12,7 +12,6 @@ using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
 using Ouroboros.Test.TestSupport;
-using Xunit.Abstractions;
 
 namespace Ouroboros.Test.Live;
 
