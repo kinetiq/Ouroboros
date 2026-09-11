@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ouroboros.Config;
@@ -35,6 +35,8 @@ public class ProviderRoutingTests
     [InlineData(OuroModels.Gpt_5_5, OuroProvider.OpenAi)]
     [InlineData(OuroModels.Claude_Opus_5, OuroProvider.Anthropic)]
     [InlineData(OuroModels.Claude_Haiku_4_5, OuroProvider.Anthropic)]
+    [InlineData(OuroModels.Gpt_6_Astra, OuroProvider.OpenAi)]
+    [InlineData(OuroModels.Claude_Fable_5_1, OuroProvider.Anthropic)]
     public void Models_Route_To_The_Expected_Provider(OuroModels model, OuroProvider expected)
     {
         Assert.Equal(expected, model.GetProvider());

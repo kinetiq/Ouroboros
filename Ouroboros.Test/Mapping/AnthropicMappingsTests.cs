@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Ouroboros.Core;
 using Ouroboros.Extensions;
@@ -96,26 +96,44 @@ public class AnthropicMappingsTests
         Assert.Equal(1234, mapped.MaxTokens);
     }
 
-    [Fact]
-    public void The_Model_Id_Carries_No_Date_Suffix()
+    /// <summary>
+    /// Appending a date to a current Claude id produces a 404, so every id is pinned here.
+    /// </summary>
+    [Theory]
+    [InlineData(OuroModels.Claude_Opus_5, "claude-opus-5")]
+    [InlineData(OuroModels.Claude_Opus_4_8, "claude-opus-4-8")]
+    [InlineData(OuroModels.Claude_Sonnet_5, "claude-sonnet-5")]
+    [InlineData(OuroModels.Claude_Haiku_4_5, "claude-haiku-4-5")]
+    [InlineData(OuroModels.Claude_Fable_5_1, "claude-fable-5-1")]
+    [InlineData(OuroModels.Claude_Fable_5, "claude-fable-5")]
+    public void The_Model_Id_Carries_No_Date_Suffix(OuroModels model, string expected)
     {
-        var mapped = Map([OuroMessage.FromUser("hi")], new ChatOptions { Model = OuroModels.Claude_Opus_5 });
+        var mapped = Map([OuroMessage.FromUser("hi")], new ChatOptions { Model = model });
 
-        // Appending a date to a current Claude id produces a 404, so this is worth pinning.
-        Assert.Equal("claude-opus-5", (string?)mapped.Model);
+        Assert.Equal(expected, (string?)mapped.Model);
     }
 
-    [Fact]
-    public void Reasoning_Effort_Is_Carried_As_Output_Config_Effort()
+    /// <summary>
+    /// Every level, not just one. XHigh and Max arrived after the other three and map to SDK
+    /// members whose names do not match ours, so a wrong arm would send a level the caller never
+    /// asked for rather than failing.
+    /// </summary>
+    [Theory]
+    [InlineData(OuroReasoningEffort.Low, "low")]
+    [InlineData(OuroReasoningEffort.Medium, "medium")]
+    [InlineData(OuroReasoningEffort.High, "high")]
+    [InlineData(OuroReasoningEffort.XHigh, "xhigh")]
+    [InlineData(OuroReasoningEffort.Max, "max")]
+    public void Reasoning_Effort_Is_Carried_As_Output_Config_Effort(OuroReasoningEffort level, string expected)
     {
         var mapped = Map([OuroMessage.FromUser("hi")], new ChatOptions
         {
             Model = OuroModels.Claude_Opus_5,
-            ReasoningEffort = OuroReasoningEffort.High
+            ReasoningEffort = level
         });
 
         Assert.NotNull(mapped.OutputConfig);
-        Assert.Equal("high", mapped.OutputConfig!.Effort is { } effort ? (string?)effort : null);
+        Assert.Equal(expected, mapped.OutputConfig!.Effort is { } effort ? (string?)effort : null);
     }
 
     [Fact]

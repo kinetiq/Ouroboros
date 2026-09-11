@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using OpenAI.Responses;
@@ -131,7 +131,7 @@ internal static class OpenAiMappings
     }
 
     /// <summary>
-    /// Maps our three-level effort onto OpenAI's.
+    /// Maps our effort levels onto OpenAI's.
     /// </summary>
     /// <remarks>
     /// The casts on the arms are load-bearing. ResponseReasoningEffortLevel converts implicitly
@@ -146,6 +146,13 @@ internal static class OpenAiMappings
             OuroReasoningEffort.Low => (ResponseReasoningEffortLevel?)ResponseReasoningEffortLevel.Low,
             OuroReasoningEffort.Medium => (ResponseReasoningEffortLevel?)ResponseReasoningEffortLevel.Medium,
             OuroReasoningEffort.High => (ResponseReasoningEffortLevel?)ResponseReasoningEffortLevel.High,
+
+            // No static property for these two: the installed SDK predates them. The type is a
+            // string wrapper with a public constructor, so the wire value goes in directly. A live
+            // test covers them, because nothing here would catch a renamed level.
+            OuroReasoningEffort.XHigh => new ResponseReasoningEffortLevel("xhigh"),
+            OuroReasoningEffort.Max => new ResponseReasoningEffortLevel("max"),
+
             null => null,
             _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, "Unmapped reasoning effort.")
         };

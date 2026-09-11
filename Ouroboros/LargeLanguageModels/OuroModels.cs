@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Ouroboros.LargeLanguageModels;
 
@@ -18,12 +18,21 @@ public enum OuroModels
 	[MaxTokens(400000,  128000)]		[Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_4_nano	= 8,
 	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_5			= 9,
 
+	// Values are pinned, so these pick up after the Anthropic block below rather than
+	// continuing 9, 10, 11. Grouping here is by vendor; the numbers just record arrival order.
+	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_6_Astra		= 14,
+	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_6_Sol		= 15,
+	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_6_Terra	= 16,
+	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_6_Luna	= 17,
+
 	// Anthropic. Reasoning here means adaptive thinking driven by output_config.effort rather than
 	// OpenAI's reasoning_effort, but it is the same knob from a caller's point of view.
 	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Opus_5	= 10,
 	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Opus_4_8	= 11,
 	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Sonnet_5	= 12,
-	[MaxTokens(200000,  64000)]		    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Haiku_4_5 = 13
+	[MaxTokens(200000,  64000)]		    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Haiku_4_5 = 13,
+	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Fable_5_1 = 18,
+	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Fable_5	 = 19
 }
 
 class MaxTokensAttribute(int contextWindow, int maxOutput) : Attribute

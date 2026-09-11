@@ -28,7 +28,7 @@ First, <a href="http://docs.nuget.org/docs/start-here/installing-nuget">install 
 
 # Limits and Possible Contributions
 Ouroboros is production-ready, but it does have limits. If you would like those limits to go away, get involved!
- - Supports OpenAI (GPT-5 family, Responses API) and Anthropic (Claude). Provider SDKs are internal details, so adding more providers is not a breaking change.
+ - Supports OpenAI (GPT-5, GPT-5.6 and GPT-6 families, Responses API) and Anthropic (Claude, including the Fable family). Provider SDKs are internal details, so adding more providers is not a breaking change.
  - Server-side code execution, file I/O, and structured output all work on both providers. Where a capability genuinely does not exist on one of them, asking for it fails loudly rather than degrading silently - see stop sequences below.
  - Local token counting (`OuroClient.TokenCount`) is OpenAI-only — Anthropic publishes no tokenizer, so read the provider's own usage off the response instead.
  - Failover moves on transient failures only (rate limits, server faults, transient network errors, a blown attempt timeout). Each chain entry gets its own full retry budget, so a chain can run considerably longer than a single call — bound it with a `CancellationToken`.

@@ -1,4 +1,4 @@
-using Ouroboros.LargeLanguageModels;
+﻿using Ouroboros.LargeLanguageModels;
 
 namespace Ouroboros.Test.Models;
 
@@ -19,6 +19,16 @@ public class OuroModelsValueTests
     [InlineData(OuroModels.Gpt_5_4_mini, 7)]
     [InlineData(OuroModels.Gpt_5_4_nano, 8)]
     [InlineData(OuroModels.Gpt_5_5, 9)]
+    [InlineData(OuroModels.Claude_Opus_5, 10)]
+    [InlineData(OuroModels.Claude_Opus_4_8, 11)]
+    [InlineData(OuroModels.Claude_Sonnet_5, 12)]
+    [InlineData(OuroModels.Claude_Haiku_4_5, 13)]
+    [InlineData(OuroModels.Gpt_6_Astra, 14)]
+    [InlineData(OuroModels.Gpt_5_6_Sol, 15)]
+    [InlineData(OuroModels.Gpt_5_6_Terra, 16)]
+    [InlineData(OuroModels.Gpt_5_6_Luna, 17)]
+    [InlineData(OuroModels.Claude_Fable_5_1, 18)]
+    [InlineData(OuroModels.Claude_Fable_5, 19)]
     public void Model_Has_Its_Pinned_Value(OuroModels model, int expected)
     {
         Assert.Equal(expected, (int)model);
