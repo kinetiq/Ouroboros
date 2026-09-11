@@ -1,4 +1,4 @@
-using Ouroboros.Core;
+﻿using Ouroboros.Core;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -35,7 +35,7 @@ public class OuroResponseSuccess : OuroResponseBase
     /// stop reason counts as complete: truncation has to be positively reported, never inferred
     /// from silence.
     /// </summary>
-    public bool IsComplete => StopReason is not (OuroStopReason.MaxTokens or OuroStopReason.Paused);
+    public bool IsComplete => StopReason is not (OuroStopReason.MaxTokens or OuroStopReason.Paused or OuroStopReason.Refusal);
 
     /// <summary>
     /// The code executions in <see cref="Content" />, for callers who want the outcomes without

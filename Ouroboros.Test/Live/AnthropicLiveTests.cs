@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -327,6 +327,53 @@ public class AnthropicLiveTests(ITestOutputHelper output)
         public int BirthYear { get; set; }
 
         public string BirthCity { get; set; } = "";
+    }
+
+    /// <summary>
+    /// The newest Claude family answers at all. Fable 5.1 is the first model here whose id is not
+    /// an opus/sonnet/haiku name, so a wrong id is the most likely mistake and a 404 the symptom.
+    /// </summary>
+    [RequiresAnthropicKeyTheory]
+    [InlineData(OuroModels.Claude_Fable_5_1)]
+    [InlineData(OuroModels.Claude_Fable_5)]
+    public async Task The_Fable_Family_Round_Trips(OuroModels model)
+    {
+        using var client = Build();
+
+        var response = await client.ChatAsync(
+            [OuroMessage.FromUser("What is the capital of France? Answer with one word.")],
+            new ChatOptions { Model = model, MaxCompletionTokens = 4096 });
+
+        AssertSucceeded(response);
+
+        var success = Assert.IsType<OuroResponseSuccess>(response);
+
+        output.WriteLine($"requested={ModelMappings.GetModelNameAsString(model)} echoed={success.Model}");
+
+        Assert.Contains("Paris", success.ResponseText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// XHigh and Max were added after the other three levels. The SDK names them, but only newer
+    /// models accept them, so this proves the pairing rather than the spelling.
+    /// </summary>
+    [RequiresAnthropicKeyTheory]
+    [InlineData(OuroReasoningEffort.XHigh)]
+    [InlineData(OuroReasoningEffort.Max)]
+    public async Task The_Top_Effort_Levels_Are_Accepted(OuroReasoningEffort level)
+    {
+        using var client = Build();
+
+        var response = await client.ChatAsync(
+            [OuroMessage.FromUser("Say OK.")],
+            new ChatOptions
+            {
+                Model = OuroModels.Claude_Opus_5,
+                ReasoningEffort = level,
+                MaxCompletionTokens = 8192
+            });
+
+        AssertSucceeded(response);
     }
 
     private static OuroClient Build()

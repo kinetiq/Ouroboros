@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Ouroboros.LargeLanguageModels;
 
@@ -45,6 +45,14 @@ public static class ModelMappings
                 return "gpt-5.4-nano";
             case OuroModels.Gpt_5_5:
                 return "gpt-5.5";
+            case OuroModels.Gpt_5_6_Sol:
+                return "gpt-5.6-sol";
+            case OuroModels.Gpt_5_6_Terra:
+                return "gpt-5.6-terra";
+            case OuroModels.Gpt_5_6_Luna:
+                return "gpt-5.6-luna";
+            case OuroModels.Gpt_6_Astra:
+                return "gpt-6-astra";
 
             // Anthropic. These ids carry no date suffix - they are complete as written, and
             // appending one produces a 404.
@@ -56,6 +64,10 @@ public static class ModelMappings
                 return "claude-sonnet-5";
             case OuroModels.Claude_Haiku_4_5:
                 return "claude-haiku-4-5";
+            case OuroModels.Claude_Fable_5_1:
+                return "claude-fable-5-1";
+            case OuroModels.Claude_Fable_5:
+                return "claude-fable-5";
         }
 
         throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null);

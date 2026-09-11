@@ -1,4 +1,4 @@
-namespace Ouroboros.Responses;
+﻿namespace Ouroboros.Responses;
 
 /// <summary>
 /// Why the model stopped generating.
@@ -45,5 +45,16 @@ public enum OuroStopReason
     /// successful and carries everything the turn produced across every round - it is unfinished,
     /// not failed, which is what IsComplete reports.
     /// </remarks>
-    Paused = 4
+    Paused = 4,
+
+    /// <summary>
+    /// The provider's safety classifier declined the request. The call succeeded at the HTTP
+    /// level and the content is empty or partial.
+    /// </summary>
+    /// <remarks>
+    /// Claude Fable 5.1 is the first model here that can return this. Without its own value it
+    /// would land on Unknown, which IsComplete treats as complete - so a refused request would
+    /// read as a finished response that happened to say nothing.
+    /// </remarks>
+    Refusal = 5
 }

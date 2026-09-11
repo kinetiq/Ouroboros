@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -107,9 +107,13 @@ public class OpenAiLiveTests(ITestOutputHelper output)
     {
         using var client = Build();
 
-        // Both current models rather than just the default. They are separately deployed, so a
-        // convention holding for one is evidence about the other and not proof.
-        foreach (var model in new[] { OuroModels.Gpt_5_4_mini, OuroModels.Gpt_5_4 })
+        // Several models rather than just the default. They are separately deployed, so a
+        // convention holding for one is evidence about the others and not proof.
+        foreach (var model in new[]
+                 {
+                     OuroModels.Gpt_5_4_mini, OuroModels.Gpt_5_4,
+                     OuroModels.Gpt_5_6_Luna, OuroModels.Gpt_6_Astra
+                 })
         {
             var requested = ModelMappings.GetModelNameAsString(model);
 
@@ -467,6 +471,63 @@ public class OpenAiLiveTests(ITestOutputHelper output)
         public int BirthYear { get; set; }
 
         public string BirthCity { get; set; } = "";
+    }
+
+    /// <summary>
+    /// XHigh and Max are the two effort levels the installed OpenAI SDK does not name. The mapper
+    /// builds them from a raw string, so this is the only thing standing between a typo and a 400
+    /// that would only show up in production.
+    /// </summary>
+    [RequiresOpenAiKeyTheory]
+    [InlineData(OuroReasoningEffort.XHigh)]
+    [InlineData(OuroReasoningEffort.Max)]
+    public async Task The_Top_Effort_Levels_Are_Accepted(OuroReasoningEffort level)
+    {
+        using var client = Build();
+
+        var response = await client.ChatAsync(
+            [OuroMessage.FromUser("Say OK.")],
+            new ChatOptions
+            {
+                Model = OuroModels.Gpt_5_6_Luna,
+                ReasoningEffort = level,
+                MaxCompletionTokens = 4096
+            });
+
+        AssertSucceeded(response);
+    }
+
+    /// <summary>
+    /// Tokenization maps GPT-6 to o200k_base on the strength of OpenAI having kept that encoding
+    /// since GPT-4o. That is an assumption, not a documented fact, and a count that is quietly a
+    /// few percent out is worse than one that refuses - these numbers get costed against.
+    /// </summary>
+    /// <remarks>
+    /// Not exact equality. PromptTokens covers the whole rendered request, which carries per-model
+    /// framing this cannot see. A different encoding would miss by far more than the slack here.
+    /// </remarks>
+    [RequiresOpenAiKeyFact]
+    public async Task The_Local_Token_Count_Matches_What_Gpt_6_Reports()
+    {
+        using var client = Build();
+
+        // Long enough that a wrong vocabulary cannot hide inside the framing allowance.
+        var prompt = string.Join(" ",
+            Enumerable.Repeat("The quick brown fox jumps over the lazy dog, repeatedly.", 40));
+
+        var local = OuroClient.TokenCount(prompt, OuroModels.Gpt_6_Astra);
+
+        var response = await client.ChatAsync(
+            [OuroMessage.FromUser(prompt)],
+            new ChatOptions { Model = OuroModels.Gpt_6_Astra, MaxCompletionTokens = 2048 });
+
+        AssertSucceeded(response);
+
+        var success = Assert.IsType<OuroResponseSuccess>(response);
+
+        output.WriteLine($"local={local} reported={success.PromptTokens}");
+
+        Assert.InRange(success.PromptTokens, local, local + 60);
     }
 
     private static OuroClient Build()

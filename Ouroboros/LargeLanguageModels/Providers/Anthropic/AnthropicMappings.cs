@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -246,7 +246,7 @@ internal static class AnthropicMappings
     }
 
     /// <summary>
-    /// Maps our three-level effort onto Anthropic's.
+    /// Maps our effort levels onto Anthropic's.
     /// </summary>
     /// <remarks>
     /// Anthropic also offers xhigh and max above these. Our enum is a clean subset, so nothing is
@@ -259,6 +259,8 @@ internal static class AnthropicMappings
             OuroReasoningEffort.Low => Effort.Low,
             OuroReasoningEffort.Medium => Effort.Medium,
             OuroReasoningEffort.High => Effort.High,
+            OuroReasoningEffort.XHigh => Effort.Xhigh,
+            OuroReasoningEffort.Max => Effort.Max,
             null => null,
             _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, "Unmapped reasoning effort.")
         };

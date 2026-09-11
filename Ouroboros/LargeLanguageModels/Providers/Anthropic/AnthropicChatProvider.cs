@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -428,6 +428,7 @@ internal sealed class AnthropicChatProvider(AnthropicSdk.AnthropicClient client,
             "max_tokens" => OuroStopReason.MaxTokens,
             "stop_sequence" => OuroStopReason.StopSequence,
             "pause_turn" => OuroStopReason.Paused,
+            "refusal" => OuroStopReason.Refusal,
             _ => OuroStopReason.Unknown
         };
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.ML.Tokenizers;
@@ -53,7 +53,8 @@ internal static class Tokenization
 
         return model switch
         {
-            // Every OpenAI model we support is GPT-5 family, which uses o200k_base.
+            // Every OpenAI model we support is GPT-5 or GPT-6 family, both of which use
+            // o200k_base. OpenAI has kept that encoding from GPT-4o forward.
             OuroModels.Gpt_5 or
             OuroModels.Gpt_5_1 or
             OuroModels.Gpt_5_2 or
@@ -62,7 +63,11 @@ internal static class Tokenization
             OuroModels.Gpt_5_4 or
             OuroModels.Gpt_5_4_mini or
             OuroModels.Gpt_5_4_nano or
-            OuroModels.Gpt_5_5 => O200KBase,
+            OuroModels.Gpt_5_5 or
+            OuroModels.Gpt_5_6_Sol or
+            OuroModels.Gpt_5_6_Terra or
+            OuroModels.Gpt_5_6_Luna or
+            OuroModels.Gpt_6_Astra => O200KBase,
             _ => throw new ArgumentOutOfRangeException(nameof(model), model, "No tokenizer encoding is mapped for this model.")
         };
     }
