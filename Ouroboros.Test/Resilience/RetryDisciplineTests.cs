@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenAI.Responses;
@@ -104,6 +107,64 @@ public class RetryDisciplineTests
         // chain walk that stopped at the first match would have retried this five more times.
         Assert.Equal(1, transport.Calls);
         Assert.False(response.Success);
+    }
+
+    /// <summary>
+    /// A refused connection is transient, and has to be treated as such.
+    /// </summary>
+    /// <remarks>
+    /// A refused connection reaches us as a ClientResultException carrying no status at all,
+    /// because no response ever arrived to carry one. The provider used to answer "retryable?"
+    /// from that status, where neither 429 nor 5xx matches zero, so the one failure most worth
+    /// another attempt was the one that got none - and no failover either, since eligibility
+    /// follows the same flag.
+    ///
+    /// Asserted through failover rather than a call count, following FailoverTests. With backoff
+    /// off the retry budget is zero, so both a handled fault and a refused one take exactly one
+    /// attempt, and only the chain moving tells them apart. Counting attempts instead would mean
+    /// waiting out the real 155-second schedule to prove the same thing.
+    /// </remarks>
+    [Fact]
+    public async Task A_Transport_Fault_Is_Retryable_And_Falls_Over()
+    {
+        // Thrown at the transport, so the real SDK wraps it the way it does in production.
+        // Constructing the ClientResultException here would test our belief about the SDK rather
+        // than the SDK.
+        var transport = new ThrowingTransport(() => new HttpRequestException(
+            "No connection could be made because the target machine actively refused it.",
+            new SocketException(10061)));
+
+        var result = await RunChain(
+            new OpenAiResponsesProvider(transport.ToClient()),
+            FakeProvider.Succeeds(OuroProvider.Anthropic, "from the fallback"));
+
+        Assert.Equal(1, transport.Calls);
+        Assert.True(result.FinalResponse.Success);
+        Assert.Equal("from the fallback", result.FinalResponse.ResponseText);
+    }
+
+    /// <summary>
+    /// Runs [Gpt_5_4_mini, Claude_Opus_5] over the two providers given, backoff off.
+    /// </summary>
+    private static Task<ChainResult> RunChain(IChatProvider primary, IChatProvider fallback)
+    {
+        var options = new ChatOptions { UseExponentialBackOff = false };
+
+        List<ChainEntry> chain =
+        [
+            Entry(OuroModels.Gpt_5_4_mini, primary, options),
+            Entry(OuroModels.Claude_Opus_5, fallback, options)
+        ];
+
+        return new ChatExecutor().ExecuteChainAsync(chain, [OuroMessage.FromUser("hi")]);
+    }
+
+    private static ChainEntry Entry(OuroModels model, IChatProvider provider, ChatOptions options)
+    {
+        var entry = options.Clone();
+        entry.Model = model;
+
+        return new ChainEntry(model, provider, entry);
     }
 
     private static StubTransport Stalling()
