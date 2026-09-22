@@ -631,9 +631,14 @@ public class OuroClient : IOuroClient, IDisposable
                 // invisibly, which is the trap the transport alone misses.
                 NetworkTimeout = System.Threading.Timeout.InfiniteTimeSpan,
 
-                // The SDK retries three times by default. Left on, that multiplies against Polly
-                // rather than replacing it. ChatExecutor is the single retry authority - the same
-                // rule applied to the Anthropic client.
+                // Turns the SDK's own retry off. It retries three times by default, and those
+                // attempts would multiply against Polly's rather than replace them: our six
+                // attempts over its four is twenty-four calls for one chat. ChatExecutor is the
+                // single retry authority, and the Anthropic client below is set the same way.
+                //
+                // The corollary is worth stating, because it is not visible from here: with this
+                // at zero, nothing retries underneath ChatExecutor. A failure the executor
+                // declines to retry gets one attempt and no more.
                 RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
             }));
 
@@ -650,9 +655,9 @@ public class OuroClient : IOuroClient, IDisposable
             ApiKey = RequireKey(Options.AnthropicApiKey, OuroProvider.Anthropic),
             HttpClient = AnthropicTransport.Value,
 
-            // The SDK retries 429s and 5xx twice by default. Left on, that multiplies against
-            // Polly rather than replacing it - up to six attempts where the caller asked for
-            // two. ChatExecutor is the single retry authority.
+            // Turns the SDK's own retry off, for the reason given on the OpenAI client above: it
+            // retries 429s and 5xx twice by default, and those attempts would multiply against
+            // Polly's rather than replace them. ChatExecutor is the single retry authority.
             MaxRetries = 0
         });
 

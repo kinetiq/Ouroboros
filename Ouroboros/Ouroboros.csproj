@@ -8,7 +8,7 @@
 		     anything in VersionSuffix makes NuGet treat the package as prerelease.
 		     AssemblyVersion stayed 5.0.0.0 across every beta, so shipping the stable 5.0.0 does not
 		     churn assembly binding for anyone who was already on one. -->
-		<VersionPrefix>5.1.0</VersionPrefix>
+		<VersionPrefix>5.1.1</VersionPrefix>
 
 		<!-- The entire OpenAI.Responses and OpenAI.Containers surface is [Experimental("OPENAI001")].
 		     Suppressed here rather than at call sites because it is unavoidable - there is no
@@ -37,6 +37,8 @@
 			Powerful layer over OpenAI and Anthropic supporting chaining and recursion scenarios. Includes provider failover, a fluent SDK for chaining, templates, structured output, server-side code execution, and text processing. .NET 10 only.
 		</Description>
 		<PackageReleaseNotes>
+			5.1.1 fixes a retry gap on OpenAI. A transport fault - a refused connection, a reset socket, a DNS failure - reaches us as a ClientResultException carrying no status, because no response arrived to carry one. The provider decided retryability from that status, where neither 429 nor 5xx matches zero, so the failure most worth another attempt got exactly one, and no failover either. It now escapes to the retry policy, which reads the inner exception chain and already handles it. Behaviour on every other status is unchanged, and no API moved.
+
 			5.1 adds the current models on both vendors and the two reasoning effort levels they introduced.
 
 			Models. OpenAI gains Gpt_6_Astra, Gpt_5_6_Sol, Gpt_5_6_Terra and Gpt_5_6_Luna. Anthropic gains Claude_Fable_5_1 and Claude_Fable_5. Enum values are appended rather than renumbered, so anything persisting the underlying int is unaffected.

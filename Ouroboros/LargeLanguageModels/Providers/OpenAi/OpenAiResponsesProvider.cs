@@ -54,7 +54,16 @@ internal sealed class OpenAiResponsesProvider(ResponsesClient client, ILogger? l
 
             return MapResult(response, options.ResponseType);
         }
-        catch (ClientResultException ex)
+        // Status 0 means no response arrived, so the SDK is wrapping a transport fault: a refused
+        // connection, a reset socket, a DNS failure. The filter lets those escape on purpose.
+        // ChatExecutor reads the inner exception chain to decide what transient means, and it
+        // should be the only thing deciding. Answering here would judge the cause from a status
+        // code that cannot see it, and keep a second copy of the rule - cancellation guard
+        // included, which is what stops a cancelled call from looking retryable.
+        //
+        // The Anthropic provider arrives at the same place by catching only its three named API
+        // exceptions. A transport fault escapes both providers, and is judged once.
+        catch (ClientResultException ex) when (ex.Status != 0)
         {
             var error = new OuroResponseProviderError("OpenAI", ex.Status.ToString(), ex.Message);
 
