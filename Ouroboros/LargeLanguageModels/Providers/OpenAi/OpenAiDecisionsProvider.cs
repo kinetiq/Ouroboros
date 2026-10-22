@@ -31,6 +31,11 @@ internal sealed class OpenAiDecisionsProvider(HttpClient http, string apiKey, Ur
     public async Task<ProviderAttempt> SendAsync(OuroDecisionRequest request, DecisionOptions options,
         CancellationToken cancellationToken)
     {
+        // Final, so the runner does not retry it: a malformed request fails the same way every time.
+        // Checked here, as the Responses provider checks capabilities, so no caller can skip it.
+        if (DecisionRequestValidator.Validate(request, options) is { } problems)
+            return ProviderAttempt.Final(new OuroResponseInternalError(problems));
+
         using var message = new HttpRequestMessage(HttpMethod.Post, Endpoint)
         {
             Content = new StringContent(OpenAiDecisionsMappings.MapRequest(request, options), Encoding.UTF8,
