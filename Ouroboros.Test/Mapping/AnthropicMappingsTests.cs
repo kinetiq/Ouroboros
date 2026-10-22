@@ -106,6 +106,9 @@ public class AnthropicMappingsTests
     [InlineData(OuroModels.Claude_Haiku_4_5, "claude-haiku-4-5")]
     [InlineData(OuroModels.Claude_Fable_5_1, "claude-fable-5-1")]
     [InlineData(OuroModels.Claude_Fable_5, "claude-fable-5")]
+    [InlineData(OuroModels.Claude_Opus_5_5, "claude-opus-5-5")]
+    [InlineData(OuroModels.Claude_Sonnet_5_5, "claude-sonnet-5-5")]
+    [InlineData(OuroModels.Claude_Haiku_5_5, "claude-haiku-5-5")]
     public void The_Model_Id_Carries_No_Date_Suffix(OuroModels model, string expected)
     {
         var mapped = Map([OuroMessage.FromUser("hi")], new ChatOptions { Model = model });

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ouroboros.Config;
 using Ouroboros.Core;
+using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
@@ -26,7 +27,8 @@ namespace Ouroboros.Test.Live;
 /// </remarks>
 public class OpenAiLiveTests(ITestOutputHelper output)
 {
-    private const OuroModels Model = OuroModels.Gpt_5_4_mini;
+    // The default rather than a pinned model, so these tests exercise what an unconfigured caller gets.
+    private static readonly OuroModels Model = Constants.DefaultChatModel;
 
     /// <summary>
     /// The cheapest possible proof the request shape is accepted: auth, model id, the system prompt
@@ -107,13 +109,10 @@ public class OpenAiLiveTests(ITestOutputHelper output)
     {
         using var client = Build();
 
-        // Several models rather than just the default. They are separately deployed, so a
-        // convention holding for one is evidence about the others and not proof.
-        foreach (var model in new[]
-                 {
-                     OuroModels.Gpt_5_4_mini, OuroModels.Gpt_5_4,
-                     OuroModels.Gpt_5_6_Luna, OuroModels.Gpt_6_Astra
-                 })
+        // Every GPT model rather than just the default. They are separately deployed, so a
+        // convention holding for one is evidence about the others and not proof. Driven off the
+        // enum, so this is also the test that notices a model OpenAI has shut down.
+        foreach (var model in Enum.GetValues<OuroModels>().Where(model => model.GetProvider() == OuroProvider.OpenAi))
         {
             var requested = ModelMappings.GetModelNameAsString(model);
 

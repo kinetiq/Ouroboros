@@ -34,8 +34,9 @@ public sealed class DecisionOptions
     /// The OpenAI model id to send.
     /// </summary>
     /// <remarks>
-    /// A string rather than OuroModels. The Decisions models cannot chat, so an OuroModels value for
-    /// one would let ChatAsync accept a model that fails every call.
+    /// A string rather than OuroModels. The endpoint keeps its own list of models, and it need not
+    /// match the chat list. gpt-6-luna happens to be on both, but a model that served Decisions and
+    /// could not chat would, as an OuroModels value, let ChatAsync accept a model that fails every call.
     /// </remarks>
     public string Model { get; set; } = DefaultModel;
 

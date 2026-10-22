@@ -14,8 +14,8 @@ public class ModelAttributeTests
     }
 
     [Fact]
-    public void Default_Chat_Model_Is_Gpt_5_4_Mini()
+    public void Default_Chat_Model_Is_Gpt_6_Luna()
     {
-        Assert.Equal(OuroModels.Gpt_5_4_mini, Constants.DefaultChatModel);
+        Assert.Equal(OuroModels.Gpt_6_Luna, Constants.DefaultChatModel);
     }
 }

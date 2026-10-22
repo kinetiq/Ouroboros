@@ -24,7 +24,9 @@ public static class ModelMappings
     /// </summary>
     public static string GetModelNameAsString(OuroModels ouroModel)
     {
-        // Map supported Ouroboros models to API model names.
+        // Map supported Ouroboros models to API model names. Retiring models still map: they work
+        // until the vendor's shutdown date, and [Obsolete] is how callers hear about it.
+#pragma warning disable CS0618
         switch (ouroModel)
         {
             case OuroModels.Gpt_5:
@@ -53,9 +55,14 @@ public static class ModelMappings
                 return "gpt-5.6-luna";
             case OuroModels.Gpt_6_Astra:
                 return "gpt-6-astra";
+            case OuroModels.Gpt_6_Luna:
+                return "gpt-6-luna";
+            case OuroModels.Gpt_6_1_Sol:
+                return "gpt-6.1-sol";
 
             // Anthropic. These ids carry no date suffix - they are complete as written, and
-            // appending one produces a 404.
+            // appending one produces a 404. claude-haiku-4-5 is the one alias among them: the API
+            // resolves it to claude-haiku-4-5-20251001 and echoes that longer id back.
             case OuroModels.Claude_Opus_5:
                 return "claude-opus-5";
             case OuroModels.Claude_Opus_4_8:
@@ -68,7 +75,14 @@ public static class ModelMappings
                 return "claude-fable-5-1";
             case OuroModels.Claude_Fable_5:
                 return "claude-fable-5";
+            case OuroModels.Claude_Opus_5_5:
+                return "claude-opus-5-5";
+            case OuroModels.Claude_Sonnet_5_5:
+                return "claude-sonnet-5-5";
+            case OuroModels.Claude_Haiku_5_5:
+                return "claude-haiku-5-5";
         }
+#pragma warning restore CS0618
 
         throw new ArgumentOutOfRangeException(nameof(ouroModel), ouroModel, null);
     }

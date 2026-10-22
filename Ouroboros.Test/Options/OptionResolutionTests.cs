@@ -55,10 +55,10 @@ public class OptionResolutionTests
         await client.ChatAsync([OuroMessage.FromUser("hi")], options);
         Assert.Equal(Constants.DefaultChatModel, provider.LastOptions!.Model);
 
-        client.SetDefaultChatModel(OuroModels.Gpt_5_nano);
+        client.SetDefaultChatModel(OuroModels.Gpt_5_6_Terra);
         await client.ChatAsync([OuroMessage.FromUser("hi")], options);
 
-        Assert.Equal(OuroModels.Gpt_5_nano, provider.LastOptions!.Model);
+        Assert.Equal(OuroModels.Gpt_5_6_Terra, provider.LastOptions!.Model);
     }
 
     [Fact]

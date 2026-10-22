@@ -156,7 +156,7 @@ var options = new ChatOptions
 {
     MaxCompletionTokens = 20,
     ReasoningEffort = OuroReasoningEffort.High,
-    Model = OuroModels.Gpt_5_4_mini,
+    Model = OuroModels.Gpt_6_Luna,
 };
 
 var response = await client.ChatAsync(messages, options);

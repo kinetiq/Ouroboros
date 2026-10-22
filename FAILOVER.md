@@ -25,8 +25,8 @@ services.AddOuroboros(options =>
 ```csharp
 new ChatOptions
 {
-    Model = OuroModels.Gpt_5_4_mini,
-    FallbackModels = [OuroModels.Claude_Sonnet_5]
+    Model = OuroModels.Gpt_6_Luna,
+    FallbackModels = [OuroModels.Claude_Sonnet_5_5]
 }
 ```
 

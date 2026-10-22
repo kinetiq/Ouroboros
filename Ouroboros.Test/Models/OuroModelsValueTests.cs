@@ -9,6 +9,8 @@ namespace Ouroboros.Test.Models;
 /// </summary>
 public class OuroModelsValueTests
 {
+    // Retiring models are still pinned. Their values must hold until a major version removes them.
+#pragma warning disable CS0618
     [Theory]
     [InlineData(OuroModels.Gpt_5, 1)]
     [InlineData(OuroModels.Gpt_5_1, 2)]
@@ -29,10 +31,16 @@ public class OuroModelsValueTests
     [InlineData(OuroModels.Gpt_5_6_Luna, 17)]
     [InlineData(OuroModels.Claude_Fable_5_1, 18)]
     [InlineData(OuroModels.Claude_Fable_5, 19)]
+    [InlineData(OuroModels.Gpt_6_Luna, 20)]
+    [InlineData(OuroModels.Gpt_6_1_Sol, 21)]
+    [InlineData(OuroModels.Claude_Opus_5_5, 22)]
+    [InlineData(OuroModels.Claude_Sonnet_5_5, 23)]
+    [InlineData(OuroModels.Claude_Haiku_5_5, 24)]
     public void Model_Has_Its_Pinned_Value(OuroModels model, int expected)
     {
         Assert.Equal(expected, (int)model);
     }
+#pragma warning restore CS0618
 
     /// <summary>
     /// 0 was gpt-3.5-turbo-instruct, removed in 5.0. It is deliberately left undefined so that

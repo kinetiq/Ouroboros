@@ -8,13 +8,21 @@ public enum OuroModels
 	// legacy completions endpoint. Values are pinned so a future removal can't silently
 	// renumber the rest — anything persisting the underlying int would shift without warning.
 	// Do not reuse 0: leaving it undefined makes default(OuroModels) fail loudly.
+	//
+	// Retiring models are marked [Obsolete] rather than removed. Removal waits for a major version,
+	// and the warning gives callers the date and the replacement while there is still time to move.
+	[Obsolete("OpenAI shuts down gpt-5 (snapshot 2025-08-07) on 2026-12-11. Use Gpt_5_6_Sol.")]
 	[MaxTokens(400000,  128000)]		[Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5			= 1,
+	[Obsolete("OpenAI shuts down gpt-5.1 on 2027-04-01. Use Gpt_6_1_Sol.")]
 	[MaxTokens(400000,  128000)]		[Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_1			= 2,
 	[MaxTokens(400000,  128000)]		[Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_2			= 3,
+	[Obsolete("OpenAI shuts down gpt-5-mini (snapshot 2025-08-07) on 2026-12-11. Use Gpt_5_6_Terra.")]
 	[MaxTokens(400000,  128000)]		[Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_mini		= 4,
+	[Obsolete("OpenAI shuts down gpt-5-nano (snapshot 2025-08-07) on 2026-12-11. Use Gpt_5_6_Luna.")]
 	[MaxTokens(400000,  128000)]		[Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_nano		= 5,
 	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_4			= 6,
 	[MaxTokens(400000,  128000)]		[Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_4_mini	= 7,
+	[Obsolete("OpenAI shuts down gpt-5.4-nano on 2027-04-01. Use Gpt_6_Luna.")]
 	[MaxTokens(400000,  128000)]		[Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_4_nano	= 8,
 	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_5			= 9,
 
@@ -24,15 +32,22 @@ public enum OuroModels
 	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_6_Sol		= 15,
 	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_6_Terra	= 16,
 	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_5_6_Luna	= 17,
+	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_6_Luna		= 20,
+	[MaxTokens(1050000, 128000)]	    [Reasoning]		[Provider(OuroProvider.OpenAi)]		Gpt_6_1_Sol		= 21,
 
 	// Anthropic. Reasoning here means adaptive thinking driven by output_config.effort rather than
 	// OpenAI's reasoning_effort, but it is the same knob from a caller's point of view.
 	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Opus_5	= 10,
 	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Opus_4_8	= 11,
 	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Sonnet_5	= 12,
-	[MaxTokens(200000,  64000)]		    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Haiku_4_5 = 13,
+	// No [Reasoning]: Haiku 4.5 predates adaptive thinking and rejects it with a 400. It only takes
+	// a fixed budget_tokens thinking config, which the mapper does not send.
+	[MaxTokens(200000,  64000)]		    				[Provider(OuroProvider.Anthropic)]	Claude_Haiku_4_5 = 13,
 	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Fable_5_1 = 18,
-	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Fable_5	 = 19
+	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Fable_5	 = 19,
+	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Opus_5_5	 = 22,
+	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Sonnet_5_5 = 23,
+	[MaxTokens(1000000, 128000)]	    [Reasoning]		[Provider(OuroProvider.Anthropic)]	Claude_Haiku_5_5 = 24
 }
 
 class MaxTokensAttribute(int contextWindow, int maxOutput) : Attribute

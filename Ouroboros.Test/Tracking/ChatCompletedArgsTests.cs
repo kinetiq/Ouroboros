@@ -54,7 +54,7 @@ public class ChatCompletedArgsTests
     public async Task Hook_Receives_The_Model_Set_Via_SetDefaultChatModel()
     {
         var (client, _) = BuildClient();
-        client.SetDefaultChatModel(OuroModels.Gpt_5_nano, OuroReasoningEffort.High);
+        client.SetDefaultChatModel(OuroModels.Gpt_5_6_Terra, OuroReasoningEffort.High);
 
         ChatCompletedArgs? captured = null;
         client.OnChatCompleted = args => { captured = args; return Task.CompletedTask; };
@@ -62,7 +62,7 @@ public class ChatCompletedArgsTests
         await client.ChatAsync([OuroMessage.FromUser("hi")]);
 
         Assert.NotNull(captured);
-        Assert.Equal(OuroModels.Gpt_5_nano, captured!.Model);
+        Assert.Equal(OuroModels.Gpt_5_6_Terra, captured!.Model);
         Assert.Equal(OuroReasoningEffort.High, captured.ReasoningEffort);
     }
 

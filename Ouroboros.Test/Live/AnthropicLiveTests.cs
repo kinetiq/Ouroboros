@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Ouroboros.Config;
 using Ouroboros.Core;
+using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
 using Ouroboros.Responses;
@@ -25,6 +26,10 @@ namespace Ouroboros.Test.Live;
 /// </remarks>
 public class AnthropicLiveTests(ITestOutputHelper output)
 {
+    // The current Opus. It defaults to medium effort where Opus 5 defaulted to high, so a test
+    // here that starts failing on depth wants ReasoningEffort set, not a different model.
+    private const OuroModels Model = OuroModels.Claude_Opus_5_5;
+
     /// <summary>
     /// The cheapest possible proof that the request shape is accepted: auth, model id, the system
     /// prompt lifted to its own field, and a response that maps back to blocks.
@@ -39,7 +44,7 @@ public class AnthropicLiveTests(ITestOutputHelper output)
                 OuroMessage.FromSystem("Answer with a single word and no punctuation."),
                 OuroMessage.FromUser("What is the capital of France?")
             ],
-            new ChatOptions { Model = OuroModels.Claude_Opus_5, MaxCompletionTokens = 2048 });
+            new ChatOptions { Model = Model, MaxCompletionTokens = 2048 });
 
         output.WriteLine($"stop={GetStopReason(response)} text={response.ResponseText}");
 
@@ -76,7 +81,7 @@ public class AnthropicLiveTests(ITestOutputHelper output)
                 "Using the code execution tool, compute 2**100 and print only the number.")],
             new ChatOptions
             {
-                Model = OuroModels.Claude_Opus_5,
+                Model = Model,
                 ServerTools = OuroServerTools.CodeExecution,
                 MaxCompletionTokens = 8192,
 
@@ -133,7 +138,7 @@ public class AnthropicLiveTests(ITestOutputHelper output)
                 + "mean. Then run the file.")],
             new ChatOptions
             {
-                Model = OuroModels.Claude_Opus_5,
+                Model = Model,
                 ServerTools = OuroServerTools.CodeExecution,
                 MaxCompletionTokens = 8192,
                 Timeout = TimeSpan.FromMinutes(5)
@@ -198,7 +203,7 @@ public class AnthropicLiveTests(ITestOutputHelper output)
                     + "score column, then save a bar chart of it as a PNG.")],
                 new ChatOptions
                 {
-                    Model = OuroModels.Claude_Opus_5,
+                    Model = Model,
                     ServerTools = OuroServerTools.CodeExecution,
                     Attachments = [upload],
                     MaxCompletionTokens = 8192,
@@ -263,7 +268,7 @@ public class AnthropicLiveTests(ITestOutputHelper output)
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.ChatAsync(
             [OuroMessage.FromUser("Write a long essay about the sea.")],
-            new ChatOptions { Model = OuroModels.Claude_Opus_5 },
+            new ChatOptions { Model = Model },
             cts.Token));
     }
 
@@ -289,7 +294,7 @@ public class AnthropicLiveTests(ITestOutputHelper output)
             [OuroMessage.FromUser("Ada Lovelace was born in 1815 in London.")],
             new ChatOptions
             {
-                Model = OuroModels.Claude_Opus_5,
+                Model = Model,
                 ResponseType = typeof(Person),
                 MaxCompletionTokens = 4096
             });
@@ -330,13 +335,16 @@ public class AnthropicLiveTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// The newest Claude family answers at all. Fable 5.1 is the first model here whose id is not
-    /// an opus/sonnet/haiku name, so a wrong id is the most likely mistake and a 404 the symptom.
+    /// Every Claude model in the enum answers at all.
     /// </summary>
+    /// <remarks>
+    /// A wrong id is the most likely mistake when a model is added, and a 404 the symptom. Driven
+    /// off the enum rather than a list, so a new model is covered the moment it exists, and a
+    /// vendor retiring one shows up here before it shows up in production.
+    /// </remarks>
     [RequiresAnthropicKeyTheory]
-    [InlineData(OuroModels.Claude_Fable_5_1)]
-    [InlineData(OuroModels.Claude_Fable_5)]
-    public async Task The_Fable_Family_Round_Trips(OuroModels model)
+    [MemberData(nameof(ClaudeModels))]
+    public async Task Every_Claude_Model_Round_Trips(OuroModels model)
     {
         using var client = Build();
 
@@ -368,13 +376,16 @@ public class AnthropicLiveTests(ITestOutputHelper output)
             [OuroMessage.FromUser("Say OK.")],
             new ChatOptions
             {
-                Model = OuroModels.Claude_Opus_5,
+                Model = Model,
                 ReasoningEffort = level,
                 MaxCompletionTokens = 8192
             });
 
         AssertSucceeded(response);
     }
+
+    public static TheoryData<OuroModels> ClaudeModels =>
+        new(Enum.GetValues<OuroModels>().Where(model => model.GetProvider() == OuroProvider.Anthropic));
 
     private static OuroClient Build()
     {
