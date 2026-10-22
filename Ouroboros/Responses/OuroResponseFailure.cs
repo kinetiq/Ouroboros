@@ -20,6 +20,12 @@ public class OuroResponseFailure : OuroResponseBase
     /// Long-form error details, if available.
     /// </summary>
     public string ErrorDetails { get; set; }
+    
+    /// <summary>
+    /// True when the call failed for a reason that may clear on its own (a rate limit, a 5xx, a network error, a
+    /// timeout)
+    /// </summary>
+    public bool IsTransient { get; set; }
 
     public override string ToString()
     {
