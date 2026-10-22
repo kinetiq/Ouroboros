@@ -8,7 +8,7 @@
 		     anything in VersionSuffix makes NuGet treat the package as prerelease.
 		     AssemblyVersion stayed 5.0.0.0 across every beta, so shipping the stable 5.0.0 does not
 		     churn assembly binding for anyone who was already on one. -->
-		<VersionPrefix>5.2.0</VersionPrefix>
+		<VersionPrefix>5.2.1</VersionPrefix>
 
 		<!-- The entire OpenAI.Responses and OpenAI.Containers surface is [Experimental("OPENAI001")].
 		     Suppressed here rather than at call sites because it is unavoidable - there is no
@@ -37,6 +37,8 @@
 			Powerful layer over OpenAI and Anthropic supporting chaining and recursion scenarios. Includes provider failover, a fluent SDK for chaining, templates, structured output, server-side code execution, and text processing. .NET 10 only.
 		</Description>
 		<PackageReleaseNotes>
+			5.2.1 adds OuroResponseFailure.IsTransient, contributed by Ned Emerson. It is true when a call failed for a reason that may clear on its own: a rate limit, server fault or network fault that outlasted its retries, or a blown attempt timeout. It is false when the provider rejected the request on its merits, when the error would repeat on any provider (a mapper that threw, a type that will not turn into a schema), and when the caller cancelled. The rule is the one failover already uses, so IsTransient is true for exactly the failures that move down a chain. A caller with no chain can use it to decide whether to try again later. ChatAsync and DecideAsync both set it. Nothing else changed.
+
 			5.2 adds the Decisions API, behind an experimental flag. IOuroDecisions.DecideAsync asks predicate, choice and score questions about text or images and returns probabilities rather than prose. It calls OpenAI's /v1/decisions endpoint, which is still in beta. Every Decisions type is therefore marked [Experimental("OURO001")] and can change in a minor release; suppress OURO001 to use it. AddOuroboros registers IOuroDecisions against the same client, and IOuroClient is unchanged. Retry, per-attempt timeout and cancellation behave as they do on ChatAsync, with a 30-second default timeout. There is no failover, because no other provider has an equivalent API.
 
 			5.2 also brings the model list up to date. OpenAI gains Gpt_6_Luna and Gpt_6_1_Sol. Anthropic gains Claude_Opus_5_5, Claude_Sonnet_5_5 and Claude_Haiku_5_5. Enum values are appended as before.
