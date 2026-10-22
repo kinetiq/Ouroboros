@@ -48,8 +48,8 @@ internal static class OpenAiDecisionsMappings
 
         var parts = new JsonArray();
 
-        // UNCONFIRMED: the guide shows the input_image part but not a text part. input_text is what
-        // the Responses API uses next to input_image, so it is the likely name here too.
+        // The guide shows the input_image part but not a text part. input_text, the Responses API's
+        // name, is accepted: confirmed by DecisionsLiveTests.Text_And_An_Image_Round_Trip.
         if (!string.IsNullOrEmpty(request.Text))
             parts.Add(new JsonObject { ["type"] = "input_text", ["text"] = request.Text });
 
@@ -98,8 +98,8 @@ internal static class OpenAiDecisionsMappings
                     $"No mapping for question type {question.GetType().Name}. This should never happen.");
         }
 
-        // UNCONFIRMED for choice and score: the guide names instructions only on predicates. Sent
-        // only when set, so a caller who leaves it off a choice cannot trip on it.
+        // The guide names instructions only on predicates, but choices and scores accept them too:
+        // confirmed by DecisionsLiveTests.Every_Question_Type_Round_Trips. Sent only when set.
         if (question.Instructions is { } instructions)
             mapped["instructions"] = instructions;
 
@@ -125,8 +125,9 @@ internal static class OpenAiDecisionsMappings
             Model = GetString(root, "model") ?? ""
         };
 
-        // UNCONFIRMED: the guide does not show usage. Read when present, in the Responses API's
-        // shape; otherwise the counts stay 0 rather than being guessed.
+        // The guide does not show usage, but the API sends it in the Responses API's shape, with
+        // output_tokens always 0 (output is not billed). Confirmed by the live tests. Still read
+        // defensively, so a response without it leaves the counts at 0 rather than failing.
         if (root.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object)
         {
             response.PromptTokens = GetInt(usage, "input_tokens") ?? 0;
