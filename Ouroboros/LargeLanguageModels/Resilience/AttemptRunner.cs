@@ -83,7 +83,14 @@ internal sealed class AttemptRunner(ILogger? logger = null)
                 FailoverEligible: false);
         }
 
-        return Unwrap(policyResult, provider, attemptTimeout, timeoutSetting);
+        var outcome = Unwrap(policyResult, provider, attemptTimeout, timeoutSetting);
+
+        // The same judgement that drives failover, surfaced to callers so they can decide whether
+        // to try again later.
+        if (outcome.Response is OuroResponseFailure failure)
+            failure.IsTransient = outcome.FailoverEligible;
+
+        return outcome;
     }
 
     /// <summary>
