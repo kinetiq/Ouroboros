@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Ouroboros.Decisions;
 
 namespace Ouroboros.Config;
 
@@ -68,6 +69,13 @@ public static class UseOuroborosExtension
         // Registered against the interface too, so consumers can depend on IOuroClient.
         // Resolves through the registration above rather than building a second client.
         services.AddTransient<IOuroClient>(serviceProvider => serviceProvider.GetRequiredService<OuroClient>());
+
+        // Same client again. Registering the experimental interface does not reach consumers:
+        // OURO001 fires only where code names IOuroDecisions, so a host that never asks for it
+        // never sees the diagnostic.
+#pragma warning disable OURO001
+        services.AddTransient<IOuroDecisions>(serviceProvider => serviceProvider.GetRequiredService<OuroClient>());
+#pragma warning restore OURO001
 
         return services;
     }
