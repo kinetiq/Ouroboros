@@ -51,6 +51,7 @@ internal static class Tokenization
                 "tokenizer, so any local figure would be a guess. Read the provider's own usage off " +
                 "the response instead - OuroResponseBase.PromptTokens and CompletionTokens.");
 
+#pragma warning disable CS0618 // Retiring models still count until they shut down.
         return model switch
         {
             // Every OpenAI model we support is GPT-5 or GPT-6 family, both of which use
@@ -67,9 +68,12 @@ internal static class Tokenization
             OuroModels.Gpt_5_6_Sol or
             OuroModels.Gpt_5_6_Terra or
             OuroModels.Gpt_5_6_Luna or
-            OuroModels.Gpt_6_Astra => O200KBase,
+            OuroModels.Gpt_6_Astra or
+            OuroModels.Gpt_6_Luna or
+            OuroModels.Gpt_6_1_Sol => O200KBase,
             _ => throw new ArgumentOutOfRangeException(nameof(model), model, "No tokenizer encoding is mapped for this model.")
         };
+#pragma warning restore CS0618
     }
 
     /// <summary>

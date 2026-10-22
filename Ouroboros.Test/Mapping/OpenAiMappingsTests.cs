@@ -55,6 +55,8 @@ public class OpenAiMappingsTests
     [InlineData(OuroModels.Gpt_5_6_Terra, "gpt-5.6-terra")]
     [InlineData(OuroModels.Gpt_5_6_Luna, "gpt-5.6-luna")]
     [InlineData(OuroModels.Gpt_6_Astra, "gpt-6-astra")]
+    [InlineData(OuroModels.Gpt_6_Luna, "gpt-6-luna")]
+    [InlineData(OuroModels.Gpt_6_1_Sol, "gpt-6.1-sol")]
     public void The_Model_Id_Reaches_The_Request(OuroModels model, string expected)
     {
         var mapped = Map([OuroMessage.FromUser("hi")], new ChatOptions { Model = model });

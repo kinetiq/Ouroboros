@@ -8,7 +8,7 @@
 		     anything in VersionSuffix makes NuGet treat the package as prerelease.
 		     AssemblyVersion stayed 5.0.0.0 across every beta, so shipping the stable 5.0.0 does not
 		     churn assembly binding for anyone who was already on one. -->
-		<VersionPrefix>5.1.1</VersionPrefix>
+		<VersionPrefix>5.2.0</VersionPrefix>
 
 		<!-- The entire OpenAI.Responses and OpenAI.Containers surface is [Experimental("OPENAI001")].
 		     Suppressed here rather than at call sites because it is unavoidable - there is no
@@ -24,7 +24,7 @@
 
 		<!-- Legal -->
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Copyright>Brian MacKay 2022-2026</Copyright> 
+		<Copyright>Brian MacKay 2022-2027</Copyright> 
 
 		<!-- Location -->
 		<PackageProjectUrl>https://github.com/kinetiq/Ouroboros</PackageProjectUrl>
@@ -37,6 +37,16 @@
 			Powerful layer over OpenAI and Anthropic supporting chaining and recursion scenarios. Includes provider failover, a fluent SDK for chaining, templates, structured output, server-side code execution, and text processing. .NET 10 only.
 		</Description>
 		<PackageReleaseNotes>
+			5.2 adds the Decisions API, behind an experimental flag. IOuroDecisions.DecideAsync asks predicate, choice and score questions about text or images and returns probabilities rather than prose. It calls OpenAI's /v1/decisions endpoint, which is still in beta. Every Decisions type is therefore marked [Experimental("OURO001")] and can change in a minor release; suppress OURO001 to use it. AddOuroboros registers IOuroDecisions against the same client, and IOuroClient is unchanged. Retry, per-attempt timeout and cancellation behave as they do on ChatAsync, with a 30-second default timeout. There is no failover, because no other provider has an equivalent API.
+
+			5.2 also brings the model list up to date. OpenAI gains Gpt_6_Luna and Gpt_6_1_Sol. Anthropic gains Claude_Opus_5_5, Claude_Sonnet_5_5 and Claude_Haiku_5_5. Enum values are appended as before.
+
+			The default chat model moves from Gpt_5_4_mini to Gpt_6_Luna, OpenAI's newest low-cost tier. A call that names no model now gets a different model, a different price and a larger context window (1.05M tokens, up from 400K). Calls that name a model are unaffected.
+
+			Five OpenAI models are now [Obsolete], because OpenAI is shutting them down: Gpt_5, Gpt_5_mini and Gpt_5_nano on 11 December 2026, and Gpt_5_1 and Gpt_5_4_nano on 1 April 2027. Each warning names a replacement. They keep working until those dates, and removal waits for the next major version.
+
+			Claude_Haiku_4_5 works again. It was marked as a reasoning model, so every call asked for adaptive thinking, which Haiku 4.5 does not support, and the API refused it with a 400. It now runs without thinking.
+
 			5.1.1 fixes a retry gap on OpenAI. A transport fault - a refused connection, a reset socket, a DNS failure - reaches us as a ClientResultException carrying no status, because no response arrived to carry one. The provider decided retryability from that status, where neither 429 nor 5xx matches zero, so the failure most worth another attempt got exactly one, and no failover either. It now escapes to the retry policy, which reads the inner exception chain and already handles it. Behaviour on every other status is unchanged, and no API moved.
 
 			5.1 adds the current models on both vendors and the two reasoning effort levels they introduced.
@@ -68,18 +78,18 @@
 
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="" />
-		<PackageReference Include="Anthropic" Version="12.40.0" />
+		<PackageReference Include="Anthropic" Version="13.1.0" />
 		<!-- Pinned to override the vulnerable 9.0.4 that Microsoft.ML.Tokenizers.Data.O200kBase
 		     pulls in transitively (GHSA-73j8-2gch-69rq). Safe to drop once that package ships
 		     against a patched version. -->
-		<PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.11" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
-		<PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
-		<PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
-		<PackageReference Include="OpenAI" Version="2.13.0" />
-		<PackageReference Include="Polly" Version="8.7.0" />
+		<PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.13" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
+		<PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.1" />
+		<PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.1" />
+		<PackageReference Include="OpenAI" Version="2.14.0" />
+		<PackageReference Include="Polly" Version="8.8.0" />
 		<PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
-		<PackageReference Include="Scriban" Version="7.2.6" />
+		<PackageReference Include="Scriban" Version="7.5.1" />
 	</ItemGroup>
 </Project>

@@ -29,7 +29,7 @@ using AnthropicSdk = Anthropic;
 
 namespace Ouroboros;
 
-public class OuroClient : IOuroClient, IDisposable
+public partial class OuroClient : IOuroClient, IDisposable
 {
     private readonly OuroborosOptions Options;
 
@@ -596,8 +596,12 @@ public class OuroClient : IOuroClient, IDisposable
     {
     }
 
+    /// <param name="openAiHandler">
+    /// Test seam: replaces the network under the OpenAI transport. Lets a test drive the real
+    /// providers end to end, which providerOverride cannot do for the Decisions API.
+    /// </param>
     internal OuroClient(OuroborosOptions options, Func<OuroModels, IChatProvider>? providerOverride,
-        ILogger<OuroClient>? logger = null)
+        ILogger<OuroClient>? logger = null, HttpMessageHandler? openAiHandler = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
 
@@ -611,7 +615,7 @@ public class OuroClient : IOuroClient, IDisposable
         Executor = new ChatExecutor(Logger);
 
         OpenAiTransport = new Lazy<HttpClient>(() =>
-            new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan });
+            new HttpClient(openAiHandler ?? new HttpClientHandler()) { Timeout = System.Threading.Timeout.InfiniteTimeSpan });
 
         AnthropicTransport = new Lazy<HttpClient>(() =>
             new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan });

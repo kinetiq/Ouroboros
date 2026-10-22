@@ -106,6 +106,9 @@ public class AnthropicMappingsTests
     [InlineData(OuroModels.Claude_Haiku_4_5, "claude-haiku-4-5")]
     [InlineData(OuroModels.Claude_Fable_5_1, "claude-fable-5-1")]
     [InlineData(OuroModels.Claude_Fable_5, "claude-fable-5")]
+    [InlineData(OuroModels.Claude_Opus_5_5, "claude-opus-5-5")]
+    [InlineData(OuroModels.Claude_Sonnet_5_5, "claude-sonnet-5-5")]
+    [InlineData(OuroModels.Claude_Haiku_5_5, "claude-haiku-5-5")]
     public void The_Model_Id_Carries_No_Date_Suffix(OuroModels model, string expected)
     {
         var mapped = Map([OuroMessage.FromUser("hi")], new ChatOptions { Model = model });
@@ -150,23 +153,21 @@ public class AnthropicMappingsTests
 
     /// <summary>
     /// Sampling parameters were removed from ChatOptions in 5.0, which happens to be exactly what
-    /// current Claude models require - they reject temperature, top_p and top_k outright.
+    /// the API requires - from version 2026-10-21 it rejects temperature, top_p and top_k outright.
     /// </summary>
     /// <remarks>
-    /// The SDK marks all three obsolete for the same reason, so reading them here warns. Suppressed
-    /// deliberately and narrowly: reading them is the entire point of the assertion, and the test
-    /// guards against anyone reintroducing them to ChatOptions and wiring them through.
+    /// SDK 13.0 dropped the typed properties, so the compiler now stops anyone wiring them through
+    /// the normal way. What it cannot stop is smuggling them into the raw body, which is the route
+    /// left and the one this test guards.
     /// </remarks>
     [Fact]
     public void No_Sampling_Parameters_Are_Sent()
     {
         var mapped = Map([OuroMessage.FromUser("hi")]);
 
-#pragma warning disable CS0618
-        Assert.Null(mapped.Temperature);
-        Assert.Null(mapped.TopP);
-        Assert.Null(mapped.TopK);
-#pragma warning restore CS0618
+        Assert.False(mapped.RawBodyData.ContainsKey("temperature"));
+        Assert.False(mapped.RawBodyData.ContainsKey("top_p"));
+        Assert.False(mapped.RawBodyData.ContainsKey("top_k"));
     }
 
     [Fact]
