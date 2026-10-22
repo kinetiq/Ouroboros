@@ -37,6 +37,8 @@
 			Powerful layer over OpenAI and Anthropic supporting chaining and recursion scenarios. Includes provider failover, a fluent SDK for chaining, templates, structured output, server-side code execution, and text processing. .NET 10 only.
 		</Description>
 		<PackageReleaseNotes>
+			5.2 adds the Decisions API, behind an experimental flag. IOuroDecisions.DecideAsync asks predicate, choice and score questions about text or images and returns probabilities rather than prose. It calls OpenAI's /v1/decisions endpoint, which is still in beta. Every Decisions type is therefore marked [Experimental("OURO001")] and can change in a minor release; suppress OURO001 to use it. AddOuroboros registers IOuroDecisions against the same client, and IOuroClient is unchanged. Retry, per-attempt timeout and cancellation behave as they do on ChatAsync, with a 30-second default timeout. There is no failover, because no other provider has an equivalent API.
+
 			5.1.1 fixes a retry gap on OpenAI. A transport fault - a refused connection, a reset socket, a DNS failure - reaches us as a ClientResultException carrying no status, because no response arrived to carry one. The provider decided retryability from that status, where neither 429 nor 5xx matches zero, so the failure most worth another attempt got exactly one, and no failover either. It now escapes to the retry policy, which reads the inner exception chain and already handles it. Behaviour on every other status is unchanged, and no API moved.
 
 			5.1 adds the current models on both vendors and the two reasoning effort levels they introduced.
