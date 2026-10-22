@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Anthropic.Core;
-using Anthropic.Models.Beta.Files;
+using Anthropic.Models.Files;
 using Ouroboros.Core;
 using Ouroboros.LargeLanguageModels.Providers;
 using AnthropicSdk = Anthropic;
@@ -37,7 +37,7 @@ internal sealed class AnthropicFileStore(AnthropicSdk.AnthropicClient client) : 
         if (!string.IsNullOrWhiteSpace(mediaType))
             file.ContentType = MediaTypeHeaderValue.Parse(mediaType);
 
-        var metadata = await client.Beta.Files.Upload(new FileUploadParams { File = file }, cancellationToken);
+        var metadata = await client.Files.Upload(new FileUploadParams { File = file }, cancellationToken);
 
         return ToRef(metadata);
     }
@@ -52,14 +52,14 @@ internal sealed class AnthropicFileStore(AnthropicSdk.AnthropicClient client) : 
         // round trip to learn what we told it is silly.
         if (fileName is null || mediaType is null)
         {
-            var metadata = await client.Beta.Files.RetrieveMetadata(
+            var metadata = await client.Files.RetrieveMetadata(
                 file.Id, new FileRetrieveMetadataParams(), cancellationToken);
 
             fileName ??= metadata.Filename;
             mediaType ??= metadata.MimeType;
         }
 
-        using var response = await client.Beta.Files.Download(file.Id, new FileDownloadParams(), cancellationToken);
+        using var response = await client.Files.Download(file.Id, new FileDownloadParams(), cancellationToken);
         using var source = await response.ReadAsStream();
         using var buffer = new MemoryStream();
 
@@ -74,7 +74,7 @@ internal sealed class AnthropicFileStore(AnthropicSdk.AnthropicClient client) : 
 
     public async Task DeleteAsync(OuroFileRef file, CancellationToken cancellationToken)
     {
-        await client.Beta.Files.Delete(file.Id, new FileDeleteParams(), cancellationToken);
+        await client.Files.Delete(file.Id, new FileDeleteParams(), cancellationToken);
     }
 
     private static OuroFileRef ToRef(FileMetadata metadata)

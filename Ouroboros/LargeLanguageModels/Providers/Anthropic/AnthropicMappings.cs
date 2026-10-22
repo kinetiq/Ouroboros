@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using Anthropic.Models.Messages;
-using AnthropicRole = Anthropic.Models.Messages.Role;
 using Ouroboros.Core;
 using Ouroboros.Extensions;
 using Ouroboros.LargeLanguageModels.ChatCompletions;
@@ -123,11 +122,9 @@ internal static class AnthropicMappings
     {
         var mapped = messages
             .Where(message => message.Role != OuroRole.System)
-            .Select(message => new MessageParam
-            {
-                Role = message.Role == OuroRole.Assistant ? AnthropicRole.Assistant : AnthropicRole.User,
-                Content = message.Content
-            })
+            .Select(message => message.Role == OuroRole.Assistant
+                ? (MessageParam)new AssistantMessageParam { Content = message.Content }
+                : new UserMessageParam { Content = message.Content })
             .ToList();
 
         if (attachments is { Count: > 0 })
@@ -137,11 +134,7 @@ internal static class AnthropicMappings
         // partial assistant one.
         if (inProgress is { Count: > 0 })
         {
-            mapped.Add(new MessageParam
-            {
-                Role = AnthropicRole.Assistant,
-                Content = inProgress.ToList()
-            });
+            mapped.Add(new AssistantMessageParam { Content = inProgress.ToList() });
         }
 
         return mapped;
@@ -172,11 +165,7 @@ internal static class AnthropicMappings
         foreach (var attachment in attachments)
             blocks.Add(new ContainerUploadBlockParam { FileID = attachment.Id });
 
-        var withFiles = new MessageParam
-        {
-            Role = AnthropicRole.User,
-            Content = blocks
-        };
+        MessageParam withFiles = new UserMessageParam { Content = blocks };
 
         if (index >= 0)
             messages[index] = withFiles;

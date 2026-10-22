@@ -150,23 +150,21 @@ public class AnthropicMappingsTests
 
     /// <summary>
     /// Sampling parameters were removed from ChatOptions in 5.0, which happens to be exactly what
-    /// current Claude models require - they reject temperature, top_p and top_k outright.
+    /// the API requires - from version 2026-10-21 it rejects temperature, top_p and top_k outright.
     /// </summary>
     /// <remarks>
-    /// The SDK marks all three obsolete for the same reason, so reading them here warns. Suppressed
-    /// deliberately and narrowly: reading them is the entire point of the assertion, and the test
-    /// guards against anyone reintroducing them to ChatOptions and wiring them through.
+    /// SDK 13.0 dropped the typed properties, so the compiler now stops anyone wiring them through
+    /// the normal way. What it cannot stop is smuggling them into the raw body, which is the route
+    /// left and the one this test guards.
     /// </remarks>
     [Fact]
     public void No_Sampling_Parameters_Are_Sent()
     {
         var mapped = Map([OuroMessage.FromUser("hi")]);
 
-#pragma warning disable CS0618
-        Assert.Null(mapped.Temperature);
-        Assert.Null(mapped.TopP);
-        Assert.Null(mapped.TopK);
-#pragma warning restore CS0618
+        Assert.False(mapped.RawBodyData.ContainsKey("temperature"));
+        Assert.False(mapped.RawBodyData.ContainsKey("top_p"));
+        Assert.False(mapped.RawBodyData.ContainsKey("top_k"));
     }
 
     [Fact]
