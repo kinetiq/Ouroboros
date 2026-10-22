@@ -150,7 +150,12 @@ internal sealed class ChatExecutor(ILogger? logger = null)
                 FailoverEligible: false);
         }
 
-        return Unwrap(policyResult, provider, attemptTimeout);
+        var outcome = Unwrap(policyResult, provider, attemptTimeout);
+
+        if (outcome.Response is OuroResponseFailure failure)
+            failure.IsTransient = outcome.FailoverEligible;
+
+        return outcome;
     }
 
     /// <summary>
