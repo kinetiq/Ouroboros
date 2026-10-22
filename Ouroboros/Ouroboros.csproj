@@ -8,7 +8,7 @@
 		     anything in VersionSuffix makes NuGet treat the package as prerelease.
 		     AssemblyVersion stayed 5.0.0.0 across every beta, so shipping the stable 5.0.0 does not
 		     churn assembly binding for anyone who was already on one. -->
-		<VersionPrefix>5.1.1</VersionPrefix>
+		<VersionPrefix>5.2.0</VersionPrefix>
 
 		<!-- The entire OpenAI.Responses and OpenAI.Containers surface is [Experimental("OPENAI001")].
 		     Suppressed here rather than at call sites because it is unavoidable - there is no
