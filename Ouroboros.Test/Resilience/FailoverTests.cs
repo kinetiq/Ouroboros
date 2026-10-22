@@ -44,6 +44,7 @@ public class FailoverTests
         Assert.Equal(OuroModels.Gpt_5_4_mini, result.Attempts[0].Model);
         Assert.Equal(OuroModels.Claude_Opus_5, result.Attempts[1].Model);
         Assert.False(result.Attempts[0].Response.Success);
+        Assert.True(Assert.IsAssignableFrom<OuroResponseFailure>(result.Attempts[0].Response).IsTransient);
     }
 
     /// <summary>
@@ -64,6 +65,7 @@ public class FailoverTests
         Assert.Single(result.Attempts);
         Assert.Equal(0, fallback.Calls);
         Assert.False(result.FinalResponse.Success);
+        Assert.False(Assert.IsAssignableFrom<OuroResponseFailure>(result.FinalResponse).IsTransient);
     }
 
     /// <summary>
@@ -90,6 +92,7 @@ public class FailoverTests
         // One call, not six: a non-transient exception is not retried either.
         Assert.Equal(1, primary.Calls);
         Assert.Contains("the mapper is broken", result.FinalResponse.ResponseText);
+        Assert.False(Assert.IsAssignableFrom<OuroResponseFailure>(result.FinalResponse).IsTransient);
     }
 
     /// <summary>
@@ -105,6 +108,7 @@ public class FailoverTests
 
         Assert.Equal(2, result.Attempts.Count);
         Assert.Equal("recovered", result.FinalResponse.ResponseText);
+        Assert.True(Assert.IsAssignableFrom<OuroResponseFailure>(result.Attempts[0].Response).IsTransient);
     }
 
     /// <summary>
@@ -120,6 +124,7 @@ public class FailoverTests
 
         Assert.Equal(2, result.Attempts.Count);
         Assert.Equal("in time", result.FinalResponse.ResponseText);
+        Assert.True(Assert.IsAssignableFrom<OuroResponseFailure>(result.Attempts[0].Response).IsTransient);
     }
 
     /// <summary>
